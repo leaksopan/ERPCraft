@@ -61,18 +61,62 @@ impl ErpApp {
     pub fn ui(&mut self, ui: &mut egui::Ui) {
         self.shortcuts(ui.ctx());
         shell::app_bar(self, ui);
-        // BC keeps the navigation bar on the role center and on list pages.
-        if matches!(self.stack.last(), Some(View::RoleCenter | View::List(_)) | None) {
-            shell::role_center_bars(self, ui);
-        }
+        // The base page (role center or a list) stays underneath; cards stack over it.
+        let base = self.stack.iter().rposition(|v| !matches!(v, View::Card(_))).unwrap_or(0);
+        let base_is_rc = matches!(self.stack.get(base), Some(View::RoleCenter) | None);
+        shell::role_center_bars(self, ui, base_is_rc);
         egui::CentralPanel::default().frame(egui::Frame::new().fill(theme::TOKENS.canvas)).show(ui, |ui| {
             if let Some(n) = self.notice.clone() {
                 widgets::notice_bar(ui, &n, || self.notice = None);
             }
-            match self.stack.last().cloned() {
-                Some(View::List(state)) => list::show(self, ui, state),
-                Some(View::Card(state)) => card::show(self, ui, state),
-                _ => role_center::show(self, ui),
+            let rect = ui.available_rect_before_wrap();
+            let cards: Vec<usize> = (base + 1..self.stack.len()).collect();
+            let mut base_ui = ui.new_child(egui::UiBuilder::new().max_rect(rect).id_salt("base_view"));
+            if !cards.is_empty() {
+                base_ui.disable();
+            }
+            match self.stack.get(base).cloned() {
+                Some(View::List(state)) => list::show(self, &mut base_ui, base, state),
+                _ => role_center::show(self, &mut base_ui),
+            }
+            if cards.is_empty() {
+                return;
+            }
+            // CoreERP page stack: 22% scrim over the content area, cards at most 1328 px wide,
+            // each card underneath shifted 80 px left (7 px when expanded) and dimmed.
+            ui.painter().rect_filled(rect, 0.0, egui::Color32::from_black_alpha(56));
+            let narrow = rect.width() < 1408.0;
+            let count = cards.len();
+            for (i, idx) in cards.iter().copied().enumerate() {
+                let depth = count - 1 - i;
+                let active = depth == 0;
+                if narrow && !active {
+                    continue;
+                }
+                let Some(View::Card(state)) = self.stack.get(idx).cloned() else { continue };
+                let inset = if narrow {
+                    0.0
+                } else if state.expanded {
+                    40.0
+                } else {
+                    ((rect.width() - 1328.0) / 2.0).max(0.0)
+                };
+                let shift = if narrow { 0.0 } else { depth.min(3) as f32 * if state.expanded { 7.0 } else { 80.0 } };
+                let r = egui::Rect::from_min_max(
+                    egui::pos2(rect.left() + inset - shift, rect.top()),
+                    egui::pos2(rect.right() - inset - shift, rect.bottom()),
+                );
+                let mut cui = ui.new_child(egui::UiBuilder::new().max_rect(r).id_salt(("page_dialog", idx)));
+                if !active {
+                    cui.disable();
+                }
+                card::show(self, &mut cui, idx, state, card::Layer { active, count, narrow });
+                if !active {
+                    ui.painter().rect_filled(r, 0.0, egui::Color32::from_black_alpha(46));
+                }
+                if self.stack.len() <= idx {
+                    break;
+                }
             }
         });
         shell::nav_menu(self, ui.ctx());
@@ -142,16 +186,46 @@ impl ErpApp {
         }
     }
 
-    /// "+ New" on a card / document page: inserts a record (number series) and opens it.
+    /// "+ New" on a card / document page: inserts a record (number series) and opens it in edit
+    /// mode, as CoreERP does for new records.
     pub fn new_record_on(&mut self, card_page: &str) {
         match self.session.run("record.new", &json!({"page": card_page})) {
-            Ok(r) => self.handle_result(&r),
+            Ok(r) => {
+                self.handle_result(&r);
+                if let Some(View::Card(c)) = self.stack.last_mut() {
+                    c.editing = true;
+                }
+            }
             Err(e) => self.error(e.message),
+        }
+    }
+
+    /// Opens a card from a list row; ‹ › on the card then step through that list.
+    pub fn open_card_from_list(&mut self, page: &str, key: Key, list: &nav::ListState) {
+        self.open_page(page, Vec::new(), Some(key));
+        if let Some(View::Card(c)) = self.stack.last_mut() {
+            c.nav = Some(nav::RecordNav { list_page: list.page.clone(), filters: list.filters.clone(), search: list.search.clone() });
         }
     }
 
     /// Opens `page` or `page:key` (multi-field keys joined by `|`), e.g. `customer-card:10000`.
     pub fn open_spec(&mut self, spec: &str) {
+        // `list>card:key` opens the list, then the card over it (with ‹ › through the list).
+        if let Some((list, card)) = spec.split_once('>') {
+            self.open_spec(list);
+            let Some(View::List(state)) = self.stack.last().cloned() else { return };
+            let Some((page, key)) = card.split_once(':') else { return };
+            let key = self
+                .session
+                .page(page)
+                .and_then(|p| p.source_table.as_deref())
+                .and_then(|t| self.session.table(t))
+                .and_then(|t| Key::from_json(t, &json!(key)).ok());
+            if let Some(key) = key {
+                self.open_card_from_list(page, key, &state);
+            }
+            return;
+        }
         let (page, key) = match spec.split_once(':') {
             Some((p, k)) => (p, Some(k)),
             None => (spec, None),

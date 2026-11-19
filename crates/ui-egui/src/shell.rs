@@ -52,7 +52,7 @@ pub fn app_bar(app: &mut ErpApp, ui: &mut Ui) {
         });
 }
 
-pub fn role_center_bars(app: &mut ErpApp, ui: &mut Ui) {
+pub fn role_center_bars(app: &mut ErpApp, ui: &mut Ui, on_role_center: bool) {
     let Some(rc) = app.session.meta().role_center(&app.role_center) else { return };
     let company = app
         .session
@@ -60,7 +60,6 @@ pub fn role_center_bars(app: &mut ErpApp, ui: &mut Ui) {
         .map(|r| r.str("Name").to_string())
         .filter(|s| !s.is_empty())
         .unwrap_or_else(|| "My Company".to_string());
-    let on_role_center = matches!(app.stack.last(), Some(crate::View::RoleCenter) | None);
     // Row 1: company name | section menus (Finance ▾, Cash Management ▾, …) | ☰.
     egui::Panel::top("nav_bar")
         .exact_size(50.0)

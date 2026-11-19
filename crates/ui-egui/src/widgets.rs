@@ -208,6 +208,24 @@ pub fn field_editor(
     }
 }
 
+/// A field of an editable card in view mode: the value in a read-only input box (CoreERP shows
+/// `Input readOnly`); clicking it switches the card to edit mode.
+pub fn view_value(ui: &mut Ui, f: &FieldDef, v: &Value, width: f32) -> egui::Response {
+    let width = if width.is_finite() { width.max(24.0) } else { 120.0 };
+    let text = display(v, &f.ty);
+    let inner = egui::Frame::new()
+        .fill(TOKENS.table_header)
+        .stroke(Stroke::new(1.0, TOKENS.divider))
+        .corner_radius(2)
+        .inner_margin(egui::Margin::symmetric(8, 3))
+        .show(ui, |ui| {
+            ui.set_width(width - 16.0);
+            let layout = if is_numeric(&f.ty) { Layout::right_to_left(Align::Center) } else { Layout::left_to_right(Align::Center) };
+            ui.with_layout(layout, |ui| ui.add(egui::Label::new(RichText::new(text).color(TOKENS.text)).truncate()));
+        });
+    inner.response.interact(Sense::click())
+}
+
 /// BC-style toggle switch for Boolean fields.
 pub fn toggle(ui: &mut Ui, on: &mut bool) -> egui::Response {
     let size = vec2(36.0, 18.0);

@@ -309,7 +309,36 @@ pub fn transactions(ctx: &mut Ctx) -> Result<()> {
     crate::documents::new_document(ctx, &SALES, "Quote", "20000", &Map::new(), &[json!({"no": "1301", "quantity": 3}), json!({"no": "1300", "quantity": 12})])?;
     crate::documents::new_document(ctx, &SALES, "Invoice", "50000", &Map::new(), &[json!({"no": "1000", "quantity": 2})])?;
     crate::documents::new_document(ctx, &PURCHASE, "Order", "40000", &Map::new(), &[json!({"no": "1301", "quantity": 10}), json!({"no": "1300", "quantity": 50})])?;
+
+    // Older invoices that are now past due, so the overdue cues have something to show.
+    let old = |days: u64| ctx.work_date.checked_sub_days(chrono::Days::new(days)).map(|d| d.to_string()).unwrap_or_default();
+    let (d40, d45) = (old(40), old(45));
+    let si = crate::documents::new_document(
+        ctx,
+        &SALES,
+        "Invoice",
+        "20000",
+        &obj(json!({"Document Date": d40, "Posting Date": d40, "External Document No.": "GSM-PO-0931"})),
+        &[json!({"no": "1200", "quantity": 4})],
+    )?;
+    post_as(ctx, true, "Invoice", &si)?;
+    let pi = crate::documents::new_document(
+        ctx,
+        &PURCHASE,
+        "Invoice",
+        "40000",
+        &obj(json!({"Document Date": d45, "Posting Date": d45, "Vendor Invoice No.": "KMA-0457"})),
+        &[json!({"no": "1300", "quantity": 20})],
+    )?;
+    post_as(ctx, false, "Invoice", &pi)?;
     Ok(())
+}
+
+fn post_as(ctx: &mut Ctx, sales: bool, doc_type: &str, created: &Json) -> Result<String> {
+    let no = created.get("no").and_then(Json::as_str).unwrap_or_default().to_string();
+    let side = if sales { &SALES } else { &PURCHASE };
+    let r = crate::posting::post_document(ctx, side, doc_type, &no)?;
+    Ok(r.get("posted_no").and_then(Json::as_str).unwrap_or_default().to_string())
 }
 
 fn obj(j: Json) -> Map<String, Json> {

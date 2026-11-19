@@ -43,8 +43,12 @@ fn main() -> ExitCode {
             return ExitCode::from(1);
         }
     };
+    // `--size 1700x950` sets the window size (handy for checking the wide page-dialog layout).
+    let size = arg_value("--size")
+        .and_then(|s| s.split_once('x').and_then(|(w, h)| Some([w.trim().parse::<f32>().ok()?, h.trim().parse::<f32>().ok()?])))
+        .unwrap_or([1400.0, 860.0]);
     let options = eframe::NativeOptions {
-        viewport: egui::ViewportBuilder::default().with_title("ERPCraft").with_inner_size([1400.0, 860.0]).with_min_inner_size([900.0, 600.0]),
+        viewport: egui::ViewportBuilder::default().with_title("ERPCraft").with_inner_size(size).with_min_inner_size([900.0, 600.0]),
         ..Default::default()
     };
     let result = eframe::run_native(

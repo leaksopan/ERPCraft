@@ -10,7 +10,7 @@ use crate::theme::{self, TOKENS};
 use crate::widgets;
 use crate::{Dialog, ErpApp};
 
-pub fn show(app: &mut ErpApp, ui: &mut Ui, mut state: ListState) {
+pub fn show(app: &mut ErpApp, ui: &mut Ui, idx: usize, mut state: ListState) {
     let depth = app.stack.len();
     let Some(page) = app.session.page(&state.page) else {
         app.back();
@@ -63,9 +63,11 @@ pub fn show(app: &mut ErpApp, ui: &mut Ui, mut state: ListState) {
         });
     });
 
-    // Keyboard shortcuts of the page's actions act on the selected row.
+    // Keyboard shortcuts of the page's actions act on the selected row (not while a card is open
+    // over the list).
     for a in &page.actions {
         if let Some(s) = &a.shortcut
+            && ui.is_enabled()
             && widgets::shortcut_pressed(ui.ctx(), s)
         {
             let key = state.selected.clone();
@@ -74,7 +76,7 @@ pub fn show(app: &mut ErpApp, ui: &mut Ui, mut state: ListState) {
     }
     // Write the state back unless the action opened another page.
     if app.stack.len() == depth
-        && let Some(View::List(s)) = app.stack.last_mut()
+        && let Some(View::List(s)) = app.stack.get_mut(idx)
     {
         *s = state;
     }
@@ -263,7 +265,8 @@ fn grid(app: &mut ErpApp, ui: &mut Ui, page: &PageDef, table: &TableDef, rows: &
             .and_then(|r| app.session.card_page_for(&table.name, &r))
             .or_else(|| page.card_page.clone());
         if let Some(t) = target {
-            app.open_page(&t, Vec::new(), Some(k));
+            let list = state.clone();
+            app.open_card_from_list(&t, k, &list);
         }
     }
 }

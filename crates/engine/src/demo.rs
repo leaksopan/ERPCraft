@@ -129,10 +129,13 @@ pub fn setup(ctx: &mut Ctx) -> Result<()> {
         ("10200", "Accounts Receivable", "Posting", "Balance Sheet", "Assets", ""),
         ("10300", "Inventory - Spare Parts", "Posting", "Balance Sheet", "Assets", ""),
         ("10400", "Purchase VAT (PPN Masukan)", "Posting", "Balance Sheet", "Assets", ""),
+        ("10500", "Fixed Assets - Vehicles & Equipment", "Posting", "Balance Sheet", "Assets", ""),
+        ("10510", "Accumulated Depreciation", "Posting", "Balance Sheet", "Assets", ""),
         ("10999", "Total Assets", "End-Total", "Balance Sheet", "Assets", "10100..10999"),
         ("20100", "Liabilities", "Begin-Total", "Balance Sheet", "Liabilities", ""),
         ("20200", "Accounts Payable", "Posting", "Balance Sheet", "Liabilities", ""),
         ("20300", "Sales VAT (PPN Keluaran)", "Posting", "Balance Sheet", "Liabilities", ""),
+        ("20400", "Deferred Grant Income (Hibah)", "Posting", "Balance Sheet", "Liabilities", ""),
         ("20999", "Total Liabilities", "End-Total", "Balance Sheet", "Liabilities", "20100..20999"),
         ("30100", "Equity", "Begin-Total", "Balance Sheet", "Equity", ""),
         ("30200", "Owner's Capital", "Posting", "Balance Sheet", "Equity", ""),
@@ -143,15 +146,19 @@ pub fn setup(ctx: &mut Ctx) -> Result<()> {
         ("40200", "Sales - Spare Parts", "Posting", "Income Statement", "Income", ""),
         ("40300", "Sales - Workshop Services", "Posting", "Income Statement", "Income", ""),
         ("40400", "Sales Returns & Allowances", "Posting", "Income Statement", "Income", ""),
+        ("40500", "Gain on Disposal of Assets", "Posting", "Income Statement", "Income", ""),
         ("40999", "Total Revenue", "End-Total", "Income Statement", "Income", "40100..40999"),
         ("50100", "Cost of Goods Sold", "Begin-Total", "Income Statement", "Cost of Goods Sold", ""),
         ("50200", "COGS - Spare Parts", "Posting", "Income Statement", "Cost of Goods Sold", ""),
         ("50300", "Purchases - Services & Supplies", "Posting", "Income Statement", "Cost of Goods Sold", ""),
+        ("50400", "Inventory Adjustments", "Posting", "Income Statement", "Cost of Goods Sold", ""),
         ("50999", "Total Cost of Goods Sold", "End-Total", "Income Statement", "Cost of Goods Sold", "50100..50999"),
         ("60100", "Operating Expenses", "Begin-Total", "Income Statement", "Expense", ""),
         ("60200", "Rent", "Posting", "Income Statement", "Expense", ""),
         ("60300", "Utilities", "Posting", "Income Statement", "Expense", ""),
         ("60400", "Salaries & Wages", "Posting", "Income Statement", "Expense", ""),
+        ("60500", "Depreciation Expense", "Posting", "Income Statement", "Expense", ""),
+        ("60600", "Loss on Disposal of Assets", "Posting", "Income Statement", "Expense", ""),
         ("60999", "Total Operating Expenses", "End-Total", "Income Statement", "Expense", "60100..60999"),
         ("99999", "NET INCOME", "Total", "Income Statement", "", "40000..69999"),
     ];
@@ -187,17 +194,22 @@ pub fn setup(ctx: &mut Ctx) -> Result<()> {
     for (code, desc) in [("STANDARD", "PPN 11%"), ("ZERO", "No VAT")] {
         raw(ctx, "VAT Product Posting Group", json!({"Code": code, "Description": desc}))?;
     }
+    for prod in ["PARTS", "SERVICES"] {
+        // Item journals post with a blank business group (BC: Gen. Bus. Posting Group '' on the line).
+        raw(ctx, "General Posting Setup", json!({"Gen. Bus. Posting Group": "", "Gen. Prod. Posting Group": prod, "COGS Account": "50200", "Inventory Adjmt. Account": "50400"}))?;
+    }
     for bus in ["DOMESTIC", "EXPORT"] {
         raw(ctx, "General Posting Setup", json!({"Gen. Bus. Posting Group": bus, "Gen. Prod. Posting Group": "PARTS",
-            "Sales Account": "40200", "Sales Credit Memo Account": "40400", "Purch. Account": "50300", "Purch. Credit Memo Account": "50300", "COGS Account": "50200"}))?;
+            "Sales Account": "40200", "Sales Credit Memo Account": "40400", "Purch. Account": "50300", "Purch. Credit Memo Account": "50300", "COGS Account": "50200", "Inventory Adjmt. Account": "50400"}))?;
         raw(ctx, "General Posting Setup", json!({"Gen. Bus. Posting Group": bus, "Gen. Prod. Posting Group": "SERVICES",
-            "Sales Account": "40300", "Sales Credit Memo Account": "40400", "Purch. Account": "50300", "Purch. Credit Memo Account": "50300", "COGS Account": "50200"}))?;
+            "Sales Account": "40300", "Sales Credit Memo Account": "40400", "Purch. Account": "50300", "Purch. Credit Memo Account": "50300", "COGS Account": "50200", "Inventory Adjmt. Account": "50400"}))?;
         for prod in ["STANDARD", "ZERO"] {
             let pct = if bus == "DOMESTIC" && prod == "STANDARD" { 11 } else { 0 };
             raw(ctx, "VAT Posting Setup", json!({"VAT Bus. Posting Group": bus, "VAT Prod. Posting Group": prod, "VAT Calculation Type": "Normal VAT",
                 "VAT %": pct, "Sales VAT Account": "20300", "Purchase VAT Account": "10400", "Description": format!("{bus} / {prod}")}))?;
         }
     }
+    pending.push(("10500".to_string(), "SERVICES", "Purchase"));
     let gt = ctx.table(GL_ACCOUNT)?;
     for (no, gen_prod, gen_type) in pending {
         let mut acc = ctx.get_code(GL_ACCOUNT, &no)?;
@@ -208,6 +220,20 @@ pub fn setup(ctx: &mut Ctx) -> Result<()> {
     }
     raw(ctx, "Inventory Posting Group", json!({"Code": "PARTS", "Description": "Spare parts inventory"}))?;
     raw(ctx, "Inventory Posting Setup", json!({"Location Code": "", "Invt. Posting Group Code": "PARTS", "Inventory Account": "10300", "Description": "Spare parts"}))?;
+    for (code, name, city) in [("MAIN", "Gudang Pusat Jakarta", "Jakarta Timur"), ("BANDUNG", "Gudang Bandung", "Bandung")] {
+        raw(ctx, "Location", json!({"Code": code, "Name": name, "City": city}))?;
+        raw(ctx, "Inventory Posting Setup", json!({"Location Code": code, "Invt. Posting Group Code": "PARTS", "Inventory Account": "10300", "Description": format!("Spare parts at {name}")}))?;
+    }
+    for (code, desc, start) in [("I-JNL", "Item Journal", "IJ00001"), ("I-RCLSS", "Item Reclass. Journal", "IR00001"), ("I-PHYS", "Phys. Inventory Journal", "IP00001"), ("FA-JNL", "FA G/L Journal", "FAJ00001")] {
+        raw(ctx, "No. Series", json!({"Code": code, "Description": desc, "Starting No.": start, "Increment-by No.": 1}))?;
+    }
+    for (template, ty, _, _, caption, series, source) in crate::schema::inventory::ITEM_JOURNALS {
+        raw(ctx, "Item Journal Template", json!({"Name": template, "Description": caption, "Type": ty, "No. Series": series, "Source Code": source}))?;
+        raw(ctx, "Item Journal Batch", json!({"Journal Template Name": template, "Name": "DEFAULT", "Description": "Default journal", "No. Series": series}))?;
+    }
+    raw(ctx, "Gen. Journal Template", json!({"Name": "ASSETS", "Description": "Fixed Asset G/L Journal", "Type": "Assets", "No. Series": "FA-JNL", "Source Code": "FAGLJNL"}))?;
+    raw(ctx, "Gen. Journal Batch", json!({"Journal Template Name": "ASSETS", "Name": "DEFAULT", "Description": "Default journal", "No. Series": "FA-JNL"}))?;
+    fixed_asset_setup(ctx)?;
     raw(ctx, "Customer Posting Group", json!({"Code": "DOMESTIC", "Description": "Domestic customers", "Receivables Account": "10200"}))?;
     raw(ctx, "Vendor Posting Group", json!({"Code": "DOMESTIC", "Description": "Domestic vendors", "Payables Account": "20200"}))?;
     raw(ctx, "Bank Account Posting Group", json!({"Code": "OPERATING", "Description": "Operating accounts", "G/L Account No.": "10120"}))?;
@@ -229,6 +255,25 @@ pub fn setup(ctx: &mut Ctx) -> Result<()> {
     Ok(())
 }
 
+/// Depreciation book, posting groups, classes and locations for fixed assets.
+fn fixed_asset_setup(ctx: &mut Ctx) -> Result<()> {
+    raw(ctx, "Depreciation Book", json!({"Code": "COMPANY", "Description": "Company book (commercial)", "G/L Integration - Acq. Cost": true,
+        "G/L Integration - Depreciation": true, "G/L Integration - Disposal": true}))?;
+    raw(ctx, "No. Series", json!({"Code": "FA", "Description": "Fixed Assets", "Starting No.": "FA000010", "Increment-by No.": 10}))?;
+    raw(ctx, "FA Setup", json!({"Primary Key": "", "Default Depr. Book": "COMPANY", "Fixed Asset Nos.": "FA"}))?;
+    for code in ["VEHICLES", "EQUIPMENT"] {
+        raw(ctx, "FA Posting Group", json!({"Code": code, "Acquisition Cost Account": "10500", "Accum. Depreciation Account": "10510",
+            "Depreciation Expense Acc.": "60500", "Gains Acc. on Disposal": "40500", "Losses Acc. on Disposal": "60600"}))?;
+    }
+    raw(ctx, "FA Class", json!({"Code": "TANGIBLE", "Name": "Tangible Assets"}))?;
+    raw(ctx, "FA Subclass", json!({"Code": "VEHICLE", "Name": "Vehicles", "FA Class Code": "TANGIBLE", "Default FA Posting Group": "VEHICLES"}))?;
+    raw(ctx, "FA Subclass", json!({"Code": "EQUIPMENT", "Name": "Workshop Equipment", "FA Class Code": "TANGIBLE", "Default FA Posting Group": "EQUIPMENT"}))?;
+    for (code, name) in [("JKT-WS", "Workshop Jakarta"), ("BDG-WS", "Workshop Bandung")] {
+        raw(ctx, "FA Location", json!({"Code": code, "Name": name}))?;
+    }
+    Ok(())
+}
+
 pub fn master_data(ctx: &mut Ctx) -> Result<()> {
     let mut pending_batches: Vec<erpcraft_meta::Record> = Vec::new();
     let customers: &[(&str, &str, &str, &str, &str, i64)] = &[
@@ -245,7 +290,8 @@ pub fn master_data(ctx: &mut Ctx) -> Result<()> {
             json!({"No.": no, "Name": name, "Address": addr, "City": city, "Country/Region Code": "ID", "Phone No.": "+62 21 7000 0000",
                    "Contact": "Purchasing Dept.", "Salesperson Code": if no.starts_with('1') || no.starts_with('3') { "AR" } else { "DS" },
                    "Credit Limit (LCY)": limit, "Gen. Bus. Posting Group": "DOMESTIC", "VAT Bus. Posting Group": "DOMESTIC",
-                   "Customer Posting Group": "DOMESTIC", "Payment Terms Code": terms}),
+                   "Customer Posting Group": "DOMESTIC", "Payment Terms Code": terms,
+                   "Location Code": if *city == "Bandung" { "BANDUNG" } else { "MAIN" }}),
         )?;
     }
     let vendors: &[(&str, &str, &str, &str)] = &[
@@ -260,7 +306,7 @@ pub fn master_data(ctx: &mut Ctx) -> Result<()> {
             VENDOR,
             json!({"No.": no, "Name": name, "City": city, "Country/Region Code": "ID", "Purchaser Code": "PB",
                    "Gen. Bus. Posting Group": "DOMESTIC", "VAT Bus. Posting Group": "DOMESTIC", "Vendor Posting Group": "DOMESTIC",
-                   "Payment Terms Code": terms}),
+                   "Payment Terms Code": terms, "Location Code": "MAIN"}),
         )?;
     }
     let items: &[(&str, &str, &str, &str, &str, i64, i64, &str)] = &[
@@ -304,12 +350,75 @@ pub fn master_data(ctx: &mut Ctx) -> Result<()> {
     for b in pending_batches {
         ctx.db.modify(bt, b)?;
     }
+    let assets: &[(&str, &str, &str, &str, &str, i64)] = &[
+        ("Tow Truck Isuzu Elf", "VEHICLE", "JKT-WS", "B 9123 KXA", "", 8),
+        ("Hydraulic Car Lift 4T", "EQUIPMENT", "JKT-WS", "HL4-22918", "", 10),
+        ("Diagnostic Scanner Pro", "EQUIPMENT", "BDG-WS", "DSP-00731", "", 4),
+        ("Air Compressor 100L", "EQUIPMENT", "BDG-WS", "AC100-5521", "40000", 5),
+    ];
+    let ft = ctx.table("Fixed Asset")?;
+    let bk = ctx.table("FA Depreciation Book")?;
+    for (desc, sub, loc, serial, vendor, years) in assets {
+        let r = crate::records::create(
+            ctx,
+            ft,
+            &obj(json!({"Description": desc, "FA Subclass Code": sub, "FA Location Code": loc, "Serial No.": serial, "Vendor No.": vendor})),
+            None,
+        )?;
+        let key = erpcraft_meta::Key(vec![r.get("No.").clone(), erpcraft_meta::Value::text("COMPANY")]);
+        crate::records::update(ctx, bk, &key, &obj(json!({"Depreciation Method": "Straight-Line", "No. of Depreciation Years": years})))?;
+    }
     Ok(())
 }
 
 /// A few documents so every list and cue has something to show: stock received, an invoice
 /// posted and partly paid, open orders and a quote.
+/// A general-journal-style line in `template` / DEFAULT, validated like the UI does.
+fn jnl(ctx: &mut Ctx, template: &str, values: Json) -> Result<()> {
+    let t = ctx.table("Gen. Journal Line")?;
+    let mut v = obj(values);
+    v.insert("Journal Template Name".into(), json!(template));
+    v.insert("Journal Batch Name".into(), json!("DEFAULT"));
+    crate::records::create(ctx, t, &v, None)?;
+    Ok(())
+}
+
+/// Opening balance and fixed assets, about a year back: bought (bank), received as a grant
+/// (hibah) and taken over as an opening balance, then depreciated up to last month.
+fn opening_and_assets(ctx: &mut Ctx) -> Result<()> {
+    let ago = |days: u64| ctx.work_date.checked_sub_days(chrono::Days::new(days)).map(|d| d.to_string()).unwrap_or_default();
+    let (d400, d395, d200) = (ago(400), ago(395), ago(200));
+    jnl(ctx, "GENERAL", json!({"Posting Date": d400, "Account Type": "Bank Account", "Account No.": "OPERATING", "Description": "Opening balance - owner's capital",
+        "Debit Amount": 1_500_000_000, "Bal. Account Type": "G/L Account", "Bal. Account No.": "30200"}))?;
+    crate::journal::post(ctx, "GENERAL", "DEFAULT")?;
+    let fa = |i: usize| format!("FA0000{}0", i);
+    jnl(ctx, "ASSETS", json!({"Posting Date": d395, "Account Type": "Fixed Asset", "Account No.": fa(1), "FA Posting Type": "Acquisition Cost",
+        "Description": "Purchase tow truck", "Amount": 385_000_000, "Bal. Account Type": "Bank Account", "Bal. Account No.": "OPERATING"}))?;
+    jnl(ctx, "ASSETS", json!({"Posting Date": d395, "Account Type": "Fixed Asset", "Account No.": fa(2), "FA Posting Type": "Acquisition Cost",
+        "Description": "Car lift received as grant (hibah)", "Amount": 95_000_000, "Bal. Account Type": "G/L Account", "Bal. Account No.": "20400"}))?;
+    jnl(ctx, "ASSETS", json!({"Posting Date": d395, "Account Type": "Fixed Asset", "Account No.": fa(3), "FA Posting Type": "Acquisition Cost",
+        "Description": "Scanner taken over (opening balance)", "Amount": 28_000_000, "Bal. Account Type": "G/L Account", "Bal. Account No.": "30200"}))?;
+    crate::journal::post(ctx, "ASSETS", "DEFAULT")?;
+    // The compressor comes on a purchase invoice from the vendor.
+    let pi = crate::documents::new_document(
+        ctx,
+        &PURCHASE,
+        "Invoice",
+        "40000",
+        &obj(json!({"Posting Date": d200, "Document Date": d200, "Vendor Invoice No.": "KMA-AC-0042"})),
+        &[json!({"type": "Fixed Asset", "no": fa(4), "quantity": 1, "direct_unit_cost": 18_500_000})],
+    )?;
+    post_as(ctx, false, "Invoice", &pi)?;
+    // Depreciation up to the end of last month.
+    let first = chrono::NaiveDate::from_ymd_opt(chrono::Datelike::year(&ctx.work_date), chrono::Datelike::month(&ctx.work_date), 1);
+    if let Some(end) = first.and_then(|d| d.pred_opt()) {
+        crate::fa::calculate_depreciation(ctx, end, true, None)?;
+    }
+    Ok(())
+}
+
 pub fn transactions(ctx: &mut Ctx) -> Result<()> {
+    opening_and_assets(ctx)?;
     let po = crate::documents::new_document(
         ctx,
         &PURCHASE,
@@ -338,6 +447,16 @@ pub fn transactions(ctx: &mut Ctx) -> Result<()> {
     )?;
     post(ctx, false, &po)?;
 
+    let t = ctx.table("Item Journal Line")?;
+    let r = crate::records::create(
+        ctx,
+        t,
+        &obj(json!({"Journal Template Name": "RECLASS", "Journal Batch Name": "DEFAULT", "Item No.": "1200", "Location Code": "MAIN",
+                    "New Location Code": "BANDUNG", "Quantity": 10})),
+        None,
+    )?;
+    let _ = r;
+    crate::item_journal::post(ctx, "RECLASS", "DEFAULT")?;
     let so = crate::documents::new_document(
         ctx,
         &SALES,

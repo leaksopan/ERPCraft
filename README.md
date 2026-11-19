@@ -36,8 +36,10 @@ On Windows without the MSVC build tools, use the `stable-x86_64-pc-windows-gnull
 - **Posting:** to the G/L, customer, vendor, item and bank ledgers, with G/L registers and transaction numbers. Orders post Ship / Receive and Invoice separately (posted shipments and receipts) or together. A failed command rolls back completely.
 - **Journals:** General, Cash Receipt and Payment journals with balancing per document, number series, Applies-to and a balancing bank account.
 - **Applications:** detailed customer and vendor ledger entries, Apply / Unapply Entries, Reverse Transaction for journal postings.
+- **Inventory:** locations on items, documents and ledgers; item journals for adjustments, transfers between locations and physical inventory (stock count); optional negative-stock guard ([`docs/inventory-and-fixed-assets.md`](docs/inventory-and-fixed-assets.md)).
+- **Fixed assets:** cards with depreciation books; acquisition by purchase invoice, payment, grant (hibah) or opening balance; straight-line depreciation on BC's 360-day year; disposal with gain or loss.
 - **Payments:** customer and vendor payments, applied to open invoices.
-- **Reports:** Balance Sheet, Income Statement, Aged Accounts Receivable / Payable, trial balance, customer and vendor statistics, item availability ([`docs/finance.md`](docs/finance.md)).
+- **Reports:** Balance Sheet, Income Statement, Aged Accounts Receivable / Payable, Inventory Valuation, Fixed Asset Book Value, trial balance, customer and vendor statistics, item availability ([`docs/finance.md`](docs/finance.md)).
 - **Users and permissions** after BC's User, Permission Set and Permission tables, with a work date saved per user.
 - **Demo company:** "Auto Craft", an Indonesian auto-parts and workshop business in IDR with 11% PPN.
 

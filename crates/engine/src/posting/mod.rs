@@ -149,11 +149,62 @@ fn setup_account(ctx: &Ctx, table: &str, key: Key, field: &str, what: &str) -> R
     Ok(acc)
 }
 
-fn inventory_account(ctx: &Ctx, item: &Record) -> Result<String> {
-    setup_account(ctx, INVT_POSTING_SETUP, Key(vec![Value::text(""), item.get("Inventory Posting Group").clone()]), "Inventory Account", "inventory")
+/// The inventory G/L account of `item` at `location` (Inventory Posting Setup), falling back to
+/// the blank location.
+pub fn inventory_account(ctx: &Ctx, item: &Record, location: &str) -> Result<String> {
+    let group = item.get("Inventory Posting Group").clone();
+    if !location.is_empty()
+        && let Some(r) = ctx.db.get(INVT_POSTING_SETUP, &Key(vec![Value::text(location), group.clone()]))
+        && !r.str("Inventory Account").is_empty()
+    {
+        return Ok(r.str("Inventory Account").to_string());
+    }
+    setup_account(ctx, INVT_POSTING_SETUP, Key(vec![Value::text(""), group]), "Inventory Account", "inventory")
 }
 
-/// Item ledger entry for `qty` (signed) of `item`.
+/// One item ledger entry to write.
+pub struct ItemEntry<'a> {
+    pub item: &'a Record,
+    pub posting_date: NaiveDate,
+    pub entry_type: &'a str,
+    pub doc_type: &'a str,
+    pub doc_no: &'a str,
+    pub description: &'a str,
+    pub location: &'a str,
+    /// Signed: positive into stock, negative out.
+    pub qty: Decimal,
+    pub cost: Decimal,
+    pub sales_amount: Decimal,
+    pub uom: &'a Value,
+    pub source_type: &'a str,
+    pub source_no: &'a str,
+}
+
+pub fn post_item(ctx: &mut Ctx, e: &ItemEntry) -> Result<i64> {
+    let t = ctx.table(ITEM_LEDGER)?;
+    let no = ctx.db.next_entry_no(ITEM_LEDGER);
+    let mut r = t.init_record();
+    r.set("Entry No.", Value::Int(no));
+    r.set("Item No.", Value::text(e.item.str("No.")));
+    r.set("Posting Date", Value::Date(e.posting_date));
+    r.set("Entry Type", Value::text(e.entry_type));
+    r.set("Document Type", Value::text(e.doc_type));
+    r.set("Document No.", Value::text(e.doc_no));
+    r.set("Description", Value::text(e.description));
+    r.set("Location Code", Value::text(e.location));
+    r.set("Quantity", dec(e.qty));
+    r.set("Remaining Quantity", dec(e.qty.max(Decimal::ZERO)));
+    r.set("Open", Value::Bool(e.qty > Decimal::ZERO));
+    r.set("Cost Amount (Actual)", dec(e.cost));
+    r.set("Sales Amount (Actual)", dec(e.sales_amount));
+    r.set("Unit of Measure Code", e.uom.clone());
+    r.set("Source Type", Value::text(e.source_type));
+    r.set("Source No.", Value::text(e.source_no));
+    ctx.db.insert(t, r)?;
+    Ok(no)
+}
+
+/// Item ledger entry of a document line for `qty` (signed).
 #[allow(clippy::too_many_arguments)]
 fn post_item_entry(
     ctx: &mut Ctx,
@@ -163,32 +214,34 @@ fn post_item_entry(
     doc_type: &str,
     doc_no: &str,
     description: &str,
+    location: &str,
     qty: Decimal,
     cost: Decimal,
     sales_amount: Decimal,
     uom: &Value,
     party_no: &str,
 ) -> Result<i64> {
-    let t = ctx.table(ITEM_LEDGER)?;
-    let no = ctx.db.next_entry_no(ITEM_LEDGER);
-    let mut e = t.init_record();
-    e.set("Entry No.", Value::Int(no));
-    e.set("Item No.", Value::text(item.str("No.")));
-    e.set("Posting Date", Value::Date(posting_date));
-    e.set("Entry Type", Value::text(if side.sales { "Sale" } else { "Purchase" }));
-    e.set("Document Type", Value::text(doc_type));
-    e.set("Document No.", Value::text(doc_no));
-    e.set("Description", Value::text(description));
-    e.set("Quantity", dec(qty));
-    e.set("Remaining Quantity", dec(qty.max(Decimal::ZERO)));
-    e.set("Open", Value::Bool(qty > Decimal::ZERO));
-    e.set("Cost Amount (Actual)", dec(cost));
-    e.set("Sales Amount (Actual)", dec(sales_amount));
-    e.set("Unit of Measure Code", uom.clone());
-    e.set("Source Type", Value::text(if side.sales { "Customer" } else { "Vendor" }));
-    e.set("Source No.", Value::text(party_no));
-    ctx.db.insert(t, e)?;
-    Ok(no)
+    if qty < Decimal::ZERO {
+        crate::item_journal::check_negative(ctx, item.str("No."), location, -qty)?;
+    }
+    post_item(
+        ctx,
+        &ItemEntry {
+            item,
+            posting_date,
+            entry_type: if side.sales { "Sale" } else { "Purchase" },
+            doc_type,
+            doc_no,
+            description,
+            location,
+            qty,
+            cost,
+            sales_amount,
+            uom,
+            source_type: if side.sales { "Customer" } else { "Vendor" },
+            source_no: party_no,
+        },
+    )
 }
 
 /// Line amounts for `qty` of a line whose full amounts are for `Quantity`.
@@ -317,7 +370,7 @@ pub fn post_document(ctx: &mut Ctx, side: &Side, doc_type: &str, no: &str, mode:
                 } else {
                     (q, portion(l, "Amount", q))
                 };
-                ile = post_item_entry(ctx, side, &it, posting_date, ile_doc, &shipment_no, l.str("Description"), qty, cost, Decimal::ZERO, l.get("Unit of Measure Code"), &party_no)?;
+                ile = post_item_entry(ctx, side, &it, posting_date, ile_doc, &shipment_no, l.str("Description"), l.str("Location Code"), qty, cost, Decimal::ZERO, l.get("Unit of Measure Code"), &party_no)?;
                 if !side.sales {
                     update_item_cost(ctx, it.str("No."), q, cost)?;
                 }
@@ -357,6 +410,7 @@ pub fn post_document(ctx: &mut Ctx, side: &Side, doc_type: &str, no: &str, mode:
             if side.sales { header.str("External Document No.").to_string() } else { header.str(Side::vendor_doc_no_field(doc_type)).to_string() };
         let txn = Txn::new(ctx, if side.sales { "SALES" } else { "PURCHASES" }, "", "");
         let mut gl: Vec<GlLine> = Vec::new();
+        let mut fa_specs: Vec<crate::fa::FaEntrySpec> = Vec::new();
         let (mut total_amount, mut total_incl) = (Decimal::ZERO, Decimal::ZERO);
 
         for l in lines.iter().filter(|l| !to_invoice(l).is_zero()) {
@@ -371,12 +425,17 @@ pub fn post_document(ctx: &mut Ctx, side: &Side, doc_type: &str, no: &str, mode:
             let inventory_item = is_item_inventory(ctx, l)?;
             let account = match l.str("Type") {
                 "G/L Account" => l.str("No.").to_string(),
+                "Fixed Asset" if !side.sales => {
+                    let (acc, spec) = crate::fa::acquisition_from_document(ctx, l.str("No."), if credit { -amount } else { amount }, posting_date, &line_desc_for(l, &description))?;
+                    fa_specs.push(spec);
+                    acc
+                }
                 "Item" => {
                     if side.sales {
                         let f = if credit { "Sales Credit Memo Account" } else { "Sales Account" };
                         setup_account(ctx, GEN_POSTING_SETUP, gen_key.clone(), f, "sales")?
                     } else if let Some(it) = &inventory_item {
-                        inventory_account(ctx, it)?
+                        inventory_account(ctx, it, l.str("Location Code"))?
                     } else {
                         let f = if credit { "Purch. Credit Memo Account" } else { "Purch. Account" };
                         setup_account(ctx, GEN_POSTING_SETUP, gen_key.clone(), f, "purchases")?
@@ -408,7 +467,7 @@ pub fn post_document(ctx: &mut Ctx, side: &Side, doc_type: &str, no: &str, mode:
                         (false, true) => "Purchase Credit Memo",
                     };
                     let sales_amount = if side.sales { if credit { -amount } else { amount } } else { Decimal::ZERO };
-                    post_item_entry(ctx, side, it, posting_date, ile_doc, &posted_no, &line_desc, signed, cost, sales_amount, l.get("Unit of Measure Code"), &party_no)?;
+                    post_item_entry(ctx, side, it, posting_date, ile_doc, &posted_no, &line_desc, l.str("Location Code"), signed, cost, sales_amount, l.get("Unit of Measure Code"), &party_no)?;
                     if !side.sales && !credit && !qty.is_zero() {
                         update_item_cost(ctx, it.str("No."), qty, amount)?;
                     }
@@ -418,7 +477,7 @@ pub fn post_document(ctx: &mut Ctx, side: &Side, doc_type: &str, no: &str, mode:
                     let cost = round_amount(it.get("Unit Cost").as_dec() * qty) * if credit { Decimal::NEGATIVE_ONE } else { Decimal::ONE };
                     if !cost.is_zero() {
                         let cogs = setup_account(ctx, GEN_POSTING_SETUP, gen_key.clone(), "COGS Account", "cost of goods sold")?;
-                        let inv = inventory_account(ctx, it)?;
+                        let inv = inventory_account(ctx, it, l.str("Location Code"))?;
                         gl.push(GlLine { account: cogs, amount: cost, vat_amount: Decimal::ZERO, description: line_desc.clone(), gen_posting_type: "" });
                         gl.push(GlLine { account: inv, amount: -cost, vat_amount: Decimal::ZERO, description: line_desc.clone(), gen_posting_type: "" });
                     }
@@ -442,6 +501,9 @@ pub fn post_document(ctx: &mut Ctx, side: &Side, doc_type: &str, no: &str, mode:
             &GlDoc { posting_date, doc_type: ledger_doc_type, doc_no: &posted_no, ext_doc_no: &ext_doc_no, source_type, source_no: &bill_no, txn: &txn },
             gl,
         )?;
+        for spec in &fa_specs {
+            crate::fa::post_entry(ctx, &txn, spec, posting_date, ledger_doc_type, &posted_no, &ext_doc_no)?;
+        }
         let due = header.get("Due Date").as_date();
         let currency = header.str("Currency Code").to_string();
         let person = header.str(side.person).to_string();
@@ -535,6 +597,10 @@ pub fn post_document(ctx: &mut Ctx, side: &Side, doc_type: &str, no: &str, mode:
     Ok(Json::Object(result))
 }
 
+fn line_desc_for(l: &Record, fallback: &str) -> String {
+    if l.str("Description").is_empty() { fallback.to_string() } else { l.str("Description").to_string() }
+}
+
 pub fn posted_page(side: &Side, credit: bool) -> &'static str {
     match (side.sales, credit) {
         (true, false) => "posted-sales-invoice",
@@ -551,7 +617,7 @@ pub fn document_page(side: &Side, doc_type: &str) -> &'static str {
 }
 
 /// Average cost after a purchase of `qty` for `amount`; also records the last direct cost.
-fn update_item_cost(ctx: &mut Ctx, item_no: &str, qty: Decimal, amount: Decimal) -> Result<()> {
+pub fn update_item_cost(ctx: &mut Ctx, item_no: &str, qty: Decimal, amount: Decimal) -> Result<()> {
     let it = ctx.table(ITEM)?;
     let mut item = ctx.get_code(ITEM, item_no)?;
     // Inventory before this receipt (its entry is already written).

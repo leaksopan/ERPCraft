@@ -151,3 +151,70 @@ pub fn aged(ctx: &Ctx, side: &Side, date: NaiveDate) -> Result<Json> {
         "total": money(grand[5]),
     }))
 }
+
+/// Inventory Valuation: quantity and value per item at `date` (value = cost amounts of the item
+/// ledger entries), with the inventory G/L balance for reconciliation.
+pub fn inventory_valuation(ctx: &Ctx, date: NaiveDate) -> Result<Json> {
+    let mut rows = Vec::new();
+    let (mut total_qty, mut total_value) = (Decimal::ZERO, Decimal::ZERO);
+    for item in ctx.db.rows(crate::schema::tables::ITEM).filter(|i| i.str("Type") == "Inventory") {
+        let no = item.str("No.");
+        let entries = ctx.db.rows(crate::schema::tables::ITEM_LEDGER).filter(|e| e.str("Item No.") == no && e.get("Posting Date").as_date().is_some_and(|d| d <= date));
+        let (qty, value) = entries.fold((Decimal::ZERO, Decimal::ZERO), |(q, v), e| (q + e.get("Quantity").as_dec(), v + e.get("Cost Amount (Actual)").as_dec()));
+        if qty.is_zero() && value.is_zero() {
+            continue;
+        }
+        total_qty += qty;
+        total_value += value;
+        let unit = if qty.is_zero() { Decimal::ZERO } else { (value / qty).round_dp(2) };
+        rows.push(json!([no, item.str("Description"), item.str("Base Unit of Measure"), money(qty), money(unit), money(value)]));
+    }
+    rows.push(json!(["", "Total", "", money(total_qty), "", money(total_value)]));
+    let gl: Decimal = ctx
+        .db
+        .rows(crate::schema::tables::INVT_POSTING_SETUP)
+        .map(|s| s.str("Inventory Account").to_string())
+        .collect::<std::collections::BTreeSet<_>>()
+        .iter()
+        .map(|a| balance(ctx, a, None, Some(date)))
+        .sum();
+    rows.push(json!(["", "Inventory (G/L)", "", "", "", money(gl)]));
+    Ok(json!({
+        "report": {"title": format!("Inventory Valuation as of {date}"), "columns": ["No.", "Description", "Unit", "Quantity", "Unit Cost", "Value"], "rows": rows},
+        "value": money(total_value),
+        "gl_value": money(gl),
+    }))
+}
+
+/// Fixed Asset Book Value: acquisition cost, depreciation and book value per asset at `date`
+/// (default depreciation book).
+pub fn fa_book_value(ctx: &Ctx, date: NaiveDate) -> Result<Json> {
+    let book = crate::fa::default_book(ctx)?;
+    let mut rows = Vec::new();
+    let mut totals = [Decimal::ZERO; 3];
+    for fa in ctx.db.rows(crate::schema::fixed_assets::FIXED_ASSET) {
+        let no = fa.str("No.");
+        let entries: Vec<&Record> = ctx
+            .db
+            .rows(crate::schema::fixed_assets::FA_LEDGER)
+            .filter(|e| e.str("FA No.") == no && e.str("Depreciation Book Code") == book && e.get("FA Posting Date").as_date().is_some_and(|d| d <= date))
+            .collect();
+        let sum = |t: &[&str]| -> Decimal { entries.iter().filter(|e| t.contains(&e.str("FA Posting Type"))).map(|e| e.get("Amount").as_dec()).sum() };
+        let acq = sum(&["Acquisition Cost"]);
+        let depr = sum(&["Depreciation", "Write-Down"]);
+        let bv: Decimal = entries.iter().filter(|e| e.get("Part of Book Value").as_bool()).map(|e| e.get("Amount").as_dec()).sum();
+        if acq.is_zero() {
+            continue;
+        }
+        for (t, v) in totals.iter_mut().zip([acq, depr, bv]) {
+            *t += v;
+        }
+        rows.push(json!([no, fa.str("Description"), fa.str("FA Subclass Code"), money(acq), money(depr), money(bv)]));
+    }
+    let [acq, depr, bv] = totals;
+    rows.push(json!(["", "Total", "", money(acq), money(depr), money(bv)]));
+    Ok(json!({
+        "report": {"title": format!("Fixed Asset Book Value as of {date} ({book})"), "columns": ["No.", "Description", "Subclass", "Acquisition Cost", "Depreciation", "Book Value"], "rows": rows},
+        "book_value": money(bv),
+    }))
+}

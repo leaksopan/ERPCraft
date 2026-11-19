@@ -80,6 +80,7 @@ fn peek_after(ctx: &Ctx, series: &str, current: &str) -> String {
 
 fn account_name(ctx: &Ctx, account_type: &str, no: &str) -> Result<String> {
     let (table, field) = match account_type {
+        "Fixed Asset" => (crate::schema::fixed_assets::FIXED_ASSET, "Description"),
         "Customer" => (CUSTOMER, "Name"),
         "Vendor" => (VENDOR, "Name"),
         "Bank Account" => (BANK_ACCOUNT, "Name"),
@@ -252,6 +253,7 @@ pub fn post(ctx: &mut Ctx, template: &str, batch: &str) -> Result<Json> {
         let txn = Txn::new(ctx, &source_code, template, batch);
         let mut gl: Vec<GlLine> = Vec::new();
         let mut party_effects: Vec<(&Record, Effect)> = Vec::new();
+        let mut fa_specs: Vec<crate::fa::FaEntrySpec> = Vec::new();
         for l in doc_lines {
             let amount = l.get("Amount").as_dec();
             let desc = l.str("Description").to_string();
@@ -260,6 +262,12 @@ pub fn post(ctx: &mut Ctx, template: &str, batch: &str) -> Result<Json> {
                 sides.push(Effect { account_type: l.str("Bal. Account Type"), account_no: l.str("Bal. Account No."), amount: -amount });
             }
             for s in sides {
+                if s.account_type == "Fixed Asset" {
+                    let (lines, specs) = crate::fa::journal_effect(ctx, l, s.account_no, s.amount)?;
+                    gl.extend(lines);
+                    fa_specs.extend(specs);
+                    continue;
+                }
                 let gl_account = match s.account_type {
                     "Customer" => party_gl_account(ctx, &SALES, s.account_no)?.0,
                     "Vendor" => party_gl_account(ctx, &PURCHASE, s.account_no)?.0,
@@ -276,6 +284,9 @@ pub fn post(ctx: &mut Ctx, template: &str, batch: &str) -> Result<Json> {
         let doc_type = first.map(|l| l.str("Document Type").to_string()).unwrap_or_default();
         let ext = first.map(|l| l.str("External Document No.").to_string()).unwrap_or_default();
         post_gl(ctx, &GlDoc { posting_date: *date, doc_type: &doc_type, doc_no, ext_doc_no: &ext, source_type: "", source_no: "", txn: &txn }, gl)?;
+        for spec in &fa_specs {
+            crate::fa::post_entry(ctx, &txn, spec, *date, &doc_type, doc_no, &ext)?;
+        }
         for (l, s) in party_effects {
             let desc = l.str("Description");
             match s.account_type {

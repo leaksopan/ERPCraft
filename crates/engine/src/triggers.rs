@@ -19,6 +19,12 @@ pub fn on_insert(ctx: &mut Ctx, t: &TableDef, r: &mut Record) -> Result<()> {
     if t.name == crate::schema::finance::GEN_JNL_LINE {
         return crate::journal::on_insert(ctx, r);
     }
+    if t.name == crate::schema::inventory::ITEM_JNL_LINE {
+        return crate::item_journal::on_insert(ctx, r);
+    }
+    if t.name == crate::schema::fixed_assets::FIXED_ASSET {
+        return crate::fa::on_insert(ctx, r);
+    }
     match t.name.as_str() {
         CUSTOMER | VENDOR | ITEM => {
             if r.str("No.").is_empty() {
@@ -70,6 +76,9 @@ pub fn on_insert(ctx: &mut Ctx, t: &TableDef, r: &mut Record) -> Result<()> {
         r.set(side.party_no, header.get(side.party_no).clone());
         r.set("Gen. Bus. Posting Group", header.get("Gen. Bus. Posting Group").clone());
         r.set("VAT Bus. Posting Group", header.get("VAT Bus. Posting Group").clone());
+        if r.str("Location Code").is_empty() {
+            r.set("Location Code", header.get("Location Code").clone());
+        }
     }
     Ok(())
 }
@@ -83,7 +92,10 @@ pub fn on_modify(ctx: &mut Ctx, t: &TableDef, r: &mut Record) -> Result<()> {
 
 pub fn on_delete(ctx: &mut Ctx, t: &TableDef, r: &Record) -> Result<()> {
     let name = t.name.as_str();
-    if matches!(name, GL_ENTRY | CUST_LEDGER | VEND_LEDGER | ITEM_LEDGER | BANK_LEDGER) {
+    if name == crate::schema::fixed_assets::FIXED_ASSET {
+        return crate::fa::on_delete_fa(ctx, r);
+    }
+    if matches!(name, GL_ENTRY | CUST_LEDGER | VEND_LEDGER | ITEM_LEDGER | BANK_LEDGER | crate::schema::fixed_assets::FA_LEDGER) {
         refuse!("You cannot delete {} entries. Ledger entries are permanent; post a correction instead.", t.caption);
     }
     if matches!(
@@ -164,6 +176,15 @@ pub fn on_validate(ctx: &mut Ctx, t: &TableDef, r: &mut Record, field: &str, old
     if t.name == crate::schema::finance::GEN_JNL_LINE {
         return crate::journal::on_validate(ctx, r, field);
     }
+    if t.name == crate::schema::inventory::ITEM_JNL_LINE {
+        return crate::item_journal::on_validate(ctx, r, field);
+    }
+    if t.name == crate::schema::fixed_assets::FIXED_ASSET {
+        return crate::fa::on_validate_fa(ctx, r, field);
+    }
+    if t.name == crate::schema::fixed_assets::FA_DEPR_BOOK {
+        return crate::fa::on_validate_book(ctx, r, field);
+    }
     if let Some(side) = Side::for_header(&t.name) {
         return validate_header(ctx, side, t, r, field, old);
     }
@@ -231,6 +252,7 @@ fn validate_header(ctx: &mut Ctx, side: &Side, t: &TableDef, r: &mut Record, fie
                 r.set("Sell-to Phone No.", party.get("Phone No.").clone());
                 r.set("Sell-to E-Mail", party.get("E-Mail").clone());
             }
+            r.set("Location Code", party.get("Location Code").clone());
             let person_src = if side.sales { "Salesperson Code" } else { "Purchaser Code" };
             r.set(side.person, party.get(person_src).clone());
             let bill = match party.str(side.party_bill_field) {
@@ -242,6 +264,19 @@ fn validate_header(ctx: &mut Ctx, side: &Side, t: &TableDef, r: &mut Record, fie
         }
         f if f == side.bill_no => apply_bill_to(ctx, side, r),
         "Posting Date" | "Document Date" | "Payment Terms Code" => update_due_date(ctx, r),
+        "Location Code" => {
+            test_field_eq(t, r, "Status", "Open")?;
+            let lt = ctx.table(side.line)?;
+            let lines: Vec<Record> = ctx.db.rows(side.line).filter(|l| same_doc_header(l, r)).cloned().collect();
+            for mut l in lines {
+                if !l.get(side.qty_handled).as_dec().is_zero() {
+                    continue;
+                }
+                l.set("Location Code", r.get("Location Code").clone());
+                ctx.db.modify(lt, l)?;
+            }
+            Ok(())
+        }
         "Prices Including VAT" | "VAT Bus. Posting Group" | "Gen. Bus. Posting Group" | "Currency Code" => {
             update_lines(ctx, side, r)
         }
@@ -362,8 +397,30 @@ fn validate_line(ctx: &mut Ctx, side: &Side, r: &mut Record, field: &str, old: &
                     r.set("Gen. Prod. Posting Group", acc.get("Gen. Prod. Posting Group").clone());
                     r.set("VAT Prod. Posting Group", acc.get("VAT Prod. Posting Group").clone());
                 }
+                "Fixed Asset" if !side.sales => {
+                    let fa = ctx.get_code(crate::schema::fixed_assets::FIXED_ASSET, &no)?;
+                    if fa.get("Blocked").as_bool() || fa.get("Inactive").as_bool() {
+                        refuse!("Fixed Asset {no} is blocked or inactive.");
+                    }
+                    r.set("Description", fa.get("Description").clone());
+                    // Posting groups of the acquisition cost account, as BC takes them.
+                    let book = crate::fa::default_book(ctx)?;
+                    let group = ctx
+                        .db
+                        .get(crate::schema::fixed_assets::FA_DEPR_BOOK, &Key(vec![Value::text(&no), Value::text(&book)]))
+                        .map(|b| b.str("FA Posting Group").to_string())
+                        .unwrap_or_default();
+                    if let Some(acc) = ctx
+                        .db
+                        .get_code(crate::schema::fixed_assets::FA_POSTING_GROUP, &group)
+                        .and_then(|g| ctx.db.get_code(GL_ACCOUNT, g.str("Acquisition Cost Account")))
+                    {
+                        r.set("Gen. Prod. Posting Group", acc.get("Gen. Prod. Posting Group").clone());
+                        r.set("VAT Prod. Posting Group", acc.get("VAT Prod. Posting Group").clone());
+                    }
+                }
                 "" => {}
-                other => refuse!("Lines of type {other} are not supported yet. Use Item or G/L Account."),
+                other => refuse!("Lines of type {other} are not supported yet. Use Item, G/L Account or (on purchases) Fixed Asset."),
             }
             if r.get("Quantity").as_dec().is_zero() && r.str("Type") != "" {
                 r.set("Quantity", dec(Decimal::ONE));

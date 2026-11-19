@@ -300,6 +300,18 @@ fn s_period() -> Json {
     json!({"type": "object", "properties": {"from": {"type": "string", "description": "YYYY-MM-DD, default: first day of the work date's year"},
         "to": {"type": "string", "description": "YYYY-MM-DD, default: work date"}}})
 }
+fn s_item_journal() -> Json {
+    json!({"type": "object", "properties": {
+        "template": {"type": "string", "enum": ["ITEM", "RECLASS", "PHYS INV"], "default": "ITEM"},
+        "batch": {"type": "string", "default": "DEFAULT"},
+        "location_code": {"type": "string", "description": "Calculate Inventory: only this location (blank: every location holding stock)"}}})
+}
+fn s_depreciation() -> Json {
+    json!({"type": "object", "properties": {
+        "date": {"type": "string", "description": "depreciate up to this date (default: work date)"},
+        "post": {"type": "string", "enum": ["No", "Yes"], "default": "No", "description": "Yes: post the journal at once"},
+        "fa_no": {"type": "string", "description": "only this fixed asset (or the selected one)"}}})
+}
 fn s_no() -> Json {
     json!({"type": "object", "properties": {"no": {"type": "string"}}, "required": ["no"]})
 }
@@ -810,13 +822,51 @@ fn item_availability(ctx: &mut Ctx, p: &Json) -> Result<Json> {
     let inv = r.get("Inventory").as_dec();
     let on_so = r.get("Qty. on Sales Order").as_dec();
     let on_po = r.get("Qty. on Purch. Order").as_dec();
-    let rows = vec![
+    let mut rows = vec![
         json!(["Inventory", inv.to_string()]),
         json!(["Qty. on Sales Order", on_so.to_string()]),
         json!(["Qty. on Purch. Order", on_po.to_string()]),
         json!(["Projected Available Balance", (inv - on_so + on_po).to_string()]),
     ];
+    // Inventory by location.
+    let mut locs: std::collections::BTreeMap<String, Decimal> = std::collections::BTreeMap::new();
+    for e in ctx.db.rows(crate::schema::tables::ITEM_LEDGER).filter(|e| e.str("Item No.") == no) {
+        *locs.entry(e.str("Location Code").to_string()).or_default() += e.get("Quantity").as_dec();
+    }
+    for (loc, q) in locs.into_iter().filter(|(_, q)| !q.is_zero()) {
+        rows.push(json!([format!("    at {}", if loc.is_empty() { "(no location)" } else { &loc }), q.to_string()]));
+    }
     Ok(json!({"report": {"title": format!("Item Availability - {no} {}", r.str("Description")), "columns": ["", "Quantity"], "rows": rows}}))
+}
+
+fn item_jnl_ref(p: &Json) -> (String, String) {
+    (opt_str(p, "template").unwrap_or("ITEM").to_uppercase(), opt_str(p, "batch").unwrap_or("DEFAULT").to_uppercase())
+}
+fn item_journal_post(c: &mut Ctx, p: &Json) -> Result<Json> {
+    let (t, b) = item_jnl_ref(p);
+    crate::item_journal::post(c, &t, &b)
+}
+fn item_journal_calc(c: &mut Ctx, p: &Json) -> Result<Json> {
+    let (t, b) = item_jnl_ref(p);
+    let loc = opt_str(p, "location_code").map(str::to_uppercase);
+    if let Some(l) = &loc {
+        c.get_code(crate::schema::inventory::LOCATION, l)?;
+    }
+    crate::item_journal::calculate_inventory(c, &t, &b, loc.as_deref())
+}
+fn fa_depreciation(c: &mut Ctx, p: &Json) -> Result<Json> {
+    let date = opt_date(p, "date")?.unwrap_or(c.work_date);
+    let post = matches!(p.get("post"), Some(Json::Bool(true))) || opt_str(p, "post").is_some_and(|s| s.eq_ignore_ascii_case("yes") || s == "true");
+    let only = opt_str(p, "fa_no").map(str::to_string).or_else(|| context_code(p, crate::schema::fixed_assets::FIXED_ASSET));
+    crate::fa::calculate_depreciation(c, date, post, only.as_deref())
+}
+fn inventory_valuation(ctx: &mut Ctx, p: &Json) -> Result<Json> {
+    let d = opt_date(p, "date")?.unwrap_or(ctx.work_date);
+    crate::reports::inventory_valuation(ctx, d)
+}
+fn fa_book_value(ctx: &mut Ctx, p: &Json) -> Result<Json> {
+    let d = opt_date(p, "date")?.unwrap_or(ctx.work_date);
+    crate::reports::fa_book_value(ctx, d)
 }
 
 fn balance_sheet(ctx: &mut Ctx, p: &Json) -> Result<Json> {
@@ -931,6 +981,11 @@ static COMMANDS: &[CommandDef] = &[
     cmd!("report.income_statement", "Income Statement", "Finance", false, s_period, income_statement, "Revenue, cost of goods sold, expenses and net income for a period."),
     cmd!("report.aged_receivables", "Aged Accounts Receivable", "Sales", false, s_date, aged_receivables, "Open customer balances by days past due."),
     cmd!("report.aged_payables", "Aged Accounts Payable", "Purchasing", false, s_date, aged_payables, "Open vendor balances by days past due."),
+    cmd!("item_journal.post", "Post Item Journal", "Inventory", true, s_item_journal, item_journal_post, "Post an item, reclassification or physical inventory journal batch."),
+    cmd!("item_journal.calculate_inventory", "Calculate Inventory", "Inventory", true, s_item_journal, item_journal_calc, "Fill a physical inventory journal with the current stock per item and location."),
+    cmd!("fa.calculate_depreciation", "Calculate Depreciation", "Fixed Assets", true, s_depreciation, fa_depreciation, "Straight-line depreciation up to a date, as FA G/L journal lines (optionally posted)."),
+    cmd!("report.inventory_valuation", "Inventory Valuation", "Inventory", false, s_date, inventory_valuation, "Quantity and value per item, with the inventory G/L balance."),
+    cmd!("report.fa_book_value", "Fixed Asset Book Value", "Fixed Assets", false, s_date, fa_book_value, "Acquisition cost, depreciation and book value per fixed asset."),
     cmd!("report.trial_balance", "Trial Balance", "Finance", false, s_date, trial_balance, "G/L account balances with debit / credit totals."),
 ];
 

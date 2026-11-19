@@ -24,8 +24,8 @@ pub const SALES_SHIPMENT_LINE: &str = "Sales Shipment Line";
 pub const PURCH_RCPT_HEADER: &str = "Purch. Rcpt. Header";
 pub const PURCH_RCPT_LINE: &str = "Purch. Rcpt. Line";
 
-pub const ACCOUNT_TYPES: &[&str] = &["G/L Account", "Customer", "Vendor", "Bank Account"];
-pub const TEMPLATE_TYPES: &[&str] = &["General", "Sales", "Purchases", "Cash Receipts", "Payments"];
+pub const ACCOUNT_TYPES: &[&str] = &["G/L Account", "Customer", "Vendor", "Bank Account", "Fixed Asset"];
+pub const TEMPLATE_TYPES: &[&str] = &["General", "Sales", "Purchases", "Cash Receipts", "Payments", "Assets"];
 pub const DTLD_ENTRY_TYPES: &[&str] = &["", "Initial Entry", "Application"];
 
 /// The standard journals: (template, type, page id, page object id, caption, number series).

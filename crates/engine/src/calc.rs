@@ -92,6 +92,7 @@ pub fn calc_fields(db: &Database, work_date: NaiveDate, table: &str, r: &mut Rec
             set(r, "Remaining Amount", remaining);
             r.set("Closed", Value::Bool(remaining.is_zero()));
         }
+        crate::schema::fixed_assets::FIXED_ASSET | crate::schema::fixed_assets::FA_DEPR_BOOK => crate::fa::calc_fields(db, table, r),
         _ => {}
     }
 }

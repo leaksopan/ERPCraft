@@ -193,7 +193,9 @@ fn financial_reports() {
     let bs = s.run("report.balance_sheet", &json!({})).unwrap();
     assert_eq!(bs["balanced"], true, "{bs:#}");
     let is = s.run("report.income_statement", &json!({"from": "2000-01-01"})).unwrap();
-    assert!(dec(&is["net_income"]) > 0.0, "{is:#}");
+    // A year of depreciation on the demo's fixed assets is part of the result.
+    let rows = is["report"]["rows"].as_array().unwrap();
+    assert!(rows.iter().any(|r| r[0].as_str().unwrap().contains("60500 Depreciation Expense") && dec(&r[1]) > 0.0), "{is:#}");
     // Customer 20000's demo invoice is 40 days old with 14 days terms: 26 days overdue.
     let ar = s.run("report.aged_receivables", &json!({})).unwrap();
     let row = ar["report"]["rows"].as_array().unwrap().iter().find(|r| r[0].as_str().unwrap().starts_with("20000")).unwrap().clone();

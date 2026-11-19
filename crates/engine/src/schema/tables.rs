@@ -596,7 +596,7 @@ pub fn register(m: &mut Metadata) {
                 F::text("Description", 100),
                 F::decimal("Amount"),
                 F::decimal("Remaining Amount"),
-                F::option("Bal. Account Type", &["G/L Account", "Customer", "Vendor", "Bank Account"]),
+                F::option("Bal. Account Type", &["G/L Account", "Customer", "Vendor", "Bank Account", "Fixed Asset"]),
                 F::code("Bal. Account No.", 20),
                 F::boolean("Open"),
                 F::code("User ID", 50),

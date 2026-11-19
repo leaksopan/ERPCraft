@@ -34,6 +34,9 @@ pub fn reverse(ctx: &mut Ctx, txn_no: i64) -> Result<Json> {
             if source == "REVERSAL" { "reversal" } else { "sales or purchase document" }
         );
     }
+    if ctx.db.rows(crate::schema::fixed_assets::FA_LEDGER).any(|e| e.get("Transaction No.").as_int() == txn_no) {
+        refuse!("Transaction {txn_no} includes fixed asset entries. Post a correcting FA journal line instead.");
+    }
     let cust = entries(ctx, CUST_LEDGER, txn_no);
     let vend = entries(ctx, VEND_LEDGER, txn_no);
     for (side, list, dtld) in [(&SALES, &cust, DTLD_CUST_LEDGER), (&PURCHASE, &vend, DTLD_VEND_LEDGER)] {

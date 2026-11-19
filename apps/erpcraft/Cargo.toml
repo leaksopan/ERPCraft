@@ -15,6 +15,9 @@ workspace = true
 
 [dependencies]
 erpcraft-engine = { workspace = true }
+erpcraft-mcp = { workspace = true }
 erpcraft-ui-egui = { workspace = true }
 eframe = { workspace = true }
 egui = { workspace = true }
+serde_json = { workspace = true }
+png = "0.18"

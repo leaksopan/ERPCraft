@@ -20,11 +20,13 @@ mod documents;
 mod error;
 pub mod filter;
 mod noseries;
+mod permissions;
 pub mod posting;
 pub mod records;
 pub mod schema;
 mod session;
 mod side;
+pub mod store;
 mod triggers;
 
 pub use commands::CommandDef;

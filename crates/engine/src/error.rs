@@ -10,8 +10,12 @@ pub enum ErrorKind {
     Invalid,
     /// A business rule refused the action (blocked customer, status not Open, unbalanced posting).
     Refused,
-    /// I/O or data-file problems.
+    /// I/O, data-file or database problems.
     Io,
+    /// Another session changed the record since it was read (optimistic concurrency).
+    Conflict,
+    /// The user may not run this command or touch this table.
+    Permission,
     /// A bug: a panic was caught and the change rolled back.
     Internal,
 }
@@ -35,6 +39,12 @@ impl EngineError {
     pub fn io(m: impl Into<String>) -> Self {
         Self { kind: ErrorKind::Io, message: m.into() }
     }
+    pub fn conflict(m: impl Into<String>) -> Self {
+        Self { kind: ErrorKind::Conflict, message: m.into() }
+    }
+    pub fn permission(m: impl Into<String>) -> Self {
+        Self { kind: ErrorKind::Permission, message: m.into() }
+    }
     pub fn internal(m: impl Into<String>) -> Self {
         Self { kind: ErrorKind::Internal, message: m.into() }
     }
@@ -45,6 +55,8 @@ impl EngineError {
             ErrorKind::Invalid => "invalid",
             ErrorKind::Refused => "refused",
             ErrorKind::Io => "io",
+            ErrorKind::Conflict => "conflict",
+            ErrorKind::Permission => "permission",
             ErrorKind::Internal => "internal",
         }
     }

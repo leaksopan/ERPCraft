@@ -2,22 +2,28 @@
 
 `erpcraft-cli` runs ERPCraft headless. Every subcommand is a thin wrapper over an engine command
 (`Session::run`), the same entry point the desktop app and the MCP server use, so anything you can
-do in the app you can script.
+do in the app you can script. With `--connect` the same subcommands run in the running desktop app
+instead ([control.md](control.md)).
 
 ```
-erpcraft-cli [--data <file>] [--json] [--workdate <date>] <command> [args]
+erpcraft-cli [--db <url> | --data <file> | --connect [addr]] [--json] [--workdate <date>] <command> [args]
 ```
 
 ## Global options
 
 | Option | Meaning |
 | --- | --- |
+| `--db <url>` | PostgreSQL company, `postgres://user:password@host[:port]/db`. Default: `$ERPCRAFT_DATABASE_URL`. Wins over `--data`. Printed sources hide the password. |
 | `--data <file>` | Company data file. Default: `$ERPCRAFT_DATA`, else `./company.erpcraft.json`. A missing file is an empty company, saved on the first change. |
+| `--connect [addr]` | Run in the running desktop app (`erpcraft --control`) instead of opening the company here. `addr` is `host:port` or a port; default `127.0.0.1:7979`. A word after `--connect` that is not an address is left alone (`--connect run …`); use `--connect=addr` to be explicit. Excludes `--db`, `--data` and `--workdate`. |
 | `--json` | Print the raw JSON result instead of formatted text. |
 | `--workdate <date>` | Work date (`YYYY-MM-DD`) for this invocation. Posting uses it as the default posting date. |
 | `-h`, `--help` / `-V`, `--version` | Help / version. |
 
 Global options may appear anywhere on the line. Use `--` to pass an argument that starts with `-`.
+
+The company is chosen as everywhere in ERPCraft: `--db`, else `$ERPCRAFT_DATABASE_URL`, else
+`--data`, else `$ERPCRAFT_DATA`, else `./company.erpcraft.json`.
 
 ## Commands
 
@@ -34,7 +40,8 @@ Global options may appear anywhere on the line. Use `--` to pass an argument tha
 | `post sales\|purchase <no> [--type Order]` | `sales.document.post` / `purchase.document.post` | `--type` is Order, Invoice or Credit Memo. |
 | `workdate [date]` | `session.workdate` | Shows the work date. The work date is not stored in the data file; use `--workdate` on each command. |
 | `search <query>` | `search` | Tell Me: pages and commands. |
-| `mcp` | — | MCP server on stdio over the data file; see [mcp.md](mcp.md). |
+| `mcp` | — | MCP server on stdio over the company, or over the running app with `--connect`; see [mcp.md](mcp.md). |
+| `ui state\|back\|home` / `ui open <spec>` / `ui screenshot <file.png>` | `ui.*` control methods | Drive the running app's window (needs `--connect`). `open` takes `page`, `page:key` or `list>card:key`. |
 | `help` | — | Usage. |
 
 Filters use Business Central filter syntax per field: `10000`, `<>Open`, `10000|20000`, `>100`,
@@ -45,7 +52,7 @@ Filters use Business Central filter syntax per field: `10000`, `<>Open`, `10000|
 | Code | Meaning |
 | --- | --- |
 | 0 | Success |
-| 1 | Engine error (`error: <message>` on stderr): not found, invalid value, refused by a business rule, I/O |
+| 1 | Engine error (`error: <message>` on stderr): not found, invalid value, refused by a business rule, I/O (including "cannot reach the ERPCraft app" with `--connect`) |
 | 2 | Usage error: unknown command or option, bad arguments, invalid JSON parameters |
 
 ## Examples
@@ -61,6 +68,10 @@ erpcraft-cli post sales S-ORD1004
 erpcraft-cli run payment.customer.register '{\"customer_no\": \"20000\", \"amount\": 1443000}'
 erpcraft-cli run report.trial_balance
 erpcraft-cli --workdate 2026-12-31 run sales.document.post @post.json
+erpcraft-cli --db postgres://erp:secret@localhost/erp tables
+erpcraft-cli --connect list sales-order-list
+erpcraft-cli --connect ui open customer-card:10000
+erpcraft-cli --connect ui screenshot D:\tmp\customer.png
 ```
 
 (In PowerShell 5.1, inner double quotes in a JSON argument must be escaped as `\"`; or put the

@@ -38,6 +38,11 @@ pub const CUST_POSTING_GROUP: &str = "Customer Posting Group";
 pub const VEND_POSTING_GROUP: &str = "Vendor Posting Group";
 pub const BANK_POSTING_GROUP: &str = "Bank Account Posting Group";
 pub const PAYMENT_TERMS: &str = "Payment Terms";
+pub const USER: &str = "User";
+pub const PERMISSION_SET: &str = "Permission Set";
+pub const PERMISSION: &str = "Permission";
+pub const ACCESS_CONTROL: &str = "Access Control";
+pub const USER_PERSONALIZATION: &str = "User Personalization";
 
 pub const SALES_DOC_TYPES: &[&str] = &["Quote", "Order", "Invoice", "Credit Memo", "Blanket Order", "Return Order"];
 pub const PURCH_DOC_TYPES: &[&str] = &["Quote", "Order", "Invoice", "Credit Memo", "Blanket Order", "Return Order"];
@@ -69,6 +74,7 @@ fn address(prefix: &str) -> Vec<F> {
 }
 
 pub fn register(m: &mut Metadata) {
+    system(m);
     // ---- setup & reference data -------------------------------------------------------------
     m.add_table(
         TableDef::new(PAYMENT_TERMS, 3)
@@ -865,4 +871,60 @@ fn posted_line(name: &str, id: u32, price_field: &str) -> TableDef {
         ])
         .key(&["Document No.", "Line No."])
         .describe_by("Description")
+}
+
+/// Users and permissions, after BC's system tables (User 2000000120, Permission Set 2000000004,
+/// Permission 2000000005, Access Control 2000000053, User Personalization 2000000073). Permissions
+/// name tables and commands; `*` stands for all of them.
+fn system(m: &mut Metadata) {
+    m.add_table(
+        TableDef::new(USER, 2000000120)
+            .fields(vec![
+                F::code("User Name", 50).not_blank(),
+                F::text("Full Name", 80),
+                F::option("State", &["Enabled", "Disabled"]),
+                F::text("Contact Email", 250),
+            ])
+            .key(&["User Name"])
+            .describe_by("Full Name")
+            .pages("users", None),
+    );
+    m.add_table(
+        TableDef::new(PERMISSION_SET, 2000000004)
+            .fields(vec![F::code("Role ID", 20).not_blank(), F::text("Name", 30)])
+            .key(&["Role ID"])
+            .describe_by("Name")
+            .pages("permission-sets", None),
+    );
+    m.add_table(
+        TableDef::new(PERMISSION, 2000000005)
+            .fields(vec![
+                F::code("Role ID", 20).relation(PERMISSION_SET),
+                F::option("Object Type", &["Table Data", "Command"]),
+                F::text("Object Name", 80).tooltip("A table name, a command id, or * for all"),
+                F::boolean("Read Permission"),
+                F::boolean("Insert Permission"),
+                F::boolean("Modify Permission"),
+                F::boolean("Delete Permission"),
+                F::boolean("Execute Permission"),
+            ])
+            .key(&["Role ID", "Object Type", "Object Name"])
+            .pages("permissions", None),
+    );
+    m.add_table(
+        TableDef::new(ACCESS_CONTROL, 2000000053)
+            .fields(vec![F::code("User Name", 50).relation(USER), F::code("Role ID", 20).relation(PERMISSION_SET)])
+            .key(&["User Name", "Role ID"])
+            .pages("user-permission-sets", None),
+    );
+    m.add_table(
+        TableDef::new(USER_PERSONALIZATION, 2000000073)
+            .fields(vec![
+                F::code("User Name", 50).relation(USER),
+                F::code("Profile ID", 30),
+                F::date("Work Date"),
+            ])
+            .key(&["User Name"])
+            .pages("user-personalization", None),
+    );
 }

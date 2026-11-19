@@ -16,6 +16,7 @@ pub mod theme;
 mod widgets;
 
 use std::collections::{HashMap, HashSet};
+use std::time::Duration;
 
 use erpcraft_engine::Session;
 use erpcraft_engine::meta::{ActionDef, Key, PageKind};
@@ -23,6 +24,10 @@ use serde_json::{Map, Value as Json, json};
 
 pub use dialogs::Dialog;
 pub use nav::View;
+
+/// How often the window pulls in what other sessions (another user, the CLI, an agent) saved to
+/// the same PostgreSQL company.
+const REFRESH_EVERY: Duration = Duration::from_secs(2);
 
 /// The application state behind one window.
 pub struct ErpApp {
@@ -39,6 +44,10 @@ pub struct ErpApp {
     /// FastTabs the user toggled away from their default (page id + caption).
     pub toggled_tabs: HashSet<String>,
     pub show_factbox: bool,
+    /// `egui` time (seconds) of the next [`Session::refresh`].
+    next_refresh: f64,
+    /// A failed refresh was shown in the notice bar; don't repeat it every 2 seconds.
+    refresh_failed: bool,
 }
 
 impl ErpApp {
@@ -54,11 +63,14 @@ impl ErpApp {
             role_center: erpcraft_engine::schema::role_center::BUSINESS_MANAGER.to_string(),
             toggled_tabs: HashSet::new(),
             show_factbox: true,
+            next_refresh: 0.0,
+            refresh_failed: false,
         }
     }
 
     /// Draws one frame into `ui` (the window's root).
     pub fn ui(&mut self, ui: &mut egui::Ui) {
+        self.auto_refresh(ui.ctx());
         self.shortcuts(ui.ctx());
         shell::app_bar(self, ui);
         // The base page (role center or a list) stays underneath; cards stack over it.
@@ -121,6 +133,25 @@ impl ErpApp {
         });
         shell::nav_menu(self, ui.ctx());
         dialogs::show(self, ui.ctx());
+    }
+
+    /// About every [`REFRESH_EVERY`], pulls in other sessions' changes (a no-op for a data file) and
+    /// schedules the next frame, so the window follows a shared company without input.
+    fn auto_refresh(&mut self, ctx: &egui::Context) {
+        let now = ctx.input(|i| i.time);
+        if now >= self.next_refresh {
+            self.next_refresh = now + REFRESH_EVERY.as_secs_f64();
+            match self.session.refresh() {
+                Ok(_) => self.refresh_failed = false,
+                Err(e) => {
+                    if !self.refresh_failed {
+                        self.notice = Some(format!("Could not refresh the company data: {}", e.message));
+                    }
+                    self.refresh_failed = true;
+                }
+            }
+        }
+        ctx.request_repaint_after(REFRESH_EVERY);
     }
 
     fn shortcuts(&mut self, ctx: &egui::Context) {

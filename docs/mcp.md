@@ -7,13 +7,15 @@ agent can do anything a user can.
 
 ```
 erpcraft-cli mcp --data <company file>
+erpcraft-cli mcp --db postgres://user:password@host/db
+erpcraft-cli mcp --connect [addr]          # drive the running desktop app
 ```
 
 Only protocol messages are written to stdout; the startup line and any diagnostics go to stderr.
-The data file is resolved like every CLI command: `--data`, else `$ERPCRAFT_DATA`, else
-`./company.erpcraft.json`. A missing file starts an empty company; call `company_init` to create the
-demo company. Every mutating command is a transaction (nothing changes on error) and is saved to
-the data file immediately.
+The company is resolved like every CLI command: `--db`, else `$ERPCRAFT_DATABASE_URL`, else
+`--data`, else `$ERPCRAFT_DATA`, else `./company.erpcraft.json`. A missing file starts an empty
+company; call `company_init` to create the demo company. Every mutating command is a transaction
+(nothing changes on error) and is saved immediately.
 
 ## Registering with Claude Code
 
@@ -37,10 +39,34 @@ Or in a project `.mcp.json`:
 
 Any other MCP client (Claude Desktop, Cursor, …) uses the same command and arguments.
 
-Note: the desktop app and the MCP server each hold the company in memory and save the whole file
-after every change. Don't let both write the same data file at the same time. (A future `Remote`
-backend will let the MCP server drive the running desktop app instead; the server is already
-written against a `Backend` trait for that.)
+Note: with a data file, the desktop app and a headless MCP server each hold the company in memory
+and save the whole file after every change. Don't let both write the same data file at the same
+time: either share a PostgreSQL company (`--db`; the app refreshes every 2 seconds and shows the
+agent's changes), or let the MCP server drive the running app (below).
+
+## Driving the running desktop app
+
+Start the app with `--control` and point the MCP server at it with `--connect`:
+
+```powershell
+erpcraft --control                      # 127.0.0.1:7979
+claude mcp add erpcraft-app -- D:\Kerja\ERPCraft\target\release\erpcraft-cli.exe mcp --connect
+```
+
+The server then uses the `Remote` backend: every tool call is a control request (`engine.run`) to
+the app, runs in the app's session and shows up in the window (a created order opens its card, the
+message appears in the notice bar). The tool list comes from the app (`engine.commands`). Three more
+tools appear only in this mode:
+
+| Tool | What it does |
+| --- | --- |
+| `ui_open` `{spec}` | Open a page: `customer-list`, `customer-card:10000`, `sales-order-list>sales-order:Order\|S-ORD1001` |
+| `ui_state` | The open pages (stack, keys, edit mode), the dialog and notice shown |
+| `ui_screenshot` `{path?}` | Save a PNG of the window (default `erpcraft-screenshot.png` in the temp directory); the result has the path as text and the image as an MCP `image` content block (base64 PNG, up to 8 MiB) |
+
+If the app is not running, `--connect` fails at start with "cannot reach the ERPCraft app at …". If
+the app closes later, tool calls return `io` errors; the next call reconnects. The protocol is in
+[control.md](control.md).
 
 ## Protocol
 
@@ -53,7 +79,7 @@ written against a `Backend` trait for that.)
   `-32600`; unknown method → `-32601`; bad parameters or unknown tool/prompt → `-32602`; unknown
   resource → `-32002`. Notifications never get a response.
 - `initialize` returns `instructions` that explain the model to the agent: BC W1 names, "everything
-  is a command", BC filter syntax, how to post documents.
+  is a command", BC filter syntax, how to post documents (plus the `ui_*` tools with `--connect`).
 
 ## Tools
 

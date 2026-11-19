@@ -1,8 +1,9 @@
-//! In-memory company database with a JSON data file.
+//! The in-memory company database a session works on.
 //!
-//! The store is deliberately dumb: rows by primary key, per table. Validation, triggers and
-//! posting live above it ([`crate::records`], [`crate::posting`]). A SQL backend (SQLite /
-//! PostgreSQL) can replace this module later behind the same API.
+//! Rows by primary key, per table. Validation, triggers and posting live above it
+//! ([`crate::records`], [`crate::posting`]); persistence lives below it ([`crate::store`]: a
+//! PostgreSQL database or a JSON file). Every insert, modify and remove is recorded as a change,
+//! so a store writes only the rows a command touched.
 
 use std::collections::BTreeMap;
 use std::path::Path;
@@ -18,9 +19,18 @@ pub const FORMAT_VERSION: i64 = 1;
 /// than read into memory.
 const MAX_FILE_BYTES: u64 = 512 * 1024 * 1024;
 
+/// Hidden field holding a row's version in the store (PostgreSQL `"$version"`): 0 for a row that
+/// was never stored. Used for optimistic concurrency, like BC's SystemRowVersion.
+pub const VERSION_FIELD: &str = "$version";
+
+/// Rows changed since the last save: (table, key) → the row's stored version before the change
+/// (0 for a row that is new).
+pub type Changes = BTreeMap<(String, Key), i64>;
+
 #[derive(Clone, Debug, Default)]
 pub struct Database {
     tables: BTreeMap<String, BTreeMap<Key, Record>>,
+    changes: Changes,
 }
 
 static EMPTY: BTreeMap<Key, Record> = BTreeMap::new();
@@ -59,6 +69,7 @@ impl Database {
             )));
         }
         rows.insert(key.clone(), r);
+        self.changes.entry((t.name.clone(), key.clone())).or_insert(0);
         Ok(key)
     }
 
@@ -68,7 +79,11 @@ impl Database {
         let rows = self.tables.entry(t.name.clone()).or_default();
         match rows.get_mut(&key) {
             Some(slot) => {
+                let version = slot.get(VERSION_FIELD).as_int();
+                let mut r = r;
+                r.set(VERSION_FIELD, Value::Int(version));
                 *slot = r;
+                self.changes.entry((t.name.clone(), key)).or_insert(version);
                 Ok(())
             }
             None => Err(EngineError::not_found(format!(
@@ -80,7 +95,47 @@ impl Database {
     }
 
     pub fn remove(&mut self, table: &str, key: &Key) -> Option<Record> {
-        self.tables.get_mut(table)?.remove(key)
+        let r = self.tables.get_mut(table)?.remove(key)?;
+        self.changes.entry((table.to_string(), key.clone())).or_insert(r.get(VERSION_FIELD).as_int());
+        Some(r)
+    }
+
+    /// Removes every row (recorded as deletions, so a store deletes them too).
+    pub fn clear(&mut self) {
+        let keys: Vec<(String, Key)> =
+            self.tables.iter().flat_map(|(t, rows)| rows.keys().map(move |k| (t.clone(), k.clone()))).collect();
+        for (t, k) in keys {
+            self.remove(&t, &k);
+        }
+    }
+
+    /// The changes since the last call, emptying the list.
+    pub fn take_changes(&mut self) -> Changes {
+        std::mem::take(&mut self.changes)
+    }
+
+    pub fn has_changes(&self) -> bool {
+        !self.changes.is_empty()
+    }
+
+    /// Puts a row read from the store (insert or replace) without recording a change.
+    pub fn load_row(&mut self, t: &TableDef, r: Record) {
+        let key = r.key(t);
+        self.tables.entry(t.name.clone()).or_default().insert(key, r);
+    }
+
+    /// Drops a row another session deleted, without recording a change.
+    pub fn unload_row(&mut self, table: &str, key: &Key) {
+        if let Some(rows) = self.tables.get_mut(table) {
+            rows.remove(key);
+        }
+    }
+
+    /// Records the version the store gave a row after saving it.
+    pub fn set_version(&mut self, table: &str, key: &Key, version: i64) {
+        if let Some(r) = self.tables.get_mut(table).and_then(|rows| rows.get_mut(key)) {
+            r.set(VERSION_FIELD, Value::Int(version));
+        }
     }
 
     /// The next `Entry No.` of a ledger table (last + 1).

@@ -9,7 +9,7 @@ ERPCraft follows the shape of [VectorCraft](https://github.com/storytold/vectorc
 | Crate | What it is |
 | --- | --- |
 | `crates/meta` | The object model: tables, fields, pages (List, Card, Document, ListPart), role centers, typed values. |
-| `crates/engine` | The base application: schema and pages, triggers (`OnInsert`, `OnValidate`, `OnDelete`), FlowFields, number series, sales and purchase posting, payments, and the command registry. `Session::run` is the single entry point. |
+| `crates/engine` | The base application: schema and pages, storage (PostgreSQL / JSON), permissions, triggers (`OnInsert`, `OnValidate`, `OnDelete`), FlowFields, number series, sales and purchase posting, payments, and the command registry. `Session::run` is the single entry point. |
 | `crates/mcp` | MCP server, JSON-RPC 2.0 over stdio, hand-written. Every engine command is an MCP tool, and tables, pages and records are resources. |
 | `crates/ui-egui` | The egui client in the BC web-client layout: app bar, role center (navigation, cues), list pages (action bar, grid, FactBox), card and document pages (FastTabs, lines, totals), and Tell Me (Alt+Q). |
 | `apps/erpcraft` | Desktop app. |
@@ -25,7 +25,7 @@ cargo run -p erpcraft                              # desktop app on the same dat
 cargo run -p erpcraft-cli -- mcp                   # MCP server on stdio for agents
 ```
 
-`--data <file>` (or `ERPCRAFT_DATA`) picks the company file. The desktop app also takes `--open page[:key]`, e.g. `--open "sales-order:Order|S-ORD1002"`.
+**PostgreSQL** is the production store: pass `--db postgres://user:pass@localhost:5432/erpcraft` or set `ERPCRAFT_DATABASE_URL`. Every BC table becomes a real PostgreSQL table, and several users and processes can work at once, with BC's "Another user has modified the record" protection ([`docs/storage.md`](docs/storage.md)). Without a database URL, `--data <file>` (or `ERPCRAFT_DATA`) uses a JSON company file. The desktop app also takes `--open page[:key]`, e.g. `--open "sales-order:Order|S-ORD1002"`.
 
 On Windows without the MSVC build tools, use the `stable-x86_64-pc-windows-gnullvm` toolchain with llvm-mingw.
 
@@ -36,6 +36,7 @@ On Windows without the MSVC build tools, use the `stable-x86_64-pc-windows-gnull
 - **Posting:** to the G/L, customer, vendor, item and bank ledgers, with partial shipment and receipt. A failed command rolls back completely.
 - **Payments:** customer and vendor payments, applied to open invoices.
 - **Reports:** trial balance, customer and vendor statistics, item availability.
+- **Users and permissions** after BC's User, Permission Set and Permission tables, with a work date saved per user.
 - **Demo company:** "Auto Craft", an Indonesian auto-parts and workshop business in IDR with 11% PPN.
 
 See [`docs/cli.md`](docs/cli.md) and [`docs/mcp.md`](docs/mcp.md).

@@ -120,7 +120,7 @@ fn engine_error(uri: &str, e: &EngineError) -> RpcError {
     match e.kind {
         ErrorKind::NotFound => RpcError::new(RESOURCE_NOT_FOUND, format!("{uri}: {}", e.message)),
         ErrorKind::Invalid => RpcError::new(INVALID_PARAMS, format!("{uri}: {}", e.message)),
-        ErrorKind::Refused | ErrorKind::Io | ErrorKind::Internal => RpcError::new(INTERNAL_ERROR, format!("{uri}: {}", e.message)),
+        ErrorKind::Refused | ErrorKind::Io | ErrorKind::Conflict | ErrorKind::Permission | ErrorKind::Internal => RpcError::new(INTERNAL_ERROR, format!("{uri}: {}", e.message)),
     }
 }
 

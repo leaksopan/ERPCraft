@@ -24,8 +24,41 @@ fn create(ctx: &mut Ctx, table: &str, values: Json) -> Result<()> {
     Ok(())
 }
 
+/// Permission sets and the user who creates the company, as SUPER (BC gives the first user
+/// SUPER, so the company is never left without an administrator).
+fn security(ctx: &mut Ctx) -> Result<()> {
+    raw(ctx, "Permission Set", json!({"Role ID": "SUPER", "Name": "All permissions"}))?;
+    raw(ctx, "Permission Set", json!({"Role ID": "VIEWER", "Name": "Read data and run reports"}))?;
+    raw(
+        ctx,
+        "Permission",
+        json!({"Role ID": "SUPER", "Object Type": "Table Data", "Object Name": "*", "Read Permission": true, "Insert Permission": true,
+               "Modify Permission": true, "Delete Permission": true}),
+    )?;
+    raw(ctx, "Permission", json!({"Role ID": "SUPER", "Object Type": "Command", "Object Name": "*", "Execute Permission": true}))?;
+    raw(ctx, "Permission", json!({"Role ID": "VIEWER", "Object Type": "Table Data", "Object Name": "*", "Read Permission": true}))?;
+    for cmd in [
+        "record.list",
+        "record.get",
+        "record.lookup",
+        "customer.statistics",
+        "vendor.statistics",
+        "item.availability",
+        "report.trial_balance",
+        "sales.document.statistics",
+        "purchase.document.statistics",
+    ] {
+        raw(ctx, "Permission", json!({"Role ID": "VIEWER", "Object Type": "Command", "Object Name": cmd, "Execute Permission": true}))?;
+    }
+    let user = ctx.user.to_uppercase();
+    raw(ctx, "User", json!({"User Name": user, "Full Name": ctx.user, "State": "Enabled"}))?;
+    raw(ctx, "Access Control", json!({"User Name": user, "Role ID": "SUPER"}))?;
+    Ok(())
+}
+
 /// Number series, posting setup, chart of accounts: what BC's "base" configuration package holds.
 pub fn setup(ctx: &mut Ctx) -> Result<()> {
+    security(ctx)?;
     raw(
         ctx,
         "Company Information",

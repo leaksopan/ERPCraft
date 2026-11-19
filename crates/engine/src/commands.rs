@@ -533,7 +533,7 @@ fn company_init(ctx: &mut Ctx, p: &Json) -> Result<Json> {
     if has_data && !force {
         refuse!("The company already has data. Pass force=true to replace it.");
     }
-    *ctx.db = Database::default();
+    ctx.db.clear();
     crate::demo::setup(ctx)?;
     if demo {
         crate::demo::master_data(ctx)?;
@@ -551,6 +551,13 @@ fn company_info(ctx: &mut Ctx, _: &Json) -> Result<Json> {
 fn session_workdate(ctx: &mut Ctx, p: &Json) -> Result<Json> {
     if let Some(d) = opt_date(p, "date")? {
         ctx.work_date = d;
+        // Saved per user (BC keeps it per session; ERPCraft remembers it, like My Settings).
+        let t = ctx.table(crate::schema::tables::USER_PERSONALIZATION)?;
+        let user = ctx.user.to_uppercase();
+        let mut r = ctx.db.get_code(&t.name, &user).cloned().unwrap_or_else(|| t.init_record());
+        r.set("User Name", erpcraft_meta::Value::text(&user));
+        r.set("Work Date", erpcraft_meta::Value::Date(d));
+        ctx.put(&t.name, r)?;
     }
     Ok(json!({"work_date": ctx.work_date.to_string()}))
 }
@@ -769,7 +776,7 @@ static COMMANDS: &[CommandDef] = &[
     cmd!("record.lookup", "Lookup Values", "Data", false, s_lookup, record_lookup, "Allowed values of a field: options or related records."),
     cmd!("company.init", "Initialize Company", "Company", true, s_init, company_init, "Create the base setup, optionally with the Auto Craft demo data."),
     cmd!("company.info", "Company Information", "Company", false, s_none, company_info, "Company information, work date and user."),
-    cmd!("session.workdate", "Work Date", "Company", false, s_workdate, session_workdate, "Read or set the work date used as default posting date."),
+    cmd!("session.workdate", "Work Date", "Company", true, s_workdate, session_workdate, "Read or set the work date used as default posting date."),
     cmd!("sales.document.new", "New Sales Document", "Sales", true, s_doc_new_sales, sales_new, "Create a sales quote, order, invoice or credit memo, optionally with lines."),
     cmd!("sales.line.add", "Add Sales Line", "Sales", true, s_line, sales_line, "Add an item or G/L account line to a sales document."),
     cmd!("sales.document.release", "Release", "Sales", true, s_doc, sales_release, "Release a sales document (status Released)."),

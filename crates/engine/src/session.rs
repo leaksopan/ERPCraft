@@ -1,39 +1,67 @@
-//! A session on one company: the database, the work date, the user, and [`Session::run`], the
-//! single entry point every client uses.
+//! A session on one company: the in-memory database, the store it persists to, the work date, the
+//! user, and [`Session::run`], the single entry point every client uses.
 
 use std::panic::{AssertUnwindSafe, catch_unwind};
-use std::path::{Path, PathBuf};
+use std::path::Path;
 
 use chrono::NaiveDate;
-use erpcraft_meta::{Key, Metadata, PageDef, Record, TableDef};
+use erpcraft_meta::{Key, Metadata, PageDef, Record, TableDef, Value};
 use serde_json::{Value as Json, json};
 
 use crate::commands::{self, CommandDef};
 use crate::ctx::Ctx;
 use crate::db::Database;
-use crate::error::{EngineError, Result};
+use crate::error::{EngineError, ErrorKind, Result};
 use crate::schema;
+use crate::schema::tables::USER_PERSONALIZATION;
+use crate::store::{JsonFile, Memory, Store, is_postgres_url};
 
 pub struct Session {
     db: Database,
-    path: Option<PathBuf>,
+    store: Box<dyn Store>,
     work_date: NaiveDate,
     user: String,
-    /// Bumped after every successful mutating command, so clients can refresh cached views.
+    /// Bumped after every change (own commands and other sessions' work pulled in by refresh), so
+    /// clients can refresh cached views.
     revision: u64,
 }
 
 impl Session {
-    /// An empty in-memory company (no data file).
+    /// An empty in-memory company (nothing persisted).
     pub fn in_memory() -> Self {
-        Self { db: Database::default(), path: None, work_date: today(), user: default_user(), revision: 0 }
+        Self { db: Database::default(), store: Box::new(Memory), work_date: today(), user: default_user(), revision: 0 }
+    }
+
+    /// Opens a company from a PostgreSQL URL (`postgres://user:pass@host/db?schema=acme`) or a
+    /// JSON data file path. A missing file or an empty schema starts an empty company.
+    pub fn open_source(source: &str) -> Result<Self> {
+        if is_postgres_url(source) {
+            let store = crate::store::postgres::Postgres::connect(source, schema::base_app())?;
+            Self::with_store(Box::new(store))
+        } else {
+            Self::open(Path::new(source))
+        }
     }
 
     /// Opens the company data file at `path`; a missing file starts an empty company that is saved
     /// there on the first change.
     pub fn open(path: &Path) -> Result<Self> {
-        let db = if path.exists() { Database::load(schema::base_app(), path)? } else { Database::default() };
-        Ok(Self { db, path: Some(path.to_path_buf()), work_date: today(), user: default_user(), revision: 0 })
+        Self::with_store(Box::new(JsonFile::new(path)))
+    }
+
+    pub fn with_store(mut store: Box<dyn Store>) -> Result<Self> {
+        let db = store.load(schema::base_app())?;
+        let mut s = Self { db, store, work_date: today(), user: default_user(), revision: 0 };
+        s.apply_personalization();
+        Ok(s)
+    }
+
+    /// The user's saved work date (User Personalization), if any.
+    fn apply_personalization(&mut self) {
+        let key = Key(vec![Value::text(self.user.to_uppercase())]);
+        if let Some(d) = self.db.get(USER_PERSONALIZATION, &key).and_then(|r| r.get("Work Date").as_date()) {
+            self.work_date = d;
+        }
     }
 
     pub fn meta(&self) -> &'static Metadata {
@@ -44,14 +72,16 @@ impl Session {
         &self.db
     }
 
-    pub fn path(&self) -> Option<&Path> {
-        self.path.as_deref()
+    /// Where the company is kept ("postgres …", "file …", "memory").
+    pub fn source(&self) -> String {
+        self.store.describe()
     }
 
     pub fn work_date(&self) -> NaiveDate {
         self.work_date
     }
 
+    /// Sets the work date for this session only (not saved; `session.workdate` saves it).
     pub fn set_work_date(&mut self, d: NaiveDate) {
         self.work_date = d;
         self.revision = self.revision.wrapping_add(1);
@@ -63,6 +93,7 @@ impl Session {
 
     pub fn set_user(&mut self, u: &str) {
         self.user = u.to_string();
+        self.apply_personalization();
     }
 
     pub fn revision(&self) -> u64 {
@@ -78,15 +109,26 @@ impl Session {
         commands::all()
     }
 
+    /// Pulls in what other sessions saved since the last refresh. Returns whether anything changed.
+    pub fn refresh(&mut self) -> Result<bool> {
+        let changed = self.store.refresh(schema::base_app(), &mut self.db)?;
+        if changed {
+            self.revision = self.revision.wrapping_add(1);
+        }
+        Ok(changed)
+    }
+
     /// Runs a command. A failing (or panicking) command leaves the company exactly as it was:
-    /// changes are made on a copy that replaces the data only on success, like a BC write
-    /// transaction. Mutating commands save the data file afterwards.
+    /// changes are made on a copy that replaces the data only after the store has saved them in
+    /// one transaction, like a BC write transaction. The user's permissions are checked first.
     pub fn run(&mut self, id: &str, params: &Json) -> Result<Json> {
         let cmd = commands::find(id).ok_or_else(|| EngineError::not_found(format!("Unknown command '{id}'. Run command.list to see them.")))?;
         let params = if params.is_null() { json!({}) } else { params.clone() };
         if !params.is_object() {
             return Err(EngineError::invalid("command parameters must be a JSON object"));
         }
+        self.refresh()?;
+        crate::permissions::check(&self.db, schema::base_app(), &self.user, id, &params)?;
         let mut db = if cmd.mutates { self.db.clone() } else { Database::default() };
         let mut work_date = self.work_date;
         let user = self.user.clone();
@@ -102,9 +144,16 @@ impl Session {
             Err(_) => Err(EngineError::internal(format!("internal error in command '{id}'; nothing was changed"))),
         }?;
         if cmd.mutates {
+            let changes = db.take_changes();
+            if let Err(e) = self.store.save(schema::base_app(), &mut db, &changes) {
+                if e.kind == ErrorKind::Conflict {
+                    // Show the user the record as the other session left it.
+                    let _ = self.refresh();
+                }
+                return Err(e);
+            }
             self.db = db;
             self.revision = self.revision.wrapping_add(1);
-            self.save()?;
         }
         if work_date != self.work_date {
             self.work_date = work_date;
@@ -113,12 +162,12 @@ impl Session {
         Ok(result)
     }
 
-    /// Writes the data file (no-op in memory).
-    pub fn save(&self) -> Result<()> {
-        match &self.path {
-            Some(p) => self.db.save(schema::base_app(), p),
-            None => Ok(()),
-        }
+    /// Writes the whole company again (JSON file store only; PostgreSQL saves per command).
+    pub fn save(&mut self) -> Result<()> {
+        let mut changes = crate::db::Changes::new();
+        // A marker change so the file store writes; PostgreSQL ignores unknown tables.
+        changes.insert(("$all".to_string(), Key(Vec::new())), 0);
+        self.store.save(schema::base_app(), &mut self.db, &changes)
     }
 
     // ---- typed reads for clients that render (the egui UI) -----------------------------------

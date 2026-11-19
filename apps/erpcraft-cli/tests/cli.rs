@@ -2,9 +2,11 @@
 //! The `erpcraft-cli` binary end to end on a temporary data file.
 
 use std::io::{BufRead, BufReader, Write};
+use std::net::TcpListener;
 use std::path::{Path, PathBuf};
 use std::process::{Command, Output, Stdio};
 
+use erpcraft_mcp::control::{parse_request, reply_line};
 use serde_json::{Value, json};
 
 const BIN: &str = env!("CARGO_BIN_EXE_erpcraft-cli");
@@ -31,8 +33,15 @@ impl Drop for TempData {
     }
 }
 
+/// The binary with no company source from the environment.
+fn bin() -> Command {
+    let mut c = Command::new(BIN);
+    c.env_remove("ERPCRAFT_DATA").env_remove("ERPCRAFT_DATABASE_URL");
+    c
+}
+
 fn cli(data: &TempData, args: &[&str]) -> Output {
-    Command::new(BIN).arg("--data").arg(data.path()).args(args).env_remove("ERPCRAFT_DATA").output().unwrap()
+    bin().arg("--data").arg(data.path()).args(args).output().unwrap()
 }
 
 fn ok(data: &TempData, args: &[&str]) -> String {
@@ -103,7 +112,7 @@ fn run_new_order_and_post() {
     assert!(out.contains("Trial Balance") && out.contains("Total Debit"), "{out}");
 
     // Parameters from stdin.
-    let mut child = Command::new(BIN)
+    let mut child = bin()
         .args(["--data", d.path().to_str().unwrap(), "--json", "run", "record.get", "-"])
         .stdin(Stdio::piped())
         .stdout(Stdio::piped())
@@ -119,7 +128,7 @@ fn run_new_order_and_post() {
 #[test]
 fn mcp_over_stdio() {
     let d = demo("mcp");
-    let mut child = Command::new(BIN)
+    let mut child = bin()
         .args(["mcp", "--data", d.path().to_str().unwrap()])
         .stdin(Stdio::piped())
         .stdout(Stdio::piped())
@@ -150,4 +159,64 @@ fn mcp_over_stdio() {
     let o = child.wait_with_output().unwrap();
     assert!(o.status.success());
     assert!(String::from_utf8_lossy(&o.stderr).contains("serving"));
+}
+
+/// A stand-in for `erpcraft --control`: the control protocol on a loopback port, commands run on an
+/// in-memory demo company.
+fn fake_app() -> String {
+    let listener = TcpListener::bind("127.0.0.1:0").unwrap();
+    let addr = listener.local_addr().unwrap().to_string();
+    std::thread::spawn(move || {
+        let mut session = erpcraft_engine::Session::in_memory();
+        session.run("company.init", &json!({"demo": true})).unwrap();
+        for stream in listener.incoming() {
+            let Ok(stream) = stream else { continue };
+            let mut writer = stream.try_clone().unwrap();
+            for line in BufReader::new(stream).lines() {
+                let Ok(line) = line else { break };
+                let out = match parse_request(&line) {
+                    Err((id, e)) => reply_line(&id, Err(e)),
+                    Ok(req) => {
+                        let result = match req.method.as_str() {
+                            "engine.run" => session.run(req.params["command"].as_str().unwrap_or(""), &req.params["params"]),
+                            "engine.commands" => session.run("command.list", &json!({})),
+                            m => Err(erpcraft_engine::EngineError::not_found(format!("no {m}"))),
+                        };
+                        reply_line(&req.id, result)
+                    }
+                };
+                if writeln!(writer, "{out}").is_err() {
+                    break;
+                }
+            }
+        }
+    });
+    addr
+}
+
+#[test]
+fn connect_runs_in_the_app() {
+    let addr = fake_app();
+    let run = |args: &[&str]| bin().arg("--connect").arg(&addr).args(args).output().unwrap();
+    let o = run(&["list", "Customer"]);
+    assert!(o.status.success(), "{}", String::from_utf8_lossy(&o.stderr));
+    assert!(String::from_utf8_lossy(&o.stdout).contains("(5 records)"));
+    let o = run(&["--json", "run", "record.get", r#"{"table": "Item", "key": "1100"}"#]);
+    assert!(o.status.success(), "{}", String::from_utf8_lossy(&o.stderr));
+    let item: Value = serde_json::from_slice(&o.stdout).unwrap();
+    assert_eq!(item["No."], "1100");
+    let o = run(&["get", "Customer", "NOPE"]);
+    assert_eq!(o.status.code(), Some(1));
+
+    // --connect excludes --data/--db/--workdate.
+    assert_eq!(bin().args(["--connect", &addr, "--data", "x.json", "tables"]).output().unwrap().status.code(), Some(2));
+    assert_eq!(bin().args(["--connect", &addr, "--workdate", "2026-01-01", "tables"]).output().unwrap().status.code(), Some(2));
+}
+
+#[test]
+fn connect_without_an_app_fails_cleanly() {
+    let port = TcpListener::bind("127.0.0.1:0").unwrap().local_addr().unwrap().port();
+    let o = bin().args(["--connect", &port.to_string(), "tables"]).output().unwrap();
+    assert_eq!(o.status.code(), Some(1));
+    assert!(String::from_utf8_lossy(&o.stderr).contains("erpcraft --control"), "{}", String::from_utf8_lossy(&o.stderr));
 }

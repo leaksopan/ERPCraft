@@ -1,6 +1,7 @@
 //! `erpcraft-cli`: run any ERPCraft engine command headless, inspect metadata, and serve MCP over
 //! stdio. Every subcommand is a thin wrapper over `Session::run`, the same entry point the desktop
-//! app and the MCP server use.
+//! app and the MCP server use. With `--connect` the commands run in the running desktop app
+//! instead (its control channel, docs/control.md).
 #![deny(clippy::unwrap_used, clippy::expect_used, clippy::panic, clippy::todo, clippy::unimplemented, clippy::unreachable)]
 
 mod args;
@@ -8,17 +9,15 @@ mod render;
 
 use std::fmt::Write as _;
 use std::io::{self, Read, Write};
-use std::path::PathBuf;
 use std::process::ExitCode;
 
 use erpcraft_engine::meta::TableDef;
-use erpcraft_engine::{EngineError, Session, schema};
-use erpcraft_mcp::Server;
+use erpcraft_engine::{EngineError, Session, schema, store};
+use erpcraft_mcp::{Backend, Headless, Remote, Server};
 use serde_json::{Map, Value, json};
 
 use args::Args;
 
-const DEFAULT_DATA: &str = "company.erpcraft.json";
 /// Largest parameter file / stdin the CLI reads for `run`.
 const MAX_INPUT_BYTES: u64 = 16 * 1024 * 1024;
 /// Columns shown by `list` when no page or `--fields` says otherwise.
@@ -28,7 +27,7 @@ const USAGE: &str = "\
 erpcraft-cli - ERPCraft (Business Central-style ERP) on the command line
 
 USAGE:
-    erpcraft-cli [--data <file>] [--json] [--workdate <date>] <command> [args]
+    erpcraft-cli [--db <url> | --data <file> | --connect [addr]] [--json] [--workdate <date>] <command> [args]
 
 COMMANDS:
     init [--demo|--empty] [--force]        Create the company (demo data by default)
@@ -45,11 +44,18 @@ COMMANDS:
                                            Post a document (Order, Invoice, Credit Memo)
     workdate [date]                        Show (or set for this invocation) the work date
     search <query>                         Find pages and commands (Tell Me)
-    mcp                                    Serve MCP (JSON-RPC over stdio) on the data file
+    mcp                                    Serve MCP (JSON-RPC over stdio) on the company, or on the
+                                           running app with --connect
+    ui state|back|home|open <spec>|screenshot <file.png>
+                                           Drive the running app's window (needs --connect)
     help                                   This text
 
 GLOBAL OPTIONS:
+    --db <url>           PostgreSQL company, postgres://user:password@host/db
+                         (default: $ERPCRAFT_DATABASE_URL; wins over --data)
     --data <file>        Company data file (default: $ERPCRAFT_DATA, else ./company.erpcraft.json)
+    --connect [addr]     Run in the running desktop app (erpcraft --control) instead;
+                         addr is host:port or a port (default 127.0.0.1:7979)
     --json               Print the raw JSON result instead of formatted text
     --workdate <date>    Work date (YYYY-MM-DD) for this invocation; posting uses it
     -h, --help           Help;  -V, --version  Version
@@ -112,22 +118,55 @@ fn fail_usage(m: &str) -> ExitCode {
     ExitCode::from(2)
 }
 
-fn data_path(args: &Args) -> PathBuf {
-    if let Some(p) = &args.data {
-        return p.clone();
+/// The company source: `--db`, `$ERPCRAFT_DATABASE_URL`, `--data`, `$ERPCRAFT_DATA`, else
+/// `./company.erpcraft.json`.
+fn source(args: &Args) -> String {
+    let data = args.data.as_ref().map(|p| p.to_string_lossy().into_owned());
+    store::resolve_source(args.db.as_deref(), data.as_deref())
+}
+
+/// Where the subcommands' engine commands run.
+enum Conn {
+    /// In this process, on the company source.
+    Local(Session),
+    /// In the running desktop app (`--connect`).
+    Remote(Remote),
+}
+
+impl Conn {
+    fn run(&mut self, command: &str, params: &Value) -> Result<Value, EngineError> {
+        match self {
+            Conn::Local(s) => s.run(command, params),
+            Conn::Remote(r) => r.run(command, params),
+        }
     }
-    match std::env::var("ERPCRAFT_DATA") {
-        Ok(p) if !p.trim().is_empty() => PathBuf::from(p),
-        _ => PathBuf::from(DEFAULT_DATA),
+
+    /// What the commands run on, safe to print.
+    fn describe(&self) -> String {
+        match self {
+            Conn::Local(s) => store::redact(&s.source()),
+            Conn::Remote(r) => r.describe(),
+        }
     }
 }
 
-fn open(args: &Args) -> Result<Session, Failure> {
-    let mut s = Session::open(&data_path(args))?;
+fn open(args: &Args) -> Result<Conn, Failure> {
+    let mut c = match &args.connect {
+        Some(addr) => {
+            if args.db.is_some() || args.data.is_some() {
+                return usage("--connect runs in the app's company; it does not take --db or --data");
+            }
+            if args.workdate.is_some() {
+                return usage("--workdate would change the running app's work date; use 'workdate <date>' to do that on purpose");
+            }
+            Conn::Remote(Remote::connect(addr)?)
+        }
+        None => Conn::Local(Session::open_source(&source(args))?),
+    };
     if let Some(d) = &args.workdate {
-        s.run("session.workdate", &json!({"date": d}))?;
+        c.run("session.workdate", &json!({"date": d}))?;
     }
-    Ok(s)
+    Ok(c)
 }
 
 fn dispatch(args: &Args) -> Outcome {
@@ -146,6 +185,7 @@ fn dispatch(args: &Args) -> Outcome {
         "workdate" => workdate(args, &rest),
         "search" => search(args, &rest),
         "mcp" => mcp(args, &rest),
+        "ui" => ui(args, &rest),
         other => usage(format!("unknown command '{other}'")),
     }
 }
@@ -187,8 +227,7 @@ fn init(args: &Args, rest: &[&str]) -> Outcome {
     if args.json {
         return Ok(pretty(&r));
     }
-    let path = data_path(args);
-    Ok(format!("{}\nData file: {}\n", str_of(&r, "message"), path.display()))
+    Ok(format!("{}\nCompany: {}\n", str_of(&r, "message"), s.describe()))
 }
 
 fn commands(args: &Args) -> Outcome {
@@ -262,7 +301,7 @@ fn describe(args: &Args, rest: &[&str]) -> Outcome {
     args.only("describe", &[], &[]).map_err(Failure::Usage)?;
     let [name] = rest else { return usage("usage: describe <table-or-page>") };
     let mut s = open(args)?;
-    let is_page = s.meta().page(name).is_some();
+    let is_page = schema::base_app().page(name).is_some();
     let r = if is_page { s.run("page.describe", &json!({"page": name}))? } else { s.run("table.describe", &json!({"table": name}))? };
     if args.json {
         return Ok(pretty(&r));
@@ -335,8 +374,8 @@ fn joined(v: &Value) -> String {
 }
 
 /// A table name or a page id (`list` accepts both).
-fn target(s: &Session, name: &str) -> (Value, Option<&'static TableDef>, Vec<String>) {
-    let meta = s.meta();
+fn target(name: &str) -> (Value, Option<&'static TableDef>, Vec<String>) {
+    let meta = schema::base_app();
     if let Some(p) = meta.page(name) {
         let t = p.source_table.as_deref().and_then(|t| meta.table(t));
         return (json!({"page": p.id}), t, p.columns.clone());
@@ -370,7 +409,7 @@ fn list(args: &Args, rest: &[&str]) -> Outcome {
     args.only("list", &["filter", "search", "fields", "limit", "offset"], &[]).map_err(Failure::Usage)?;
     let [name] = rest else { return usage("usage: list <table|page> [--filter Field=expr ...] [--search text] [--fields a,b] [--limit n]") };
     let mut s = open(args)?;
-    let (mut params, t, mut columns) = target(&s, name);
+    let (mut params, t, mut columns) = target(name);
     let mut filters = Map::new();
     for f in args.option_all("filter") {
         let Some((field, expr)) = f.split_once('=') else { return usage(format!("--filter needs Field=expression, got '{f}'")) };
@@ -421,7 +460,7 @@ fn get(args: &Args, rest: &[&str]) -> Outcome {
     if args.json {
         return Ok(pretty(&r));
     }
-    let t = s.meta().table(table);
+    let t = schema::base_app().table(table);
     let empty = Map::new();
     let obj = r.as_object().unwrap_or(&empty);
     // Table field order (the JSON object itself is sorted by name).
@@ -522,7 +561,7 @@ fn workdate(args: &Args, rest: &[&str]) -> Outcome {
     };
     let mut s = open(args)?;
     let r = s.run("session.workdate", &params)?;
-    if !rest.is_empty() {
+    if !rest.is_empty() && matches!(s, Conn::Local(_)) {
         let _ = writeln!(io::stderr(), "note: the work date is not stored in the data file; pass --workdate <date> to each command (or set it in an MCP session with session_workdate).");
     }
     Ok(if args.json { pretty(&r) } else { format!("Work date: {}\n", str_of(&r, "work_date")) })
@@ -556,10 +595,37 @@ fn search(args: &Args, rest: &[&str]) -> Outcome {
     Ok(out)
 }
 
+fn ui(args: &Args, rest: &[&str]) -> Outcome {
+    args.only("ui", &[], &[]).map_err(Failure::Usage)?;
+    const UI_USAGE: &str = "usage: ui state | back | home | open <spec> | screenshot <file.png>   (with --connect)";
+    let (method, params) = match rest {
+        ["state"] => ("ui.state", json!({})),
+        ["back"] => ("ui.back", json!({})),
+        ["home"] => ("ui.home", json!({})),
+        ["open", spec] => ("ui.open", json!({"spec": spec})),
+        ["screenshot", path] => ("ui.screenshot", json!({"path": path})),
+        _ => return usage(UI_USAGE),
+    };
+    let no_app = "'ui' drives the running desktop app: start it with 'erpcraft --control' and pass --connect";
+    if args.connect.is_none() {
+        return usage(no_app);
+    }
+    let Conn::Remote(mut remote) = open(args)? else { return usage(no_app) };
+    let r = remote.ui(method, &params)?;
+    if method == "ui.screenshot" && !args.json {
+        return Ok(format!("Saved {} ({} x {})
+", str_of(&r, "path"), render::value(&r["width"], None), render::value(&r["height"], None)));
+    }
+    Ok(pretty(&r))
+}
+
 fn mcp(args: &Args, rest: &[&str]) -> Outcome {
     no_more("mcp", args, rest)?;
-    let session = open(args)?;
-    let mut server = Server::headless(session);
+    let backend: Box<dyn Backend> = match open(args)? {
+        Conn::Local(session) => Box::new(Headless::new(session)),
+        Conn::Remote(remote) => Box::new(remote),
+    };
+    let mut server = Server::new(backend);
     let _ = writeln!(io::stderr(), "erpcraft-cli mcp: serving {} on stdio", server.backend().describe());
     let stdin = io::stdin();
     let stdout = io::stdout();

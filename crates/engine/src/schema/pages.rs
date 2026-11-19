@@ -770,6 +770,17 @@ fn setup(m: &mut Metadata) {
             &["Location Code", "Invt. Posting Group Code", "Inventory Account", "Description"],
         ),
         ("no-series", 456, "No. Series", "No. Series", &["Code", "Description", "Starting No.", "Ending No.", "Last No. Used", "Increment-by No.", "Default Nos.", "Manual Nos."]),
+        ("users", 9800, "Users", "User", &["User Name", "Full Name", "State", "Contact Email"]),
+        ("permission-sets", 9802, "Permission Sets", "Permission Set", &["Role ID", "Name"]),
+        (
+            "permissions",
+            9803,
+            "Permissions",
+            "Permission",
+            &["Role ID", "Object Type", "Object Name", "Read Permission", "Insert Permission", "Modify Permission", "Delete Permission", "Execute Permission"],
+        ),
+        ("user-permission-sets", 9831, "User Permission Sets", "Access Control", &["User Name", "Role ID"]),
+        ("user-personalization", 9173, "User Personalization", "User Personalization", &["User Name", "Profile ID", "Work Date"]),
     ];
     for (id, obj, caption, table, cols) in simple {
         m.add_page(list(id, *obj, caption, table, None, cols).keywords("setup"));

@@ -5,15 +5,17 @@
 //! so new commands appear without changes here; `command_run` runs any command by id. Metadata and
 //! records are also resources (`erpcraft://table/{name}`, `erpcraft://record/{table}/{key}`, …).
 //!
-//! The server talks to a [`Backend`]: [`Headless`] runs commands in-process on a data file. A
-//! remote backend driving the running desktop app can implement the same trait.
+//! The server talks to a [`Backend`]: [`Headless`] runs commands in-process on a data file or
+//! database; [`Remote`] drives the running desktop app over its loopback control port
+//! ([`control`], docs/control.md) and adds the `ui_*` tools.
 #![deny(clippy::unwrap_used, clippy::expect_used, clippy::panic, clippy::todo, clippy::unimplemented, clippy::unreachable)]
 
 mod backend;
+pub mod control;
 pub mod jsonrpc;
 mod prompts;
 pub mod resources;
 mod server;
 
-pub use backend::{Backend, CommandInfo, Headless};
+pub use backend::{Backend, CommandInfo, Headless, Remote};
 pub use server::{INSTRUCTIONS, PROTOCOL_VERSIONS, SERVER_NAME, Server, tool_name};

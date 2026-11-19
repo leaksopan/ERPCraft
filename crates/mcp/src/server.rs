@@ -30,15 +30,37 @@ customer_statistics, item_availability, report_trial_balance.\n\
 - If the company is empty, company_init {demo: true} creates the Auto Craft demo company. Posting uses the work date \
 (session_workdate).";
 
+/// Added to the instructions when the server drives the running desktop app.
+const UI_INSTRUCTIONS: &str = "\n- This server drives the running ERPCraft desktop app: commands run in the app's session and \
+the app shows their effect. ui_open {spec} opens a page (\"customer-list\", \"customer-card:10000\", \
+\"sales-order-list>sales-order:Order|S-ORD1001\"), ui_state shows the open pages, ui_screenshot {path} saves a PNG \
+of the window.";
+
 /// Name of the generic tool that runs any command by id.
 const RUN_TOOL: &str = "command_run";
+/// The `ui_*` tools a running app offers: tool name, control method, title, description.
+const UI_TOOLS: &[(&str, &str, &str, &str)] = &[
+    ("ui_open", "ui.open", "Open Page", "Open a page in the running app: a page id (customer-list), page:key (customer-card:10000; multi-field keys joined by '|'), or list>card:key to open a card over its list."),
+    ("ui_state", "ui.state", "UI State", "The pages open in the running app (page stack, keys, edit mode, open dialog, notice)."),
+    ("ui_screenshot", "ui.screenshot", "Screenshot", "Save a PNG screenshot of the running app's window to 'path' (default: erpcraft-screenshot.png in the temp directory) and return it."),
+];
 
-/// One MCP tool: an engine command, or the generic `command_run`.
+/// What a tool runs.
+#[derive(Clone, Debug)]
+enum ToolKind {
+    /// `command_run`: any command by id.
+    RunAny,
+    /// One engine command.
+    Command(String),
+    /// A control-protocol UI method of the running app.
+    Ui(&'static str),
+}
+
+/// One MCP tool: an engine command, the generic `command_run`, or a `ui_*` tool.
 #[derive(Clone, Debug)]
 struct Tool {
     name: String,
-    /// `None` for `command_run`.
-    command: Option<String>,
+    kind: ToolKind,
     title: String,
     description: String,
     schema: Value,
@@ -178,6 +200,10 @@ impl Server {
 
     fn initialize(&mut self, params: &Value) -> Value {
         let requested = params.get("protocolVersion").and_then(Value::as_str).unwrap_or("");
+        let mut instructions = INSTRUCTIONS.to_string();
+        if self.backend.has_ui() {
+            instructions.push_str(UI_INSTRUCTIONS);
+        }
         let chosen = PROTOCOL_VERSIONS.iter().find(|v| **v == requested).or(PROTOCOL_VERSIONS.first()).copied().unwrap_or("2025-06-18");
         self.protocol = chosen.to_string();
         json!({
@@ -188,13 +214,14 @@ impl Server {
                 "prompts": {"listChanged": false},
             },
             "serverInfo": {"name": SERVER_NAME, "title": "ERPCraft", "version": env!("CARGO_PKG_VERSION")},
-            "instructions": INSTRUCTIONS,
+            "instructions": instructions,
         })
     }
 
     fn tools(&mut self) -> &[Tool] {
         if self.tools.is_none() {
-            self.tools = Some(build_tools(&self.backend.commands()));
+            let has_ui = self.backend.has_ui();
+            self.tools = Some(build_tools(&self.backend.commands(), has_ui));
         }
         self.tools.as_deref().unwrap_or(&[])
     }
@@ -207,17 +234,38 @@ impl Server {
             Some(_) => return Err(RpcError::invalid_params("tool 'arguments' must be an object")),
         };
         let tool = self.tools().iter().find(|t| t.name == name).cloned().ok_or_else(|| RpcError::invalid_params(format!("Unknown tool: {name}")))?;
-        let (command, cmd_params) = match &tool.command {
-            Some(c) => (c.clone(), args),
-            None => match args.get("command").and_then(Value::as_str) {
+        let (command, cmd_params) = match &tool.kind {
+            ToolKind::Command(c) => (c.clone(), args),
+            ToolKind::RunAny => match args.get("command").and_then(Value::as_str) {
                 Some(c) => (c.to_string(), args.get("params").cloned().unwrap_or(Value::Null)),
                 None => return Ok(tool_error("command_run needs a 'command' (a command id such as record.list)")),
             },
+            ToolKind::Ui(method) => return Ok(self.call_ui(method, args)),
         };
         Ok(match self.backend.run(&command, &cmd_params) {
             Ok(result) => self.tool_success(&result),
             Err(e) => tool_error(&format!("{} error: {}", e.kind_name(), e.message)),
         })
+    }
+
+    fn call_ui(&mut self, method: &str, mut args: Value) -> Value {
+        if method == "ui.screenshot" && args.get("path").and_then(Value::as_str).is_none_or(|p| p.trim().is_empty()) {
+            let default = std::env::temp_dir().join("erpcraft-screenshot.png");
+            args["path"] = json!(default.to_string_lossy());
+        }
+        match self.backend.ui(method, &args) {
+            Ok(result) => {
+                let mut out = self.tool_success(&result);
+                if method == "ui.screenshot"
+                    && let Some(image) = result.get("path").and_then(Value::as_str).and_then(png_base64)
+                    && let Some(content) = out.get_mut("content").and_then(Value::as_array_mut)
+                {
+                    content.push(json!({"type": "image", "data": image, "mimeType": "image/png"}));
+                }
+                out
+            }
+            Err(e) => tool_error(&format!("{} error: {}", e.kind_name(), e.message)),
+        }
     }
 
     fn tool_success(&self, result: &Value) -> Value {
@@ -235,10 +283,10 @@ fn tool_error(message: &str) -> Value {
     json!({"content": [{"type": "text", "text": message}], "isError": true})
 }
 
-fn build_tools(commands: &[CommandInfo]) -> Vec<Tool> {
+fn build_tools(commands: &[CommandInfo], has_ui: bool) -> Vec<Tool> {
     let mut tools = vec![Tool {
         name: RUN_TOOL.to_string(),
-        command: None,
+        kind: ToolKind::RunAny,
         title: "Run Command".to_string(),
         description: "Run any ERPCraft command by id (see command_list), e.g. {\"command\": \"record.list\", \"params\": {\"table\": \"Customer\"}}.".to_string(),
         schema: json!({"type": "object", "properties": {
@@ -256,9 +304,76 @@ fn build_tools(commands: &[CommandInfo]) -> Vec<Tool> {
             schema["type"] = json!("object");
         }
         let description = if c.group.is_empty() { format!("{} (command {})", c.summary, c.id) } else { format!("{} [{}; command {}]", c.summary, c.group, c.id) };
-        tools.push(Tool { name, command: Some(c.id.clone()), title: c.label.clone(), description, schema, read_only: !c.mutates });
+        tools.push(Tool { name, kind: ToolKind::Command(c.id.clone()), title: c.label.clone(), description, schema, read_only: !c.mutates });
+    }
+    if has_ui {
+        for (name, method, title, description) in UI_TOOLS {
+            let schema = match *method {
+                "ui.open" => json!({"type": "object", "properties": {
+                    "spec": {"type": "string", "description": "page, page:key or list>card:key, e.g. customer-card:10000"}}, "required": ["spec"]}),
+                "ui.screenshot" => json!({"type": "object", "properties": {
+                    "path": {"type": "string", "description": "where to write the PNG (absolute path recommended)"}}}),
+                _ => json!({"type": "object", "properties": {}}),
+            };
+            let read_only = *method == "ui.state";
+            tools.retain(|t| t.name != *name);
+            tools.push(Tool { name: (*name).to_string(), kind: ToolKind::Ui(method), title: (*title).to_string(), description: (*description).to_string(), schema, read_only });
+        }
     }
     tools
+}
+
+/// Largest screenshot attached to a tool result as an image.
+const MAX_IMAGE_BYTES: u64 = 8 * 1024 * 1024;
+
+/// The PNG at `path`, base64-encoded, if it is readable and small enough.
+fn png_base64(path: &str) -> Option<String> {
+    let len = std::fs::metadata(path).ok()?.len();
+    if len == 0 || len > MAX_IMAGE_BYTES {
+        return None;
+    }
+    let bytes = std::fs::read(path).ok()?;
+    bytes.starts_with(b"\x89PNG").then(|| base64(&bytes))
+}
+
+/// Standard base64 with padding.
+fn base64(data: &[u8]) -> String {
+    const ALPHABET: &[u8; 64] = b"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
+    let mut out = String::with_capacity(data.len().div_ceil(3) * 4);
+    for chunk in data.chunks(3) {
+        let b = [chunk.first().copied().unwrap_or(0), chunk.get(1).copied().unwrap_or(0), chunk.get(2).copied().unwrap_or(0)];
+        let n = (u32::from(b[0]) << 16) | (u32::from(b[1]) << 8) | u32::from(b[2]);
+        for (i, shift) in [18u32, 12, 6, 0].into_iter().enumerate() {
+            if i <= chunk.len() {
+                out.push(char::from(ALPHABET[((n >> shift) & 63) as usize]));
+            } else {
+                out.push('=');
+            }
+        }
+    }
+    out
+}
+
+#[cfg(test)]
+mod tests {
+    #![allow(clippy::unwrap_used)]
+    use super::*;
+
+    #[test]
+    fn base64_matches_rfc4648() {
+        for (input, expected) in [("", ""), ("f", "Zg=="), ("fo", "Zm8="), ("foo", "Zm9v"), ("foob", "Zm9vYg=="), ("fooba", "Zm9vYmE="), ("foobar", "Zm9vYmFy")] {
+            assert_eq!(base64(input.as_bytes()), expected);
+        }
+    }
+
+    #[test]
+    fn ui_tools_only_with_a_window() {
+        assert!(!build_tools(&[], false).iter().any(|t| t.name.starts_with("ui_")));
+        let tools = build_tools(&[], true);
+        for name in ["ui_open", "ui_state", "ui_screenshot"] {
+            assert!(tools.iter().any(|t| t.name == name), "{name}");
+        }
+    }
 }
 
 fn to_line(v: &Value) -> String {

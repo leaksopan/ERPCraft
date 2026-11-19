@@ -542,7 +542,10 @@ fn lines_part(app: &mut ErpApp, ui: &mut Ui, host: &PageDef, header: &Record, pa
         state.selected_line = Some(key.clone());
         app.run("record.validate", json!({"table": lt.name, "key": key.to_json(), "field": field, "value": value}));
     }
-    totals(ui, header, &lines);
+    // Shipments and receipts carry quantities only; BC shows no totals there.
+    if lt.field("Line Amount").is_some() {
+        totals(ui, header, &lines);
+    }
 }
 
 /// The totals area under the lines (BC: Subtotal / Total Excl. VAT / Total VAT / Total Incl. VAT).

@@ -1,5 +1,6 @@
 //! The base application's metadata: tables, pages and role centers.
 
+pub mod finance;
 pub mod pages;
 pub mod role_center;
 pub mod tables;
@@ -16,6 +17,7 @@ pub fn base_app() -> &'static Metadata {
         tables::register(&mut m);
         pages::register(&mut m);
         role_center::register(&mut m);
+        finance::register(&mut m);
         m
     })
 }

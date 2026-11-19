@@ -18,6 +18,17 @@ pub fn series_from_setup(ctx: &Ctx, setup_table: &str, field: &str) -> Result<St
     Ok(code)
 }
 
+/// The number `next` would return, without using it (journals show it on new lines).
+pub fn peek(ctx: &Ctx, series: &str) -> Result<String> {
+    let r = ctx.get_code(NO_SERIES, series).map_err(|_| EngineError::refused(format!("The No. Series {series} does not exist.")))?;
+    let last = r.str("Last No. Used");
+    if last.is_empty() {
+        return Ok(r.str("Starting No.").to_string());
+    }
+    let by = u128::try_from(r.get("Increment-by No.").as_int().max(1)).unwrap_or(1);
+    increment(last, by).ok_or_else(|| EngineError::refused(format!("The number {last} in No. Series {series} cannot be extended.")))
+}
+
 /// Takes the next number of `series` and records it as used.
 pub fn next(ctx: &mut Ctx, series: &str) -> Result<String> {
     let mut r = ctx

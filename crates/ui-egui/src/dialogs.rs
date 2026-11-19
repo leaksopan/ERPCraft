@@ -27,6 +27,8 @@ pub struct FormField {
     pub caption: String,
     pub hint: String,
     pub value: String,
+    /// Allowed values (JSON Schema `enum`): shown as a drop-down.
+    pub options: Vec<String>,
 }
 
 #[derive(Default)]
@@ -60,7 +62,14 @@ impl Dialog {
                     Json::Null => String::new(),
                     other => other.to_string(),
                 });
-                FormField { caption: caption(&name), name, hint, value: value.unwrap_or_default() }
+                let options: Vec<String> = prop
+                    .and_then(|p| p.get("enum"))
+                    .and_then(Json::as_array)
+                    .map(|a| a.iter().filter_map(|v| v.as_str().map(str::to_string)).collect())
+                    .unwrap_or_default();
+                let default = prop.and_then(|p| p.get("default")).and_then(Json::as_str).map(str::to_string);
+                let value = value.filter(|v| !v.is_empty()).or(default).or_else(|| options.first().cloned()).unwrap_or_default();
+                FormField { caption: caption(&name), name, hint, value, options }
             })
             .collect();
         Dialog::Form { title, submit: Submit::Command { command: command.to_string(), base }, fields }
@@ -73,7 +82,13 @@ impl Dialog {
             .iter()
             .filter_map(|c| table.field(c))
             .filter(|f| f.editable && !f.is_flow())
-            .map(|f| FormField { name: f.name.clone(), caption: f.caption.clone(), hint: f.ty.name(), value: String::new() })
+            .map(|f| {
+                let options = match &f.ty {
+                    erpcraft_engine::meta::FieldType::Option(o) => o.clone(),
+                    _ => Vec::new(),
+                };
+                FormField { name: f.name.clone(), caption: f.caption.clone(), hint: f.ty.name(), value: options.first().cloned().unwrap_or_default(), options }
+            })
             .collect();
         Dialog::Form { title: format!("New - {}", page.caption), submit: Submit::NewRecord { table: table.name.clone() }, fields }
     }
@@ -181,7 +196,15 @@ pub fn show(app: &mut ErpApp, ctx: &egui::Context) {
                 egui::Grid::new("form").num_columns(2).spacing(vec2(14.0, 8.0)).show(ui, |ui| {
                     for f in fields.iter_mut() {
                         ui.label(RichText::new(&f.caption).color(TOKENS.text_dim));
-                        ui.add(egui::TextEdit::singleline(&mut f.value).desired_width(260.0).hint_text(&f.hint));
+                        if f.options.is_empty() {
+                            ui.add(egui::TextEdit::singleline(&mut f.value).desired_width(260.0).hint_text(&f.hint));
+                        } else {
+                            egui::ComboBox::from_id_salt(("form_opt", &f.name)).selected_text(if f.value.is_empty() { " " } else { f.value.as_str() }).width(260.0).show_ui(ui, |ui| {
+                                for o in &f.options {
+                                    ui.selectable_value(&mut f.value, o.clone(), if o.is_empty() { " " } else { o.as_str() });
+                                }
+                            });
+                        }
                         ui.end_row();
                     }
                 });

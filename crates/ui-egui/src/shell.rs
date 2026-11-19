@@ -139,7 +139,10 @@ pub fn role_center_bars(app: &mut ErpApp, ui: &mut Ui, on_role_center: bool) {
                     ui.menu_button(RichText::new(format!("{}  ▾", g.caption)).color(TOKENS.text), |ui| {
                         for l in &g.links {
                             if ui.button(&l.caption).clicked() {
-                                app.open_page(&l.page, Vec::new(), None);
+                                match &l.command {
+                                    Some(c) => app.run(c, serde_json::json!({})),
+                                    None => app.open_page(&l.page, Vec::new(), None),
+                                }
                                 ui.close();
                             }
                         }

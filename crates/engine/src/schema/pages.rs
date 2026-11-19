@@ -359,15 +359,13 @@ fn doc_actions(sales: bool, doc_type: &str) -> Vec<Act> {
         );
     } else {
         v.push(
-            Act::command("Post...", A::Home, &format!("{p}.document.post"))
-                .shortcut("F9")
-                .icon("post")
-                .tooltip("Finalize the document by posting the amounts and quantities to the related accounts.")
-                .confirm(if doc_type == "Order" {
-                    "Do you want to post the order (ship and invoice)?"
-                } else {
-                    "Do you want to post the document?"
-                }),
+            {
+                let a = Act::command("Post...", A::Home, &format!("{p}.document.post"))
+                    .shortcut("F9")
+                    .icon("post")
+                    .tooltip("Finalize the document by posting the amounts and quantities to the related accounts.");
+                if doc_type == "Order" { a.ask(&["mode"]) } else { a.confirm("Do you want to post the document?") }
+            },
         );
     }
     v.push(Act::command("Release", A::Home, &format!("{p}.document.release")).shortcut("Ctrl+F9").icon("release"));

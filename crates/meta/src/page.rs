@@ -68,6 +68,8 @@ pub struct ActionDef {
     pub confirm: Option<String>,
     /// Fixed command parameters (e.g. `document_type = Order` for "New Sales Order").
     pub params: Vec<(String, String)>,
+    /// Parameters the user picks in a dialog first (BC's "Ship / Invoice / Ship and Invoice").
+    pub ask: Vec<String>,
 }
 
 impl ActionDef {
@@ -83,6 +85,7 @@ impl ActionDef {
             tooltip: String::new(),
             confirm: None,
             params: Vec::new(),
+            ask: Vec::new(),
         }
     }
 
@@ -98,6 +101,7 @@ impl ActionDef {
             tooltip: String::new(),
             confirm: None,
             params: Vec::new(),
+            ask: Vec::new(),
         }
     }
 
@@ -119,6 +123,10 @@ impl ActionDef {
     }
     pub fn confirm(mut self, s: &str) -> Self {
         self.confirm = Some(s.to_string());
+        self
+    }
+    pub fn ask(mut self, fields: &[&str]) -> Self {
+        self.ask = fields.iter().map(|s| (*s).to_string()).collect();
         self
     }
     pub fn param(mut self, k: &str, v: &str) -> Self {
@@ -281,16 +289,22 @@ impl PageDef {
     }
 }
 
-/// A link in a role center's navigation: a caption and the page it opens.
+/// A link in a role center's navigation: a caption and the page it opens, or the command it runs
+/// (reports).
 #[derive(Clone, Debug)]
 pub struct NavLink {
     pub caption: String,
     pub page: String,
+    pub command: Option<String>,
 }
 
 impl NavLink {
     pub fn new(caption: &str, page: &str) -> Self {
-        Self { caption: caption.to_string(), page: page.to_string() }
+        Self { caption: caption.to_string(), page: page.to_string(), command: None }
+    }
+
+    pub fn command(caption: &str, command: &str) -> Self {
+        Self { caption: caption.to_string(), page: String::new(), command: Some(command.to_string()) }
     }
 }
 

@@ -344,7 +344,12 @@ impl ErpApp {
             params.insert("table".into(), json!(t));
             params.insert("key".into(), k.to_json());
         }
-        let missing = dialogs::missing_params(command, &params, context.is_some());
+        let mut missing = dialogs::missing_params(command, &params, context.is_some());
+        for f in &a.ask {
+            if !missing.contains(f) {
+                missing.push(f.clone());
+            }
+        }
         if !missing.is_empty() {
             self.dialog = Some(Dialog::params(a.caption.replace('&', ""), command, Json::Object(params), missing));
             return;

@@ -108,7 +108,7 @@ impl Metadata {
                 .chain(rc.creation.iter())
                 .chain(rc.sections.iter().flat_map(|s| s.links.iter()))
                 .chain(rc.action_groups.iter().flat_map(|s| s.links.iter()));
-            for l in links {
+            for l in links.filter(|l| l.command.is_none()) {
                 if self.page(&l.page).is_none() {
                     out.push(format!("role center {}: link {} names unknown page {}", rc.id, l.caption, l.page));
                 }

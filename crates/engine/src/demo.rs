@@ -1,4 +1,4 @@
-//! The base setup every company needs, and the "Auto Craft" demo company: an Indonesian
+﻿//! The base setup every company needs, and the "Auto Craft" demo company: an Indonesian
 //! auto-parts and workshop business (IDR, PPN 11%). Names are fictional.
 
 use erpcraft_meta::Record;
@@ -85,6 +85,11 @@ pub fn setup(ctx: &mut Ctx) -> Result<()> {
         ("PP-INV", "Posted Purchase Invoices", "PP-INV108001"),
         ("PP-CR", "Posted Purchase Credit Memos", "PP-CR109001"),
         ("PMT", "Payments", "PMT00001"),
+        ("PS-SHPT", "Posted Sales Shipments", "102001"),
+        ("PP-RCPT", "Posted Purchase Receipts", "107001"),
+        ("G-JNL", "General Journal", "G00001"),
+        ("G-RCPT", "Cash Receipts Journal", "GR00001"),
+        ("G-PMT", "Payment Journal", "GP00001"),
     ];
     for (code, desc, start) in series {
         raw(ctx, "No. Series", json!({"Code": code, "Description": desc, "Starting No.": start, "Increment-by No.": 1, "Default Nos.": true}))?;
@@ -94,17 +99,26 @@ pub fn setup(ctx: &mut Ctx) -> Result<()> {
         ctx,
         "Sales & Receivables Setup",
         json!({"Primary Key": "", "Customer Nos.": "CUST", "Quote Nos.": "S-QUO", "Order Nos.": "S-ORD", "Invoice Nos.": "S-INV",
-               "Credit Memo Nos.": "S-CR", "Return Order Nos.": "S-RET", "Posted Invoice Nos.": "PS-INV", "Posted Credit Memo Nos.": "PS-CR",
+               "Credit Memo Nos.": "S-CR", "Return Order Nos.": "S-RET", "Posted Invoice Nos.": "PS-INV", "Posted Credit Memo Nos.": "PS-CR", "Posted Shipment Nos.": "PS-SHPT",
                "Credit Warnings": "Both Warnings", "Stockout Warning": true}),
     )?;
     raw(
         ctx,
         "Purchases & Payables Setup",
         json!({"Primary Key": "", "Vendor Nos.": "VEND", "Quote Nos.": "P-QUO", "Order Nos.": "P-ORD", "Invoice Nos.": "P-INV",
-               "Credit Memo Nos.": "P-CR", "Return Order Nos.": "P-RET", "Posted Invoice Nos.": "PP-INV", "Posted Credit Memo Nos.": "PP-CR",
+               "Credit Memo Nos.": "P-CR", "Return Order Nos.": "P-RET", "Posted Invoice Nos.": "PP-INV", "Posted Credit Memo Nos.": "PP-CR", "Posted Receipt Nos.": "PP-RCPT",
                "Ext. Doc. No. Mandatory": false}),
     )?;
     raw(ctx, "Inventory Setup", json!({"Primary Key": "", "Item Nos.": "ITEM"}))?;
+    for (template, ty, _, _, caption, series) in crate::schema::finance::JOURNALS {
+        let source = match *template {
+            "CASHRCPT" => "CASHRECJNL",
+            "PAYMENT" => "PAYMENTJNL",
+            _ => "GENJNL",
+        };
+        raw(ctx, "Gen. Journal Template", json!({"Name": template, "Description": caption, "Type": ty, "No. Series": series, "Source Code": source}))?;
+        raw(ctx, "Gen. Journal Batch", json!({"Journal Template Name": template, "Name": "DEFAULT", "Description": "Default journal", "No. Series": series}))?;
+    }
 
     // Chart of accounts.
     let coa: &[(&str, &str, &str, &str, &str, &str)] = &[
@@ -200,7 +214,7 @@ pub fn setup(ctx: &mut Ctx) -> Result<()> {
     for (code, formula, desc) in [("COD", "0D", "Cash on delivery"), ("14 DAYS", "14D", "Net 14 days"), ("30 DAYS", "30D", "Net 30 days"), ("CM", "CM", "End of current month")] {
         raw(ctx, "Payment Terms", json!({"Code": code, "Due Date Calculation": formula, "Description": desc}))?;
     }
-    for (code, desc, sym) in [("USD", "US Dollar", "$"), ("EUR", "Euro", "€"), ("SGD", "Singapore Dollar", "S$")] {
+    for (code, desc, sym) in [("USD", "US Dollar", "$"), ("EUR", "Euro", "â‚¬"), ("SGD", "Singapore Dollar", "S$")] {
         raw(ctx, "Currency", json!({"Code": code, "Description": desc, "Symbol": sym}))?;
     }
     for (code, desc) in [("PCS", "Piece"), ("SET", "Set"), ("LTR", "Liter"), ("HOUR", "Hour")] {
@@ -216,6 +230,7 @@ pub fn setup(ctx: &mut Ctx) -> Result<()> {
 }
 
 pub fn master_data(ctx: &mut Ctx) -> Result<()> {
+    let mut pending_batches: Vec<erpcraft_meta::Record> = Vec::new();
     let customers: &[(&str, &str, &str, &str, &str, i64)] = &[
         ("10000", "Bengkel Maju Jaya", "Jl. Raya Bogor Km 21", "Jakarta Timur", "30 DAYS", 50_000_000),
         ("20000", "Garasi Sentosa Motor", "Jl. Gatot Subroto 88", "Bandung", "14 DAYS", 25_000_000),
@@ -269,12 +284,26 @@ pub fn master_data(ctx: &mut Ctx) -> Result<()> {
                    "Vendor No.": vendor, "Reorder Point": if *ty == "Service" { 0 } else { 10 }}),
         )?;
     }
+    for template in ["CASHRCPT", "PAYMENT"] {
+        let t = ctx.table("Gen. Journal Batch")?;
+        let key = erpcraft_meta::Key(vec![erpcraft_meta::Value::text(template), erpcraft_meta::Value::text("DEFAULT")]);
+        if let Some(mut b) = ctx.db.get(&t.name, &key).cloned() {
+            b.set("Bal. Account Type", erpcraft_meta::Value::text("Bank Account"));
+            b.set("Bal. Account No.", erpcraft_meta::Value::text("OPERATING"));
+            // The bank account is created just below; the batch only names it.
+            pending_batches.push(b);
+        }
+    }
     create(
         ctx,
         BANK_ACCOUNT,
         json!({"No.": "OPERATING", "Name": "Operating Account - Bank Demo", "Bank Account No.": "123-456-7890", "City": "Jakarta",
                "Bank Acc. Posting Group": "OPERATING"}),
     )?;
+    let bt = ctx.table("Gen. Journal Batch")?;
+    for b in pending_batches {
+        ctx.db.modify(bt, b)?;
+    }
     Ok(())
 }
 
@@ -370,7 +399,7 @@ pub fn transactions(ctx: &mut Ctx) -> Result<()> {
 fn post_as(ctx: &mut Ctx, sales: bool, doc_type: &str, created: &Json) -> Result<String> {
     let no = created.get("no").and_then(Json::as_str).unwrap_or_default().to_string();
     let side = if sales { &SALES } else { &PURCHASE };
-    let r = crate::posting::post_document(ctx, side, doc_type, &no)?;
+    let r = crate::posting::post_document(ctx, side, doc_type, &no, crate::posting::PostMode::BOTH)?;
     Ok(r.get("posted_no").and_then(Json::as_str).unwrap_or_default().to_string())
 }
 
@@ -382,6 +411,6 @@ fn obj(j: Json) -> Map<String, Json> {
 fn post(ctx: &mut Ctx, sales: bool, created: &Json) -> Result<String> {
     let no = created.get("no").and_then(Json::as_str).unwrap_or_default().to_string();
     let side = if sales { &SALES } else { &PURCHASE };
-    let r = crate::posting::post_document(ctx, side, "Order", &no)?;
+    let r = crate::posting::post_document(ctx, side, "Order", &no, crate::posting::PostMode::BOTH)?;
     Ok(r.get("posted_no").and_then(Json::as_str).unwrap_or_default().to_string())
 }

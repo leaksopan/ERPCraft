@@ -16,6 +16,9 @@ use crate::schema::tables::{
 use crate::side::Side;
 
 pub fn on_insert(ctx: &mut Ctx, t: &TableDef, r: &mut Record) -> Result<()> {
+    if t.name == crate::schema::finance::GEN_JNL_LINE {
+        return crate::journal::on_insert(ctx, r);
+    }
     match t.name.as_str() {
         CUSTOMER | VENDOR | ITEM => {
             if r.str("No.").is_empty() {
@@ -157,6 +160,9 @@ pub fn on_validate(ctx: &mut Ctx, t: &TableDef, r: &mut Record, field: &str, old
     }
     if t.name == ITEM && field == "Description" {
         r.set("Search Name", Value::text(r.str("Description").to_uppercase()));
+    }
+    if t.name == crate::schema::finance::GEN_JNL_LINE {
+        return crate::journal::on_validate(ctx, r, field);
     }
     if let Some(side) = Side::for_header(&t.name) {
         return validate_header(ctx, side, t, r, field, old);
@@ -368,8 +374,12 @@ fn validate_line(ctx: &mut Ctx, side: &Side, r: &mut Record, field: &str, old: &
         "Quantity" => {
             let qty = r.get("Quantity").as_dec();
             let invoiced = r.get("Quantity Invoiced").as_dec();
+            let handled = r.get(side.qty_handled).as_dec();
             if qty.abs() < invoiced.abs() {
                 refuse!("You cannot reduce Quantity below the quantity already invoiced ({invoiced}).");
+            }
+            if qty.abs() < handled.abs() {
+                refuse!("You cannot reduce Quantity below the quantity already {} ({handled}).", if side.sales { "shipped" } else { "received" });
             }
             if qty.is_sign_negative() && !qty.is_zero() {
                 refuse!("Quantity must be positive. Use a credit memo or return order for returns.");
@@ -396,14 +406,16 @@ fn validate_line(ctx: &mut Ctx, side: &Side, r: &mut Record, field: &str, old: &
             if q > outstanding || q < Decimal::ZERO {
                 refuse!("You cannot {} more than {outstanding} units.", if side.sales { "ship" } else { "receive" });
             }
-            r.set("Qty. to Invoice", dec(q));
+            // BC InitQtyToInvoice: what is shipped and not invoiced, plus what ships now.
+            let to_invoice = r.get(side.qty_handled).as_dec() + q - r.get("Quantity Invoiced").as_dec();
+            r.set("Qty. to Invoice", dec(to_invoice));
             Ok(())
         }
         "Qty. to Invoice" => {
             let q = r.get("Qty. to Invoice").as_dec();
-            let outstanding = r.get("Outstanding Quantity").as_dec();
-            if q > outstanding || q < Decimal::ZERO {
-                refuse!("You cannot invoice more than {outstanding} units.");
+            let max = r.get("Quantity").as_dec() - r.get("Quantity Invoiced").as_dec();
+            if q > max || q < Decimal::ZERO {
+                refuse!("You cannot invoice more than {max} units.");
             }
             Ok(())
         }
@@ -412,12 +424,15 @@ fn validate_line(ctx: &mut Ctx, side: &Side, r: &mut Record, field: &str, old: &
     }
 }
 
+/// BC InitOutstanding / InitQtyToShip / InitQtyToInvoice: outstanding is what is not shipped
+/// (received) yet; Qty. to Invoice covers what is shipped and not invoiced plus what ships now.
 fn set_outstanding(side: &Side, doc_type: &str, r: &mut Record) {
-    let outstanding = r.get("Quantity").as_dec() - r.get("Quantity Invoiced").as_dec();
+    let handled = r.get(side.qty_handled).as_dec();
+    let outstanding = r.get("Quantity").as_dec() - handled;
     r.set("Outstanding Quantity", dec(outstanding));
     if doc_type != "Quote" && doc_type != "Blanket Order" {
         r.set(side.qty_handle, dec(outstanding));
-        r.set("Qty. to Invoice", dec(outstanding));
+        r.set("Qty. to Invoice", dec(handled + outstanding - r.get("Quantity Invoiced").as_dec()));
     }
 }
 

@@ -33,9 +33,11 @@ On Windows without the MSVC build tools, use the `stable-x86_64-pc-windows-gnull
 
 - **Master data:** customers, vendors, items, G/L accounts, bank accounts, and the setup tables (posting groups, VAT and General Posting Setup, number series, payment terms).
 - **Sales and purchase documents:** quote, order, invoice and credit memo; release and reopen; Make Order; statistics.
-- **Posting:** to the G/L, customer, vendor, item and bank ledgers, with partial shipment and receipt. A failed command rolls back completely.
+- **Posting:** to the G/L, customer, vendor, item and bank ledgers, with G/L registers and transaction numbers. Orders post Ship / Receive and Invoice separately (posted shipments and receipts) or together. A failed command rolls back completely.
+- **Journals:** General, Cash Receipt and Payment journals with balancing per document, number series, Applies-to and a balancing bank account.
+- **Applications:** detailed customer and vendor ledger entries, Apply / Unapply Entries, Reverse Transaction for journal postings.
 - **Payments:** customer and vendor payments, applied to open invoices.
-- **Reports:** trial balance, customer and vendor statistics, item availability.
+- **Reports:** Balance Sheet, Income Statement, Aged Accounts Receivable / Payable, trial balance, customer and vendor statistics, item availability ([`docs/finance.md`](docs/finance.md)).
 - **Users and permissions** after BC's User, Permission Set and Permission tables, with a work date saved per user.
 - **Demo company:** "Auto Craft", an Indonesian auto-parts and workshop business in IDR with 11% PPN.
 

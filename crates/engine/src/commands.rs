@@ -267,6 +267,39 @@ fn s_vend_payment() -> Json {
         "bank_account_no": {"type": "string"}, "posting_date": {"type": "string"},
         "applies_to_doc_no": {"type": "string"}}, "required": ["amount"]})
 }
+fn s_post_sales() -> Json {
+    json!({"type": "object", "properties": {
+        "document_type": {"type": "string", "default": "Order"}, "no": {"type": "string"},
+        "mode": {"type": "string", "enum": ["Ship and Invoice", "Ship", "Invoice"], "default": "Ship and Invoice",
+                 "description": "orders only: what to post"}}, "required": ["no"]})
+}
+fn s_post_purch() -> Json {
+    json!({"type": "object", "properties": {
+        "document_type": {"type": "string", "default": "Order"}, "no": {"type": "string"},
+        "mode": {"type": "string", "enum": ["Receive and Invoice", "Receive", "Invoice"], "default": "Receive and Invoice",
+                 "description": "orders only: what to post"}}, "required": ["no"]})
+}
+fn s_journal() -> Json {
+    json!({"type": "object", "properties": {
+        "template": {"type": "string", "enum": ["GENERAL", "CASHRCPT", "PAYMENT"], "default": "GENERAL"},
+        "batch": {"type": "string", "default": "DEFAULT"}}})
+}
+fn s_apply() -> Json {
+    json!({"type": "object", "properties": {
+        "entry_no": {"type": "integer", "description": "the open entry to apply (or the selected ledger entry)"},
+        "applies_to_entry_nos": {"type": "array", "items": {"type": "integer"}},
+        "applies_to_doc_no": {"type": "string", "description": "apply to the open entry of this document"}}})
+}
+fn s_entry() -> Json {
+    json!({"type": "object", "properties": {"entry_no": {"type": "integer", "description": "a customer / vendor ledger entry (or the selected one)"}}})
+}
+fn s_reverse() -> Json {
+    json!({"type": "object", "properties": {"transaction_no": {"type": "integer", "description": "or the selected ledger entry's transaction"}}})
+}
+fn s_period() -> Json {
+    json!({"type": "object", "properties": {"from": {"type": "string", "description": "YYYY-MM-DD, default: first day of the work date's year"},
+        "to": {"type": "string", "description": "YYYY-MM-DD, default: work date"}}})
+}
 fn s_no() -> Json {
     json!({"type": "object", "properties": {"no": {"type": "string"}}, "required": ["no"]})
 }
@@ -369,7 +402,14 @@ pub fn cue_value(db: &Database, meta: &erpcraft_meta::Metadata, work_date: Naive
 fn rolecenter_get(ctx: &mut Ctx, p: &Json) -> Result<Json> {
     let id = opt_str(p, "id").unwrap_or(crate::schema::role_center::BUSINESS_MANAGER);
     let rc = ctx.meta.role_center(id).ok_or_else(|| EngineError::not_found(format!("Role center '{id}' does not exist.")))?;
-    let links = |v: &[erpcraft_meta::NavLink]| v.iter().map(|l| json!({"caption": l.caption, "page": l.page})).collect::<Vec<_>>();
+    let links = |v: &[erpcraft_meta::NavLink]| {
+        v.iter()
+            .map(|l| match &l.command {
+                Some(c) => json!({"caption": l.caption, "command": c}),
+                None => json!({"caption": l.caption, "page": l.page}),
+            })
+            .collect::<Vec<_>>()
+    };
     let groups = |v: &[erpcraft_meta::NavGroup]| v.iter().map(|g| json!({"caption": g.caption, "links": links(&g.links)})).collect::<Vec<_>>();
     let cues: Vec<Json> = rc
         .cue_groups
@@ -617,11 +657,74 @@ fn purch_reopen(c: &mut Ctx, p: &Json) -> Result<Json> {
 }
 fn sales_post(c: &mut Ctx, p: &Json) -> Result<Json> {
     let (t, n) = doc_ref(p, &SALES)?;
-    posting::post_document(c, &SALES, &t, &n)
+    let mode = posting::PostMode::parse(opt_str(p, "mode"))?;
+    posting::post_document(c, &SALES, &t, &n, mode)
 }
 fn purch_post(c: &mut Ctx, p: &Json) -> Result<Json> {
     let (t, n) = doc_ref(p, &PURCHASE)?;
-    posting::post_document(c, &PURCHASE, &t, &n)
+    let mode = posting::PostMode::parse(opt_str(p, "mode"))?;
+    posting::post_document(c, &PURCHASE, &t, &n, mode)
+}
+
+// ---- journals, applications, reversal ------------------------------------------------------
+
+fn journal_ref(p: &Json) -> (String, String) {
+    (opt_str(p, "template").unwrap_or("GENERAL").to_uppercase(), opt_str(p, "batch").unwrap_or("DEFAULT").to_uppercase())
+}
+fn journal_post(c: &mut Ctx, p: &Json) -> Result<Json> {
+    let (t, b) = journal_ref(p);
+    crate::journal::post(c, &t, &b)
+}
+fn journal_check(c: &mut Ctx, p: &Json) -> Result<Json> {
+    let (t, b) = journal_ref(p);
+    let problems = crate::journal::check(c, &t, &b)?;
+    let rows: Vec<Json> = if problems.is_empty() { vec![json!(["The journal balances and can be posted."])] } else { problems.iter().map(|p| json!([p])).collect() };
+    Ok(json!({"ok": problems.is_empty(), "problems": problems, "report": {"title": format!("Check {t} / {b}"), "columns": ["Result"], "rows": rows}}))
+}
+/// The ledger entry number from `entry_no` or from the selected ledger entry.
+fn entry_ref(p: &Json, side: &Side) -> Result<i64> {
+    if let Some(n) = p.get("entry_no").and_then(Json::as_i64) {
+        return Ok(n);
+    }
+    context_key(p, side.ledger)
+        .and_then(|k| k.first().and_then(|v| v.as_i64()))
+        .ok_or_else(|| EngineError::invalid("missing parameter 'entry_no'"))
+}
+fn entries_apply(c: &mut Ctx, side: &Side, p: &Json) -> Result<Json> {
+    let entry = entry_ref(p, side)?;
+    let e = c.get(side.ledger, &Key(vec![erpcraft_meta::Value::Int(entry)]))?;
+    let targets: Vec<i64> = match p.get("applies_to_entry_nos").and_then(Json::as_array) {
+        Some(a) => a.iter().filter_map(Json::as_i64).collect(),
+        None => crate::ledger::open_entries_against(c, side, e.str(side.ledger_party), e.get("Remaining Amount").as_dec(), opt_str(p, "applies_to_doc_no")),
+    };
+    if targets.is_empty() {
+        refuse!("There are no open entries of the opposite sign to apply {} Ledger Entry {entry} to.", side.party_caption);
+    }
+    let date = e.get("Posting Date").as_date().unwrap_or(c.work_date).max(c.work_date);
+    let applied = crate::ledger::apply(c, side, entry, &targets, date)?;
+    let total: Decimal = applied.iter().map(|(_, a)| *a).sum();
+    Ok(json!({"applied": applied.iter().map(|(d, a)| json!({"document_no": d, "amount": a.to_string()})).collect::<Vec<_>>(),
+              "message": format!("The entries were successfully applied ({total} applied).")}))
+}
+fn entries_unapply(c: &mut Ctx, side: &Side, p: &Json) -> Result<Json> {
+    let entry = entry_ref(p, side)?;
+    crate::ledger::unapply(c, side, entry)
+}
+fn cust_apply(c: &mut Ctx, p: &Json) -> Result<Json> {
+    entries_apply(c, &SALES, p)
+}
+fn vend_apply(c: &mut Ctx, p: &Json) -> Result<Json> {
+    entries_apply(c, &PURCHASE, p)
+}
+fn cust_unapply(c: &mut Ctx, p: &Json) -> Result<Json> {
+    entries_unapply(c, &SALES, p)
+}
+fn vend_unapply(c: &mut Ctx, p: &Json) -> Result<Json> {
+    entries_unapply(c, &PURCHASE, p)
+}
+fn transaction_reverse(c: &mut Ctx, p: &Json) -> Result<Json> {
+    let t = crate::reverse::transaction_of(c, p)?;
+    crate::reverse::reverse(c, t)
 }
 fn sales_make_order(c: &mut Ctx, p: &Json) -> Result<Json> {
     let (_, n) = doc_ref(p, &SALES)?;
@@ -716,6 +819,27 @@ fn item_availability(ctx: &mut Ctx, p: &Json) -> Result<Json> {
     Ok(json!({"report": {"title": format!("Item Availability - {no} {}", r.str("Description")), "columns": ["", "Quantity"], "rows": rows}}))
 }
 
+fn balance_sheet(ctx: &mut Ctx, p: &Json) -> Result<Json> {
+    let d = opt_date(p, "date")?.or(opt_date(p, "to")?).unwrap_or(ctx.work_date);
+    crate::reports::balance_sheet(ctx, d)
+}
+fn income_statement(ctx: &mut Ctx, p: &Json) -> Result<Json> {
+    let to = opt_date(p, "to")?.unwrap_or(ctx.work_date);
+    let from = match opt_date(p, "from")? {
+        Some(d) => d,
+        None => NaiveDate::from_ymd_opt(chrono::Datelike::year(&to), 1, 1).unwrap_or(to),
+    };
+    crate::reports::income_statement(ctx, from, to)
+}
+fn aged_receivables(ctx: &mut Ctx, p: &Json) -> Result<Json> {
+    let d = opt_date(p, "date")?.unwrap_or(ctx.work_date);
+    crate::reports::aged(ctx, &SALES, d)
+}
+fn aged_payables(ctx: &mut Ctx, p: &Json) -> Result<Json> {
+    let d = opt_date(p, "date")?.unwrap_or(ctx.work_date);
+    crate::reports::aged(ctx, &PURCHASE, d)
+}
+
 fn trial_balance(ctx: &mut Ctx, p: &Json) -> Result<Json> {
     let as_of = opt_date(p, "date")?;
     let t = ctx.table(GL_ACCOUNT)?;
@@ -781,14 +905,14 @@ static COMMANDS: &[CommandDef] = &[
     cmd!("sales.line.add", "Add Sales Line", "Sales", true, s_line, sales_line, "Add an item or G/L account line to a sales document."),
     cmd!("sales.document.release", "Release", "Sales", true, s_doc, sales_release, "Release a sales document (status Released)."),
     cmd!("sales.document.reopen", "Reopen", "Sales", true, s_doc, sales_reopen, "Reopen a released sales document."),
-    cmd!("sales.document.post", "Post", "Sales", true, s_doc, sales_post, "Post a sales order (ship and invoice), invoice or credit memo."),
+    cmd!("sales.document.post", "Post", "Sales", true, s_post_sales, sales_post, "Post a sales order (ship and invoice), invoice or credit memo."),
     cmd!("sales.quote.make_order", "Make Order", "Sales", true, s_doc, sales_make_order, "Convert a sales quote to an order."),
     cmd!("sales.document.statistics", "Statistics", "Sales", false, s_doc, sales_stats, "Amounts, VAT and profit of a sales document."),
     cmd!("purchase.document.new", "New Purchase Document", "Purchasing", true, s_doc_new_purch, purch_new, "Create a purchase quote, order, invoice or credit memo, optionally with lines."),
     cmd!("purchase.line.add", "Add Purchase Line", "Purchasing", true, s_line, purch_line, "Add an item or G/L account line to a purchase document."),
     cmd!("purchase.document.release", "Release", "Purchasing", true, s_doc, purch_release, "Release a purchase document."),
     cmd!("purchase.document.reopen", "Reopen", "Purchasing", true, s_doc, purch_reopen, "Reopen a released purchase document."),
-    cmd!("purchase.document.post", "Post", "Purchasing", true, s_doc, purch_post, "Post a purchase order (receive and invoice), invoice or credit memo."),
+    cmd!("purchase.document.post", "Post", "Purchasing", true, s_post_purch, purch_post, "Post a purchase order (receive and invoice), invoice or credit memo."),
     cmd!("purchase.quote.make_order", "Make Order", "Purchasing", true, s_doc, purch_make_order, "Convert a purchase quote to an order."),
     cmd!("purchase.document.statistics", "Statistics", "Purchasing", false, s_doc, purch_stats, "Amounts and VAT of a purchase document."),
     cmd!("payment.customer.register", "Register Customer Payment", "Cash Management", true, s_cust_payment, cust_payment, "Post a payment received and apply it to open invoices."),
@@ -796,6 +920,17 @@ static COMMANDS: &[CommandDef] = &[
     cmd!("customer.statistics", "Customer Statistics", "Sales", false, s_no, cust_stats, "Balance, sales and payments of a customer."),
     cmd!("vendor.statistics", "Vendor Statistics", "Purchasing", false, s_no, vend_stats, "Balance, purchases and payments of a vendor."),
     cmd!("item.availability", "Item Availability", "Inventory", false, s_no, item_availability, "Inventory, quantities on order and projected availability."),
+    cmd!("journal.post", "Post Journal", "Finance", true, s_journal, journal_post, "Post the lines of a general, cash receipt or payment journal batch."),
+    cmd!("journal.check", "Check Journal", "Finance", false, s_journal, journal_check, "Check that every document in a journal batch balances, without posting."),
+    cmd!("customer.entries.apply", "Apply Customer Entries", "Sales", true, s_apply, cust_apply, "Apply an open customer ledger entry to other open entries (oldest first by default)."),
+    cmd!("customer.entries.unapply", "Unapply Customer Entries", "Sales", true, s_entry, cust_unapply, "Undo the latest application of a customer ledger entry."),
+    cmd!("vendor.entries.apply", "Apply Vendor Entries", "Purchasing", true, s_apply, vend_apply, "Apply an open vendor ledger entry to other open entries (oldest first by default)."),
+    cmd!("vendor.entries.unapply", "Unapply Vendor Entries", "Purchasing", true, s_entry, vend_unapply, "Undo the latest application of a vendor ledger entry."),
+    cmd!("transaction.reverse", "Reverse Transaction", "Finance", true, s_reverse, transaction_reverse, "Reverse a journal transaction (G/L, customer, vendor and bank entries)."),
+    cmd!("report.balance_sheet", "Balance Sheet", "Finance", false, s_date, balance_sheet, "Assets, liabilities and equity at a date."),
+    cmd!("report.income_statement", "Income Statement", "Finance", false, s_period, income_statement, "Revenue, cost of goods sold, expenses and net income for a period."),
+    cmd!("report.aged_receivables", "Aged Accounts Receivable", "Sales", false, s_date, aged_receivables, "Open customer balances by days past due."),
+    cmd!("report.aged_payables", "Aged Accounts Payable", "Purchasing", false, s_date, aged_payables, "Open vendor balances by days past due."),
     cmd!("report.trial_balance", "Trial Balance", "Finance", false, s_date, trial_balance, "G/L account balances with debit / credit totals."),
 ];
 

@@ -65,7 +65,8 @@ pub fn apply(ctx: &egui::Context) {
     v.faint_bg_color = Color32::from_rgb(0xFA, 0xF9, 0xF8);
     v.hyperlink_color = t.accent;
     v.selection.bg_fill = t.row_selected;
-    v.selection.stroke = Stroke::new(1.0, t.accent);
+    // Selected rows keep dark text (BC highlights the row, not the text).
+    v.selection.stroke = Stroke::new(1.0, t.text);
     v.override_text_color = Some(t.text);
     v.window_corner_radius = CornerRadius::same(4);
     v.window_stroke = Stroke::new(1.0, t.border);
@@ -74,7 +75,8 @@ pub fn apply(ctx: &egui::Context) {
         w.corner_radius = CornerRadius::same(2);
     }
     v.widgets.inactive.bg_stroke = Stroke::new(1.0, t.border);
-    v.widgets.inactive.weak_bg_fill = t.page;
+    // Buttons and menu buttons are flat, as on BC's bars; inputs keep their border.
+    v.widgets.inactive.weak_bg_fill = Color32::TRANSPARENT;
     v.widgets.inactive.bg_fill = t.page;
     v.widgets.hovered.weak_bg_fill = t.row_hover;
     v.widgets.hovered.bg_stroke = Stroke::new(1.0, t.input_line);

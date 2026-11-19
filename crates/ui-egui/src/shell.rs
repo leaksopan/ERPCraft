@@ -61,12 +61,13 @@ pub fn role_center_bars(app: &mut ErpApp, ui: &mut Ui) {
         .filter(|s| !s.is_empty())
         .unwrap_or_else(|| "My Company".to_string());
     let on_role_center = matches!(app.stack.last(), Some(crate::View::RoleCenter) | None);
-    // Row 1: company name | section menus (Finance ⌄, Cash Management ⌄, …) | ☰.
+    // Row 1: company name | section menus (Finance ▾, Cash Management ▾, …) | ☰.
     egui::Panel::top("nav_bar")
         .exact_size(50.0)
         .frame(egui::Frame::new().fill(TOKENS.page).inner_margin(egui::Margin::symmetric(24, 0)))
         .show(ui, |ui| {
             ui.horizontal_centered(|ui| {
+                widgets::flat(ui);
                 let name = ui.add(egui::Label::new(RichText::new(&company).size(19.0).color(TOKENS.text)).sense(Sense::click()));
                 if name.clicked() {
                     app.home();
@@ -77,7 +78,7 @@ pub fn role_center_bars(app: &mut ErpApp, ui: &mut Ui) {
                 ui.add_space(10.0);
                 let mut open = None;
                 for s in &rc.sections {
-                    ui.menu_button(RichText::new(format!("{} ⌄", s.caption)).color(TOKENS.text), |ui| {
+                    ui.menu_button(RichText::new(format!("{} ▾", s.caption)).color(TOKENS.text), |ui| {
                         ui.set_min_width(220.0);
                         for l in &s.links {
                             if ui.button(&l.caption).clicked() {
@@ -128,6 +129,7 @@ pub fn role_center_bars(app: &mut ErpApp, ui: &mut Ui) {
         )
         .show(ui, |ui| {
             ui.horizontal_centered(|ui| {
+                widgets::flat(ui);
                 for l in &rc.creation {
                     if widgets::action_button(ui, "", &l.caption).clicked() {
                         app.open_page(&l.page, Vec::new(), None);
@@ -135,7 +137,7 @@ pub fn role_center_bars(app: &mut ErpApp, ui: &mut Ui) {
                 }
                 ui.add_space(6.0);
                 for g in &rc.action_groups {
-                    ui.menu_button(RichText::new(format!("{}  ⌄", g.caption)).color(TOKENS.text), |ui| {
+                    ui.menu_button(RichText::new(format!("{}  ▾", g.caption)).color(TOKENS.text), |ui| {
                         for l in &g.links {
                             if ui.button(&l.caption).clicked() {
                                 app.open_page(&l.page, Vec::new(), None);

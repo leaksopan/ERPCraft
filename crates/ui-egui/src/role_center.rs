@@ -78,7 +78,7 @@ pub fn show(app: &mut ErpApp, ui: &mut Ui) {
 }
 
 fn section_header(ui: &mut Ui, caption: &str) {
-    ui.label(RichText::new(format!("{caption} ⌄")).size(20.0).color(TOKENS.text));
+    ui.label(RichText::new(format!("{caption} ▾")).size(20.0).color(TOKENS.text));
     let (rect, _) = ui.allocate_exact_size(vec2(ui.available_width(), 2.0), Sense::hover());
     ui.painter().rect_filled(rect, 0.0, TOKENS.text_dim);
     ui.add_space(10.0);

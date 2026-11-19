@@ -22,7 +22,7 @@ pub fn action_button(ui: &mut Ui, glyph: &str, caption: &str) -> egui::Response 
 pub fn glyph(icon: &str) -> &'static str {
     match icon {
         "new" => "+",
-        "edit" => "✏",
+        "edit" => "✎",
         "delete" => "🗑",
         "post" => "⏵",
         "release" => "🔓",
@@ -79,6 +79,18 @@ pub fn card_frame() -> egui::Frame {
         .shadow(egui::epaint::Shadow { offset: [0, 1], blur: 3, spread: 0, color: Color32::from_black_alpha(22) })
 }
 
+/// Makes buttons and menu buttons in `ui` borderless (BC's command bars and navigation menus).
+pub fn flat(ui: &mut Ui) {
+    let w = &mut ui.visuals_mut().widgets;
+    w.inactive.bg_stroke = Stroke::NONE;
+    w.inactive.weak_bg_fill = Color32::TRANSPARENT;
+    w.hovered.bg_stroke = Stroke::NONE;
+    w.hovered.weak_bg_fill = TOKENS.row_hover;
+    w.open.bg_stroke = Stroke::NONE;
+    w.open.weak_bg_fill = TOKENS.divider;
+    w.active.bg_stroke = Stroke::NONE;
+}
+
 /// A short vertical separator in action bars.
 pub fn vsep(ui: &mut Ui) {
     ui.add_space(4.0);
@@ -128,7 +140,11 @@ pub fn field_editor(
     if !editable || f.is_flow() {
         let text = RichText::new(if shown.is_empty() && f.ty.is_numeric() { "0.00".to_string() } else { shown });
         let text = if f.is_flow() { text.color(TOKENS.accent) } else { text.color(TOKENS.text) };
-        ui.add_sized(vec2(width, 22.0), egui::Label::new(text).truncate().halign(if is_numeric(&f.ty) { Align::Max } else { Align::Min }));
+        let layout = if is_numeric(&f.ty) { Layout::right_to_left(Align::Center) } else { Layout::left_to_right(Align::Center) };
+        ui.allocate_ui_with_layout(vec2(width, 24.0), layout, |ui| {
+            ui.add_space(8.0);
+            ui.add(egui::Label::new(text).truncate());
+        });
         return None;
     }
     match &f.ty {
@@ -166,7 +182,7 @@ pub fn field_editor(
                     bufs.remove(id);
                 }
                 if let Some(values) = lookup {
-                    ui.menu_button("⌄", |ui| {
+                    ui.menu_button("▾", |ui| {
                         ui.set_min_width(260.0);
                         egui::ScrollArea::vertical().max_height(320.0).show(ui, |ui| {
                             if ui.selectable_label(false, RichText::new("(blank)").italics()).clicked() {

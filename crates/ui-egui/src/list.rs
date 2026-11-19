@@ -23,7 +23,7 @@ pub fn show(app: &mut ErpApp, ui: &mut Ui, mut state: ListState) {
     }
     let inline_edit = page.editable && page.card_page.is_none();
 
-    // BC list header: one bar with "Caption: All ⌄", search, New / Delete and the action menus.
+    // BC list header: one bar with "Caption: All ▾", search, New / Delete and the action menus.
     egui::Frame::new().fill(TOKENS.page).inner_margin(egui::Margin { left: 24, right: 16, top: 2, bottom: 2 }).show(ui, |ui| {
         ui.set_width(ui.available_width().max(0.0));
         action_bar(app, ui, page, table, &mut state, inline_edit);
@@ -50,7 +50,7 @@ pub fn show(app: &mut ErpApp, ui: &mut Ui, mut state: ListState) {
         egui::Panel::right(("list_factbox", &page.id))
             .resizable(true)
             .default_size(300.0)
-            .frame(egui::Frame::new().fill(TOKENS.canvas).inner_margin(egui::Margin { left: 0, right: 16, top: 12, bottom: 12 }))
+            .frame(egui::Frame::new().fill(TOKENS.canvas).inner_margin(egui::Margin { left: 12, right: 16, top: 12, bottom: 12 }))
             .show(ui, |ui| {
                 let rec = state.selected.as_ref().and_then(|k| app.session.record(&table.name, k));
                 crate::card::factbox_pane(app, ui, page, rec.as_ref());
@@ -85,9 +85,10 @@ fn action_bar(app: &mut ErpApp, ui: &mut Ui, page: &PageDef, table: &TableDef, s
     let ctx_key = selected.as_ref().map(|k| (table.name.as_str(), k));
     let mut run: Option<ActionDef> = None;
     ui.horizontal(|ui| {
+        widgets::flat(ui);
         ui.set_min_height(36.0);
         ui.label(RichText::new(format!("{}:", page.caption)).font(theme::bold(theme::BODY)).color(TOKENS.text));
-        ui.label(RichText::new("All ⌄").color(TOKENS.accent));
+        ui.label(RichText::new("All ▾").color(TOKENS.accent));
         widgets::vsep(ui);
         if widgets::action_button(ui, "🔍", "").on_hover_text("Search").clicked() {
             state.search_open = !state.search_open;
@@ -117,7 +118,7 @@ fn action_bar(app: &mut ErpApp, ui: &mut Ui, page: &PageDef, table: &TableDef, s
             }
         }
         if let Some(card) = &page.card_page
-            && widgets::action_button(ui, "✏", "Edit").clicked()
+            && widgets::action_button(ui, "✎", "Edit").clicked()
             && let Some(k) = &selected
         {
             let target = app.session.record(&table.name, k).and_then(|r| app.session.card_page_for(&table.name, &r)).unwrap_or_else(|| card.clone());
@@ -152,7 +153,7 @@ pub fn action_menus(ui: &mut Ui, page: &PageDef, run: &mut Option<ActionDef>) {
         if actions.is_empty() {
             continue;
         }
-        ui.menu_button(RichText::new(format!("{}  ⌄", area.caption())).color(TOKENS.text), |ui| {
+        ui.menu_button(RichText::new(format!("{}  ▾", area.caption())).color(TOKENS.text), |ui| {
             ui.set_min_width(200.0);
             for a in actions {
                 let mut label = a.caption.replace('&', "");
@@ -183,16 +184,18 @@ fn grid(app: &mut ErpApp, ui: &mut Ui, page: &PageDef, table: &TableDef, rows: &
     let mut builder = TableBuilder::new(ui)
         .id_salt(("list", &page.id))
         .striped(false)
-        .resizable(true)
+        .resizable(false)
         .sense(egui::Sense::click())
         .auto_shrink([false, false])
         .cell_layout(Layout::left_to_right(Align::Center));
     for f in &cols {
         let w = match f.ty {
-            erpcraft_engine::meta::FieldType::Decimal => 130.0,
-            erpcraft_engine::meta::FieldType::Text(n) if n > 50 => 240.0,
-            erpcraft_engine::meta::FieldType::Boolean => 70.0,
-            _ => 110.0,
+            erpcraft_engine::meta::FieldType::Decimal => 120.0,
+            erpcraft_engine::meta::FieldType::Text(n) if n > 50 => 200.0,
+            erpcraft_engine::meta::FieldType::Text(_) => 120.0,
+            erpcraft_engine::meta::FieldType::Boolean | erpcraft_engine::meta::FieldType::Option(_) => 80.0,
+            erpcraft_engine::meta::FieldType::Date => 95.0,
+            _ => 100.0,
         };
         builder = builder.column(Column::initial(w).at_least(50.0).clip(true));
     }
@@ -212,6 +215,8 @@ fn grid(app: &mut ErpApp, ui: &mut Ui, page: &PageDef, table: &TableDef, rows: &
                 row.set_selected(state.selected.as_ref() == Some(&key));
                 for (i, f) in cols.iter().enumerate() {
                     row.col(|ui| {
+                        let cell = ui.max_rect();
+                        ui.painter().hline(egui::Rangef::new(cell.left() - 4.0, cell.right() + 4.0), cell.bottom(), egui::Stroke::new(1.0, TOKENS.divider));
                         let v = r.get(&f.name);
                         let editable = inline_edit && f.editable && !f.is_flow() && !table.primary_key.contains(&f.name);
                         if editable {

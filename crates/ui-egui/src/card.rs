@@ -85,29 +85,28 @@ pub fn show(app: &mut ErpApp, ui: &mut Ui, mut state: CardState) {
                     action_tabs(ui, page, &mut run);
                 });
                 ui.add_space(6.0);
-                let avail = ui.available_size();
-                let with_fb = !page.factboxes.is_empty() && app.show_factbox && avail.x > 900.0;
-                let main_w = if with_fb { avail.x - 320.0 } else { avail.x };
-                ui.horizontal_top(|ui| {
-                    ui.allocate_ui_with_layout(vec2(main_w.max(200.0), avail.y.max(100.0)), Layout::top_down(Align::Min), |ui| {
-                        egui::ScrollArea::vertical().id_salt(("card_body", &page.id)).auto_shrink([false; 2]).show(ui, |ui| {
-                            let mut groups = page.groups.iter();
-                            if let Some(first) = groups.next() {
-                                fasttab(app, ui, page, table, &rec, first);
-                            }
-                            for part in &page.parts {
-                                lines_part(app, ui, page, &rec, part, &mut state);
-                            }
-                            for g in groups {
-                                fasttab(app, ui, page, table, &rec, g);
-                            }
-                            ui.add_space(24.0);
-                        });
+                let with_fb = !page.factboxes.is_empty() && app.show_factbox && ui.available_width() > 900.0;
+                if with_fb {
+                    egui::Panel::right(("card_factbox", &page.id))
+                        .resizable(false)
+                        .exact_size(310.0)
+                        .frame(egui::Frame::new().inner_margin(egui::Margin { left: 12, right: 0, top: 0, bottom: 12 }))
+                        .show(ui, |ui| factbox_pane(app, ui, page, Some(&rec)));
+                }
+                egui::CentralPanel::default().frame(egui::Frame::NONE).show(ui, |ui| {
+                    egui::ScrollArea::vertical().id_salt(("card_body", &page.id)).auto_shrink([false; 2]).show(ui, |ui| {
+                        let mut groups = page.groups.iter();
+                        if let Some(first) = groups.next() {
+                            fasttab(app, ui, page, table, &rec, first);
+                        }
+                        for part in &page.parts {
+                            lines_part(app, ui, page, &rec, part, &mut state);
+                        }
+                        for g in groups {
+                            fasttab(app, ui, page, table, &rec, g);
+                        }
+                        ui.add_space(24.0);
                     });
-                    if with_fb {
-                        ui.add_space(12.0);
-                        ui.allocate_ui_with_layout(vec2(300.0, avail.y.max(100.0)), Layout::top_down(Align::Min), |ui| factbox_pane(app, ui, page, Some(&rec)));
-                    }
                 });
             });
     });
@@ -144,6 +143,7 @@ fn action_tabs(ui: &mut Ui, page: &PageDef, run: &mut Option<ActionDef>) {
     let id = egui::Id::unique(("action_tab", &page.id));
     let mut current = ui.ctx().data(|d| d.get_temp::<usize>(id)).unwrap_or(0).min(areas.len() - 1);
     ui.vertical(|ui| {
+        widgets::flat(ui);
         ui.horizontal(|ui| {
             for (i, a) in areas.iter().enumerate() {
                 let sel = i == current;
@@ -248,7 +248,7 @@ fn fasttab(app: &mut ErpApp, ui: &mut Ui, page: &PageDef, table: &TableDef, rec:
     ui.add_space(10.0);
     let header = ui.horizontal(|ui| {
         ui.label(RichText::new(&g.caption).font(theme::bold(theme::SUBTITLE)).color(TOKENS.text));
-        ui.label(RichText::new(if collapsed { "›" } else { "⌄" }).color(TOKENS.text_dim));
+        ui.label(RichText::new(if collapsed { "›" } else { "▾" }).color(TOKENS.text_dim));
         if collapsed {
             ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
                 let promoted: Vec<String> = g
@@ -320,6 +320,7 @@ fn lines_part(app: &mut ErpApp, ui: &mut Ui, host: &PageDef, header: &Record, pa
     let editable = page.editable && host.editable;
     ui.add_space(14.0);
     ui.horizontal(|ui| {
+        widgets::flat(ui);
         ui.label(RichText::new(&part.caption).font(theme::bold(theme::SUBTITLE)).color(TOKENS.text));
         ui.add_space(12.0);
         if editable {
@@ -355,7 +356,8 @@ fn lines_part(app: &mut ErpApp, ui: &mut Ui, host: &PageDef, header: &Record, pa
     let accounts = table_values(app, "G/L Account").unwrap_or_default();
     let mut commit: Option<(Key, String, Json)> = None;
     let height = (lines.len() as f32 * 32.0 + 34.0).clamp(80.0, 420.0);
-    ui.allocate_ui(vec2(ui.available_width(), height), |ui| {
+    egui::ScrollArea::horizontal().id_salt(("lines_scroll", &part.page)).show(ui, |ui| {
+        ui.set_height(height);
         let mut b = TableBuilder::new(ui)
             .id_salt(("lines", &part.page, header.str("No.")))
             .resizable(true)
@@ -364,10 +366,12 @@ fn lines_part(app: &mut ErpApp, ui: &mut Ui, host: &PageDef, header: &Record, pa
             .cell_layout(Layout::left_to_right(Align::Center));
         for f in &cols {
             let w = match f.name.as_str() {
-                "Description" => 230.0,
-                "Type" => 110.0,
-                "No." => 110.0,
-                n if n.starts_with("Qty") || n.starts_with("Quantity") => 90.0,
+                "Description" => 220.0,
+                "Type" => 100.0,
+                "No." => 100.0,
+                "Unit of Measure Code" => 70.0,
+                n if n.starts_with("Qty") || n.starts_with("Quantity") => 80.0,
+                "Line Discount %" => 70.0,
                 _ => 110.0,
             };
             b = b.column(Column::initial(w).at_least(50.0).clip(true));
@@ -426,28 +430,33 @@ fn totals(ui: &mut Ui, header: &Record, lines: &[Record]) {
     let incl = header.get("Amount Including VAT").as_dec();
     let subtotal: rust_decimal::Decimal = lines.iter().map(|l| l.get("Line Amount").as_dec()).sum();
     let disc: rust_decimal::Decimal = lines.iter().map(|l| l.get("Line Discount Amount").as_dec()).sum();
-    ui.add_space(6.0);
-    if ui.available_width() < 300.0 {
-        return;
-    }
-    ui.columns(2, |cols| {
-        let row = |ui: &mut Ui, label: &str, v: rust_decimal::Decimal, strong: bool| {
-            ui.horizontal(|ui| {
-                ui.label(RichText::new(label).color(TOKENS.text_dim));
-                ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
-                    let t = RichText::new(format_decimal(v, 2));
-                    ui.label(if strong { t.font(theme::bold(theme::BODY)) } else { t });
-                });
+    ui.add_space(10.0);
+    let value_box = |ui: &mut Ui, v: rust_decimal::Decimal, strong: bool| {
+        egui::Frame::new().fill(TOKENS.divider).corner_radius(2).inner_margin(egui::Margin::symmetric(8, 3)).show(ui, |ui| {
+            ui.set_width(150.0);
+            ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
+                let t = RichText::new(format_decimal(v, 2));
+                ui.label(if strong { t.font(theme::bold(theme::BODY)) } else { t });
             });
-        };
-        if let Some(c) = cols.get_mut(0) {
-            row(c, "Subtotal Excl. VAT", subtotal, false);
-            row(c, "Line Discount Amount", disc, false);
-        }
-        if let Some(c) = cols.get_mut(1) {
-            row(c, "Total Excl. VAT", amount, false);
-            row(c, "Total VAT", incl - amount, false);
-            row(c, "Total Incl. VAT", incl, true);
+        });
+    };
+    egui::Grid::new(("totals", header.str("No."))).num_columns(4).spacing(vec2(16.0, 6.0)).min_col_width(140.0).show(ui, |ui| {
+        let rows: [(&str, rust_decimal::Decimal, &str, rust_decimal::Decimal, bool); 3] = [
+            ("Subtotal Excl. VAT", subtotal, "Total Excl. VAT", amount, false),
+            ("Line Discount Amount", disc, "Total VAT", incl - amount, false),
+            ("", rust_decimal::Decimal::ZERO, "Total Incl. VAT", incl, true),
+        ];
+        for (l1, v1, l2, v2, strong) in rows {
+            if l1.is_empty() {
+                ui.label("");
+                ui.label("");
+            } else {
+                ui.label(RichText::new(l1).color(TOKENS.text_dim));
+                value_box(ui, v1, false);
+            }
+            ui.label(RichText::new(l2).color(if strong { TOKENS.text } else { TOKENS.text_dim }));
+            value_box(ui, v2, strong);
+            ui.end_row();
         }
     });
 }

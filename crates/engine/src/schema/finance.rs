@@ -404,7 +404,8 @@ fn pages(m: &mut Metadata) {
                 .group(G::new("General", &["No.", no, name, "Posting Date", "Document Date", "Order No.", ext, person, "Posting Description"]).promoted(&[no, name, "Posting Date"]))
                 .part("Lines", lines, &[("Document No.", "No.")])
                 .factbox(FactBoxDef::new(if sales { "Customer Details" } else { "Vendor Details" }, Some(no), &["No.", "Name", "Phone No.", "Balance (LCY)"]))
-                .action(Act::page("Item Ledger Entries", A::Navigate, "item-ledger-entries").link("Document No.", "No.")),
+                .action(Act::page("Item Ledger Entries", A::Navigate, "item-ledger-entries").link("Document No.", "No."))
+                .action(Act::command("Print...", A::Home, "document.print").shortcut("Ctrl+P").icon("print")),
         );
         m.add_page(
             PageDef::new(lines, lines_obj, "Lines", K::ListPart, Some(line))

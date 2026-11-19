@@ -11,7 +11,8 @@ rust-version = "1.95"
 
 [workspace.dependencies]
 erpcraft-meta = { path = "crates/meta" }
-erpcraft-engine = { path = "crates/engine" }
+# Without PostgreSQL / HTTP by default, so the UI also builds for the web; native apps turn them on.
+erpcraft-engine = { path = "crates/engine", default-features = false }
 erpcraft-mcp = { path = "crates/mcp" }
 erpcraft-ui-egui = { path = "crates/ui-egui" }
 

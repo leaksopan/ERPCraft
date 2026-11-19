@@ -13,6 +13,7 @@ ERPCraft follows the shape of [VectorCraft](https://github.com/storytold/vectorc
 | `crates/mcp` | MCP server, JSON-RPC 2.0 over stdio, hand-written. Every engine command is an MCP tool, and tables, pages and records are resources. |
 | `crates/ui-egui` | The egui client in the BC web-client layout: app bar, role center (navigation, cues), list pages (action bar, grid, FactBox), card and document pages (FastTabs, lines, totals), and Tell Me (Alt+Q). |
 | `apps/erpcraft` | Desktop app. |
+| `apps/erpcraft-web` | The same egui app compiled to WebAssembly, on an in-memory demo company ([`docs/web.md`](docs/web.md)). |
 | `apps/erpcraft-cli` | `erpcraft-cli`: run any command headless, inspect metadata, or serve MCP. |
 
 ## Quick start
@@ -40,6 +41,9 @@ On Windows without the MSVC build tools, use the `stable-x86_64-pc-windows-gnull
 - **Fixed assets:** cards with depreciation books; acquisition by purchase invoice, payment, grant (hibah) or opening balance; straight-line depreciation on BC's 360-day year; disposal with gain or loss.
 - **Payments:** customer and vendor payments, applied to open invoices.
 - **Reports:** Balance Sheet, Income Statement, Aged Accounts Receivable / Payable, Inventory Valuation, Fixed Asset Book Value, trial balance, customer and vendor statistics, item availability ([`docs/finance.md`](docs/finance.md)).
+- **Printing:** sales and purchase documents, posted invoices, credit memos, shipments and receipts print to PDF (`document.print`, Ctrl+P), with a built-in PDF writer ([`docs/printing-and-lists.md`](docs/printing-and-lists.md)).
+- **List pages:** BC's filter pane with filter expressions, sorting by column, choosing columns, and a calendar date picker on date fields.
+- **Business Central connector:** test the connection, import and export customers, vendors and items (and import G/L accounts) through the BC API v2.0 with OAuth client credentials ([`docs/bc-connector.md`](docs/bc-connector.md)).
 - **Users and permissions** after BC's User, Permission Set and Permission tables, with a work date saved per user.
 - **Demo company:** "Auto Craft", an Indonesian auto-parts and workshop business in IDR with 11% PPN.
 

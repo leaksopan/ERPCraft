@@ -14,7 +14,15 @@ serde_json = { workspace = true }
 chrono = { workspace = true }
 rust_decimal = { workspace = true }
 # Synchronous PostgreSQL client (MIT OR Apache-2.0); no async runtime in the engine.
-postgres = "0.19"
+postgres = { version = "0.19", optional = true }
+# Synchronous HTTP client (MIT OR Apache-2.0) for the Business Central API connector.
+ureq = { version = "3", optional = true, features = ["json"] }
+
+[features]
+# Native builds keep everything; the web (wasm) build turns these off: no sockets there.
+default = ["postgres", "bc"]
+postgres = ["dep:postgres"]
+bc = ["dep:ureq"]
 
 [dev-dependencies]
 postgres = "0.19"

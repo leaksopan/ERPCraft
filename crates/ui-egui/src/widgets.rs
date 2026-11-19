@@ -33,6 +33,7 @@ pub fn glyph(icon: &str) -> &'static str {
         "payment" => "💳",
         "customer" | "vendor" => "👤",
         "search" => "🔍",
+        "print" => "🖶",
         "filter" => "⏷",
         _ => "",
     }
@@ -167,7 +168,8 @@ pub fn field_editor(
             let mut out = None;
             ui.horizontal(|ui| {
                 ui.spacing_mut().item_spacing.x = 2.0;
-                let lookup_w = if lookup.is_some() { 24.0 } else { 0.0 };
+                let is_date = f.ty == FieldType::Date;
+                let lookup_w = if lookup.is_some() || is_date { 24.0 } else { 0.0 };
                 let buf = bufs.entry(id.to_string()).or_insert_with(|| shown.clone());
                 let mut te = egui::TextEdit::singleline(buf).desired_width((width - lookup_w).max(16.0)).id_salt(id);
                 if is_numeric(&f.ty) {
@@ -180,6 +182,19 @@ pub fn field_editor(
                     bufs.remove(id);
                 } else if !r.has_focus() && !changed {
                     bufs.remove(id);
+                }
+                if is_date {
+                    ui.menu_button("📅", |ui| {
+                        if let Some(d) = calendar(ui, id, v.as_date()) {
+                            out = Some(json!(d.format("%Y-%m-%d").to_string()));
+                            ui.close();
+                        }
+                    })
+                    .response
+                    .on_hover_text("Choose a date");
+                    if out.is_some() {
+                        bufs.remove(id);
+                    }
                 }
                 if let Some(values) = lookup {
                     ui.menu_button("▾", |ui| {
@@ -278,4 +293,69 @@ pub fn shortcut_pressed(ctx: &egui::Context, shortcut: &str) -> bool {
         Some(k) => ctx.input_mut(|i| i.consume_key(mods, k)),
         None => false,
     }
+}
+
+/// A month calendar (BC's date picker): ‹ month year ›, weeks from Monday, today underlined.
+/// Returns the day the user picked.
+pub fn calendar(ui: &mut Ui, id: &str, current: Option<chrono::NaiveDate>) -> Option<chrono::NaiveDate> {
+    use chrono::{Datelike, Months, NaiveDate};
+    let today = chrono::Local::now().date_naive();
+    let mid = egui::Id::unique(("calendar", id));
+    let first = |d: NaiveDate| d.with_day(1).unwrap_or(d);
+    let mut month: NaiveDate = ui.ctx().data(|d| d.get_temp::<NaiveDate>(mid)).unwrap_or_else(|| first(current.unwrap_or(today)));
+    let mut picked = None;
+    ui.set_min_width(230.0);
+    ui.horizontal(|ui| {
+        if ui.button("‹").clicked() {
+            month = month.checked_sub_months(Months::new(1)).unwrap_or(month);
+        }
+        ui.with_layout(Layout::left_to_right(Align::Center).with_main_justify(true), |ui| {
+            ui.label(RichText::new(month.format("%B %Y").to_string()).strong());
+        });
+        if ui.button("›").clicked() {
+            month = month.checked_add_months(Months::new(1)).unwrap_or(month);
+        }
+    });
+    egui::Grid::new(("calendar_grid", id)).num_columns(7).spacing(vec2(2.0, 2.0)).show(ui, |ui| {
+        for d in ["Mo", "Tu", "We", "Th", "Fr", "Sa", "Su"] {
+            ui.label(RichText::new(d).size(theme::SMALL).color(TOKENS.text_dim));
+        }
+        ui.end_row();
+        let offset = month.weekday().num_days_from_monday();
+        for _ in 0..offset {
+            ui.label("");
+        }
+        let mut day = month;
+        let mut col = offset;
+        while day.month() == month.month() {
+            let selected = current == Some(day);
+            let mut text = RichText::new(day.day().to_string());
+            if day == today {
+                text = text.underline();
+            }
+            if selected {
+                text = text.color(Color32::WHITE);
+            }
+            let b = egui::Button::new(text).min_size(vec2(28.0, 24.0)).fill(if selected { TOKENS.accent } else { Color32::TRANSPARENT });
+            if ui.add(b).clicked() {
+                picked = Some(day);
+            }
+            col += 1;
+            if col == 7 {
+                ui.end_row();
+                col = 0;
+            }
+            match day.succ_opt() {
+                Some(n) => day = n,
+                None => break,
+            }
+        }
+    });
+    ui.horizontal(|ui| {
+        if ui.link("Today").clicked() {
+            picked = Some(today);
+        }
+    });
+    ui.ctx().data_mut(|d| d.insert_temp(mid, month));
+    picked
 }

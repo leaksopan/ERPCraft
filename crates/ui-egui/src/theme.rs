@@ -104,7 +104,6 @@ pub fn apply(ctx: &egui::Context) {
 pub fn install_system_fonts(ctx: &egui::Context) {
     let mut fonts = egui::FontDefinitions::default();
     let dir = std::env::var("WINDIR").map(|w| std::path::PathBuf::from(w).join("Fonts")).unwrap_or_default();
-    let mut added = false;
     for (name, file) in [("segoe", "segoeui.ttf"), ("segoe-bold", "segoeuib.ttf"), ("segoe-symbol", "seguisym.ttf")] {
         let path = dir.join(file);
         // Fonts are a few MB; anything much larger is not a font we want to load.
@@ -122,18 +121,14 @@ pub fn install_system_fonts(ctx: &egui::Context) {
                     list.push(name.to_string());
                 }
             }
-            added = true;
         }
     }
     if !fonts.families.contains_key(&FontFamily::Name("bold".into())) {
         let fallback = fonts.families.get(&FontFamily::Proportional).cloned().unwrap_or_default();
         fonts.families.insert(FontFamily::Name("bold".into()), fallback);
     }
-    if added {
-        ctx.set_fonts(fonts);
-    } else {
-        ctx.set_fonts(fonts);
-    }
+    // Always set: the "bold" family must exist even without Segoe UI (e.g. on the web).
+    ctx.set_fonts(fonts);
 }
 
 pub fn bold(size: f32) -> FontId {

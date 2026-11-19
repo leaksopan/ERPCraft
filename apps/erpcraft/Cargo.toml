@@ -14,7 +14,7 @@ path = "src/main.rs"
 workspace = true
 
 [dependencies]
-erpcraft-engine = { workspace = true }
+erpcraft-engine = { workspace = true, features = ["postgres", "bc"] }
 erpcraft-mcp = { workspace = true }
 erpcraft-ui-egui = { workspace = true }
 eframe = { workspace = true }

@@ -242,10 +242,10 @@ fn engine_run(app: &mut ErpApp, params: &Value) -> Result<Value, EngineError> {
 fn ui_open(app: &mut ErpApp, params: &Value) -> Result<Value, EngineError> {
     let spec = params.get("spec").and_then(Value::as_str).map(str::trim).unwrap_or("");
     if spec.is_empty() {
-        return Err(EngineError::invalid("ui.open needs a 'spec': page, page:key or list>card:key (e.g. customer-card:10000)"));
+        return Err(EngineError::invalid("ui.open needs a 'spec': page, page:key, list>card:key or list?Field=filter&@-Field (e.g. customer-card:10000)"));
     }
-    for part in spec.split('>') {
-        let page = part.split_once(':').map_or(part, |(p, _)| p).trim();
+    for page in erpcraft_ui_egui::spec_pages(spec) {
+        let page = page.trim();
         if app.session.page(page).is_none() {
             return Err(EngineError::not_found(format!("Page '{page}' does not exist.")));
         }

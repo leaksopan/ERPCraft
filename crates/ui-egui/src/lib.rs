@@ -44,6 +44,8 @@ pub struct ErpApp {
     /// FastTabs the user toggled away from their default (page id + caption).
     pub toggled_tabs: HashSet<String>,
     pub show_factbox: bool,
+    /// Columns the user chose per list page (Personalize › columns); the page's own otherwise.
+    pub columns: HashMap<String, Vec<String>>,
     /// `egui` time (seconds) of the next [`Session::refresh`].
     next_refresh: f64,
     /// A failed refresh was shown in the notice bar; don't repeat it every 2 seconds.
@@ -63,6 +65,7 @@ impl ErpApp {
             role_center: erpcraft_engine::schema::role_center::BUSINESS_MANAGER.to_string(),
             toggled_tabs: HashSet::new(),
             show_factbox: true,
+            columns: HashMap::new(),
             next_refresh: 0.0,
             refresh_failed: false,
         }
@@ -242,7 +245,7 @@ impl ErpApp {
     /// Opens `page` or `page:key` (multi-field keys joined by `|`), e.g. `customer-card:10000`.
     pub fn open_spec(&mut self, spec: &str) {
         // `list>card:key` opens the list, then the card over it (with ‹ › through the list).
-        if let Some((list, card)) = spec.split_once('>') {
+        if let Some((list, card)) = split_chain(spec) {
             self.open_spec(list);
             let Some(View::List(state)) = self.stack.last().cloned() else { return };
             let Some((page, key)) = card.split_once(':') else { return };
@@ -254,6 +257,25 @@ impl ErpApp {
                 .and_then(|t| Key::from_json(t, &json!(key)).ok());
             if let Some(key) = key {
                 self.open_card_from_list(page, key, &state);
+            }
+            return;
+        }
+        // `page?Field=expr&@Field` / `@-Field`: a list with filters and a sort.
+        if let Some((page, query)) = spec.split_once('?') {
+            let mut filters = Vec::new();
+            let mut sort = None;
+            for part in query.split('&').filter(|p| !p.is_empty()) {
+                if let Some(f) = part.strip_prefix("@-") {
+                    sort = Some((f.to_string(), true));
+                } else if let Some(f) = part.strip_prefix('@') {
+                    sort = Some((f.to_string(), false));
+                } else if let Some((f, e)) = part.split_once('=') {
+                    filters.push((f.to_string(), e.to_string()));
+                }
+            }
+            self.open_page(page, filters, None);
+            if let Some(View::List(l)) = self.stack.last_mut() {
+                l.sort = sort;
             }
             return;
         }
@@ -282,6 +304,10 @@ impl ErpApp {
     }
 
     pub fn handle_result(&mut self, r: &Json) {
+        // A printed document opens in the system's PDF viewer.
+        if let (Some(path), Some(_)) = (r.get("path").and_then(Json::as_str), r.get("pages")) {
+            open_file(path);
+        }
         if let Some(rep) = r.get("report") {
             self.dialog = Some(Dialog::report(rep));
         }
@@ -354,10 +380,77 @@ impl ErpApp {
             self.dialog = Some(Dialog::params(a.caption.replace('&', ""), command, Json::Object(params), missing));
             return;
         }
+        if command == "document.print" && !params.contains_key("path") {
+            params.insert("path".into(), json!(print_path(context)));
+        }
         if let Some(q) = &a.confirm {
             self.dialog = Some(Dialog::Confirm { text: q.clone(), command: command.clone(), params: Json::Object(params) });
             return;
         }
         self.run(command, Json::Object(params));
+    }
+}
+
+/// Where a printed document goes: Documents\ERPCraft\<table> <key>.pdf (the temp folder when
+/// there is no Documents folder).
+fn print_path(context: Option<(&str, &Key)>) -> String {
+    let base = std::env::var("USERPROFILE")
+        .or_else(|_| std::env::var("HOME"))
+        .map(|h| std::path::PathBuf::from(h).join("Documents"))
+        .ok()
+        .filter(|p| p.is_dir())
+        .unwrap_or_else(std::env::temp_dir)
+        .join("ERPCraft");
+    let name = match context {
+        Some((t, k)) => format!("{} {}", t, k.display()),
+        None => "document".to_string(),
+    };
+    let safe: String = name.chars().map(|c| if c.is_alphanumeric() || matches!(c, ' ' | '-' | '.') { c } else { '_' }).collect();
+    base.join(format!("{}.pdf", safe.trim())).display().to_string()
+}
+
+/// Opens a file with the system's default application (desktop builds only).
+fn open_file(path: &str) {
+    #[cfg(target_os = "windows")]
+    let r = std::process::Command::new("explorer").arg(path).spawn();
+    #[cfg(target_os = "macos")]
+    let r = std::process::Command::new("open").arg(path).spawn();
+    #[cfg(all(unix, not(target_os = "macos")))]
+    let r = std::process::Command::new("xdg-open").arg(path).spawn();
+    #[cfg(target_arch = "wasm32")]
+    let r: std::io::Result<()> = {
+        let _ = path;
+        Ok(())
+    };
+    // Opening is a convenience: the notice bar already says where the file is.
+    let _ = r;
+}
+
+/// Splits `list>card:key` at the `>` whose right side starts with a page id, so filter
+/// expressions such as `Quantity=>0` keep their `>`.
+pub fn split_chain(spec: &str) -> Option<(&str, &str)> {
+    let meta = erpcraft_engine::schema::base_app();
+    spec.char_indices().filter(|(_, c)| *c == '>').map(|(i, _)| i).find_map(|i| {
+        let (left, right) = (spec.get(..i)?, spec.get(i + 1..)?);
+        let page = right.split([':', '?']).next().unwrap_or_default();
+        meta.page(page).is_some().then_some((left, right))
+    })
+}
+
+/// The page ids a spec opens (`list`, `list>card:key`, `list?filters`).
+pub fn spec_pages(spec: &str) -> Vec<&str> {
+    let mut out = Vec::new();
+    let mut rest = spec;
+    loop {
+        match split_chain(rest) {
+            Some((left, right)) => {
+                out.push(left.split([':', '?']).next().unwrap_or_default());
+                rest = right;
+            }
+            None => {
+                out.push(rest.split([':', '?']).next().unwrap_or_default());
+                return out;
+            }
+        }
     }
 }

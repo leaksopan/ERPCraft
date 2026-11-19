@@ -6,6 +6,7 @@
 //! - [`JsonFile`]: one JSON file, for demos, tests and offline use.
 //! - [`Memory`]: nothing persisted.
 
+#[cfg(feature = "postgres")]
 pub mod postgres;
 
 use std::path::{Path, PathBuf};

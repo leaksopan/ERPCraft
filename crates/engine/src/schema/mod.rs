@@ -22,6 +22,7 @@ pub fn base_app() -> &'static Metadata {
         finance::register(&mut m);
         inventory::register(&mut m);
         fixed_assets::register(&mut m);
+        crate::bc::register(&mut m);
         m
     })
 }

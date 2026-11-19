@@ -24,6 +24,7 @@ use crate::side::{PURCHASE, SALES, Side};
 
 pub type RunFn = fn(&mut Ctx, &Json) -> Result<Json>;
 
+#[derive(Clone, Copy)]
 pub struct CommandDef {
     pub id: &'static str,
     pub label: &'static str,
@@ -49,12 +50,25 @@ impl CommandDef {
     }
 }
 
-pub fn find(id: &str) -> Option<&'static CommandDef> {
-    COMMANDS.iter().find(|c| c.id == id)
+/// Modules that add commands of their own (each a `static` slice of [`CommandDef`]).
+fn module_commands() -> [&'static [CommandDef]; 2] {
+    [crate::print::COMMANDS, crate::bc::COMMANDS]
 }
 
+pub fn find(id: &str) -> Option<&'static CommandDef> {
+    all().iter().find(|c| c.id == id)
+}
+
+/// Every command: the base registry below plus the modules' own.
 pub fn all() -> &'static [CommandDef] {
-    COMMANDS
+    static ALL: std::sync::OnceLock<Vec<CommandDef>> = std::sync::OnceLock::new();
+    ALL.get_or_init(|| {
+        let mut v: Vec<CommandDef> = COMMANDS.to_vec();
+        for m in module_commands() {
+            v.extend_from_slice(m);
+        }
+        v
+    })
 }
 
 // ---- parameter helpers ----------------------------------------------------------------------

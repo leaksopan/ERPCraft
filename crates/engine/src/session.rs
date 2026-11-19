@@ -36,8 +36,15 @@ impl Session {
     /// JSON data file path. A missing file or an empty schema starts an empty company.
     pub fn open_source(source: &str) -> Result<Self> {
         if is_postgres_url(source) {
-            let store = crate::store::postgres::Postgres::connect(source, schema::base_app())?;
-            Self::with_store(Box::new(store))
+            #[cfg(feature = "postgres")]
+            {
+                let store = crate::store::postgres::Postgres::connect(source, schema::base_app())?;
+                Self::with_store(Box::new(store))
+            }
+            #[cfg(not(feature = "postgres"))]
+            {
+                Err(EngineError::invalid("this build has no PostgreSQL support"))
+            }
         } else {
             Self::open(Path::new(source))
         }

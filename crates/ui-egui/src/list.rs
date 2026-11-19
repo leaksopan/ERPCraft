@@ -17,7 +17,13 @@ pub fn show(app: &mut ErpApp, ui: &mut Ui, idx: usize, mut state: ListState) {
         return;
     };
     let Some(table) = page.source_table.as_deref().and_then(|t| app.session.table(t)) else { return };
-    let rows = app.session.page_records(page, &state.filters, &state.search);
+    let mut rows = app.session.page_records(page, &state.filters, &state.search);
+    if let Some((field, desc)) = &state.sort {
+        rows.sort_by(|a, b| {
+            let o = a.get(field).cmp(b.get(field));
+            if *desc { o.reverse() } else { o }
+        });
+    }
     if state.selected.as_ref().is_none_or(|k| !rows.iter().any(|r| &r.key(table) == k)) {
         state.selected = rows.first().map(|r| r.key(table));
     }
@@ -28,22 +34,12 @@ pub fn show(app: &mut ErpApp, ui: &mut Ui, idx: usize, mut state: ListState) {
         ui.set_width(ui.available_width().max(0.0));
         action_bar(app, ui, page, table, &mut state, inline_edit);
     });
-    if !state.filters.is_empty() {
-        egui::Frame::new().inner_margin(egui::Margin { left: 24, right: 16, top: 6, bottom: 0 }).show(ui, |ui| {
-            ui.horizontal_wrapped(|ui| {
-                ui.label(RichText::new("Filters:").size(theme::SMALL).color(TOKENS.text_dim));
-                let mut remove = None;
-                for (i, (f, v)) in state.filters.iter().enumerate() {
-                    let chip = egui::Button::new(RichText::new(format!("{f}: {v}  ✕")).size(theme::SMALL)).fill(TOKENS.accent_soft).corner_radius(10);
-                    if ui.add(chip).clicked() {
-                        remove = Some(i);
-                    }
-                }
-                if let Some(i) = remove {
-                    state.filters.remove(i);
-                }
-            });
-        });
+    if state.filter_pane {
+        egui::Panel::left(("filter_pane", &page.id))
+            .resizable(false)
+            .exact_size(260.0)
+            .frame(egui::Frame::new().fill(TOKENS.page).inner_margin(egui::Margin { left: 24, right: 12, top: 12, bottom: 12 }))
+            .show(ui, |ui| filter_pane(app, ui, table, &mut state));
     }
     let has_factbox = !page.factboxes.is_empty() && app.show_factbox;
     if has_factbox {
@@ -134,6 +130,12 @@ fn action_bar(app: &mut ErpApp, ui: &mut Ui, page: &PageDef, table: &TableDef, s
                     app.show_factbox = !app.show_factbox;
                 }
             }
+            columns_menu(app, ui, page, table);
+            let filter_tip = if state.filter_pane { "Hide filter pane" } else { "Show filter pane (Shift+F3)" };
+            let fill = if state.filters.is_empty() { TOKENS.text } else { TOKENS.accent };
+            if ui.add(egui::Button::new(RichText::new("⏷").size(15.0).color(fill)).frame(false)).on_hover_text(filter_tip).clicked() {
+                state.filter_pane = !state.filter_pane;
+            }
         });
     });
     if let Some(a) = run {
@@ -179,7 +181,8 @@ fn grid(app: &mut ErpApp, ui: &mut Ui, page: &PageDef, table: &TableDef, rows: &
         ui.vertical_centered(|ui| ui.label(RichText::new("(There is nothing to show in this view)").italics().color(TOKENS.text_dim)));
         return;
     }
-    let cols: Vec<&erpcraft_engine::meta::FieldDef> = page.columns.iter().filter_map(|c| table.field(c)).collect();
+    let chosen = app.columns.get(&page.id).cloned().unwrap_or_else(|| page.columns.clone());
+    let cols: Vec<&erpcraft_engine::meta::FieldDef> = chosen.iter().filter_map(|c| table.field(c)).collect();
     let mut open: Option<Key> = None;
     let mut commit: Option<(Key, String, serde_json::Value)> = None;
     let lookups = crate::card::lookups(app, table, cols.iter().map(|f| f.name.as_str()));
@@ -206,7 +209,21 @@ fn grid(app: &mut ErpApp, ui: &mut Ui, page: &PageDef, table: &TableDef, rows: &
             for f in &cols {
                 h.col(|ui| {
                     let layout = if f.ty.is_numeric() { Layout::right_to_left(Align::Center) } else { Layout::left_to_right(Align::Center) };
-                    ui.with_layout(layout, |ui| ui.label(RichText::new(&f.caption).size(theme::SMALL).color(TOKENS.text_dim).strong()));
+                    let arrow = match &state.sort {
+                        Some((s, desc)) if *s == f.name => if *desc { " ▼" } else { " ▲" },
+                        _ => "",
+                    };
+                    let r = ui.with_layout(layout, |ui| {
+                        ui.add(egui::Label::new(RichText::new(format!("{}{arrow}", f.caption)).size(theme::SMALL).color(TOKENS.text_dim).strong()).sense(egui::Sense::click()))
+                    });
+                    let r = r.inner.on_hover_text("Sort by this column");
+                    if r.clicked() {
+                        state.sort = match &state.sort {
+                            Some((s, false)) if *s == f.name => Some((f.name.clone(), true)),
+                            Some((s, true)) if *s == f.name => None,
+                            _ => Some((f.name.clone(), false)),
+                        };
+                    }
                 });
             }
         })
@@ -268,5 +285,91 @@ fn grid(app: &mut ErpApp, ui: &mut Ui, page: &PageDef, table: &TableDef, rows: &
             let list = state.clone();
             app.open_card_from_list(&t, k, &list);
         }
+    }
+}
+
+/// BC's filter pane: "Filter list by" with one expression per field (`10000..20000`, `<>0`,
+/// `*text*`, `''`), a field picker to add more.
+fn filter_pane(app: &mut ErpApp, ui: &mut Ui, table: &TableDef, state: &mut ListState) {
+    ui.label(RichText::new("Filter list by:").font(theme::bold(theme::BODY)).color(TOKENS.text));
+    ui.add_space(6.0);
+    let mut remove = None;
+    for (i, (field, expr)) in state.filters.iter_mut().enumerate() {
+        let caption = table.field(field).map_or(field.clone(), |f| f.caption.clone());
+        ui.horizontal(|ui| {
+            ui.label(RichText::new(format!("× {caption}")).color(TOKENS.text));
+            ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
+                if ui.add(egui::Button::new("✕").frame(false)).on_hover_text("Remove filter").clicked() {
+                    remove = Some(i);
+                }
+            });
+        });
+        let id = format!("filter|{}|{field}", table.name);
+        let buf = app.bufs.entry(id.clone()).or_insert_with(|| expr.clone());
+        let r = ui.add(egui::TextEdit::singleline(buf).desired_width(f32::INFINITY).hint_text("e.g. 10000..20000, <>0, *oil*").id_salt(&id));
+        if r.lost_focus() || (r.changed() && !r.has_focus()) {
+            *expr = buf.clone();
+            app.bufs.remove(&id);
+        }
+        ui.add_space(8.0);
+    }
+    if let Some(i) = remove {
+        state.filters.remove(i);
+    }
+    ui.add_space(4.0);
+    ui.menu_button(RichText::new("+ Filter...").color(TOKENS.accent), |ui| {
+        ui.set_min_width(220.0);
+        egui::ScrollArea::vertical().max_height(360.0).show(ui, |ui| {
+            for f in &table.fields {
+                if state.filters.iter().any(|(n, _)| *n == f.name) {
+                    continue;
+                }
+                if ui.button(&f.caption).clicked() {
+                    state.filters.push((f.name.clone(), String::new()));
+                    ui.close();
+                }
+            }
+        });
+    });
+    ui.add_space(12.0);
+    ui.label(RichText::new("Filters use Business Central syntax: = value, <>, >, <, a..b, a|b, *text*, '' for blank.").size(theme::SMALL).color(TOKENS.text_dim));
+}
+
+/// Personalize › columns: show or hide any field of the table as a column.
+fn columns_menu(app: &mut ErpApp, ui: &mut Ui, page: &PageDef, table: &TableDef) {
+    let current = app.columns.get(&page.id).cloned().unwrap_or_else(|| page.columns.clone());
+    let mut next = current.clone();
+    ui.menu_button(RichText::new("⚙").size(15.0), |ui| {
+        ui.set_min_width(240.0);
+        ui.label(RichText::new("Columns").font(theme::bold(theme::BODY)));
+        egui::ScrollArea::vertical().max_height(380.0).show(ui, |ui| {
+            for f in &table.fields {
+                let mut on = next.contains(&f.name);
+                if ui.checkbox(&mut on, &f.caption).changed() {
+                    if on {
+                        next.push(f.name.clone());
+                    } else {
+                        next.retain(|c| *c != f.name);
+                    }
+                }
+            }
+        });
+        ui.separator();
+        if ui.button("Reset to the page's columns").clicked() {
+            next = page.columns.clone();
+            ui.close();
+        }
+    })
+    .response
+    .on_hover_text("Choose columns");
+    if next != current {
+        // Keep the table's field order for added columns.
+        let mut ordered: Vec<String> = current.iter().filter(|c| next.contains(c)).cloned().collect();
+        for f in &table.fields {
+            if next.contains(&f.name) && !ordered.contains(&f.name) {
+                ordered.push(f.name.clone());
+            }
+        }
+        app.columns.insert(page.id.clone(), ordered);
     }
 }

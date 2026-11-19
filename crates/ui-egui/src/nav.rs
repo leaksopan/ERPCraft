@@ -17,6 +17,9 @@ pub struct ListState {
     pub search: String,
     pub search_open: bool,
     pub selected: Option<Key>,
+    /// Sort column and direction (descending when true); the page's key order otherwise.
+    pub sort: Option<(String, bool)>,
+    pub filter_pane: bool,
 }
 
 /// Where a card was opened from, so ‹ › can step through the same records.
@@ -42,7 +45,8 @@ pub struct CardState {
 
 impl View {
     pub fn list(page: &str, filters: Vec<(String, String)>) -> Self {
-        View::List(ListState { page: page.to_string(), filters, search: String::new(), search_open: false, selected: None })
+        let filter_pane = !filters.is_empty();
+        View::List(ListState { page: page.to_string(), filters, search: String::new(), search_open: false, selected: None, sort: None, filter_pane })
     }
 
     pub fn card(page: &str, key: Key) -> Self {

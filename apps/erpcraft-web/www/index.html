@@ -1,0 +1,17 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>ERPCraft</title>
+  <style>
+    html, body { margin: 0; height: 100%; background: #f3f2f1; overflow: hidden; }
+    canvas { width: 100%; height: 100%; display: block; }
+  </style>
+</head>
+<body>
+  <canvas id="erpcraft"></canvas>
+  <!-- Loads the module wasm-bindgen generates (pkg/); the app itself is Rust. -->
+  <script type="module">import init from "./pkg/erpcraft_web.js"; init();</script>
+</body>
+</html>

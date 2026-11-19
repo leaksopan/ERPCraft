@@ -371,6 +371,7 @@ fn doc_actions(sales: bool, doc_type: &str) -> Vec<Act> {
     v.push(Act::command("Release", A::Home, &format!("{p}.document.release")).shortcut("Ctrl+F9").icon("release"));
     v.push(Act::command("Reopen", A::Home, &format!("{p}.document.reopen")).icon("reopen"));
     v.push(Act::command("Statistics", A::Process, &format!("{p}.document.statistics")).shortcut("F7").icon("stats"));
+    v.push(Act::command("Print...", A::Report, "document.print").shortcut("Ctrl+P").icon("print").tooltip("Print the document to PDF."));
     if sales {
         v.push(Act::page("Customer", A::Navigate, "customer-card").link("No.", "Sell-to Customer No.").icon("customer"));
     } else {
@@ -625,6 +626,7 @@ fn posted_pair(
         )
         .action(Act::page("Ledger Entries", A::Navigate, ledger_page).link("Document No.", "No."))
         .action(Act::page("G/L Entries", A::Navigate, "general-ledger-entries").link("Document No.", "No."))
+        .action(Act::command("Print...", A::Report, "document.print").icon("print"))
         .keywords("posted history"),
     );
     m.add_page(
@@ -644,7 +646,8 @@ fn posted_pair(
             )
             .action(Act::page("Ledger Entries", A::Navigate, ledger_page).link("Document No.", "No."))
             .action(Act::page("G/L Entries", A::Navigate, "general-ledger-entries").link("Document No.", "No."))
-            .action(Act::page(if sales { "Customer" } else { "Vendor" }, A::Navigate, party_page).link("No.", party_no)),
+            .action(Act::page(if sales { "Customer" } else { "Vendor" }, A::Navigate, party_page).link("No.", party_no))
+            .action(Act::command("Print...", A::Home, "document.print").shortcut("Ctrl+P").icon("print").tooltip("Print the document to PDF.")),
     );
     let price = if sales { "Unit Price" } else { "Direct Unit Cost" };
     m.add_page(

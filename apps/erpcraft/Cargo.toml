@@ -1,0 +1,20 @@
+[package]
+name = "erpcraft"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+publish = false
+description = "ERPCraft desktop app"
+
+[[bin]]
+name = "erpcraft"
+path = "src/main.rs"
+
+[lints]
+workspace = true
+
+[dependencies]
+erpcraft-engine = { workspace = true }
+erpcraft-ui-egui = { workspace = true }
+eframe = { workspace = true }
+egui = { workspace = true }

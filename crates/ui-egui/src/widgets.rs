@@ -1,0 +1,247 @@
+//! Small BC-style building blocks: action-bar buttons, links, field editors, FactBoxes.
+
+use std::collections::HashMap;
+
+use egui::{Align, Color32, Layout, RichText, Sense, Stroke, Ui, vec2};
+use erpcraft_engine::meta::{FieldDef, FieldType, Value};
+use serde_json::{Value as Json, json};
+
+use crate::theme::{self, TOKENS};
+
+/// A flat action-bar button: glyph + caption in the accent colour.
+pub fn action_button(ui: &mut Ui, glyph: &str, caption: &str) -> egui::Response {
+    let text = match (glyph.is_empty(), caption.is_empty()) {
+        (true, _) => caption.to_string(),
+        (false, true) => glyph.to_string(),
+        (false, false) => format!("{glyph}  {caption}"),
+    };
+    ui.add(egui::Button::new(RichText::new(text).color(TOKENS.text).size(theme::BODY)).frame(false).min_size(vec2(0.0, 30.0)))
+}
+
+/// Glyph for an action icon name (Unicode symbols available in Segoe UI Symbol / egui's fonts).
+pub fn glyph(icon: &str) -> &'static str {
+    match icon {
+        "new" => "+",
+        "edit" => "✏",
+        "delete" => "🗑",
+        "post" => "⏵",
+        "release" => "🔓",
+        "reopen" => "↺",
+        "stats" => "📊",
+        "ledger" => "☰",
+        "order" | "invoice" | "quote" | "credit" => "📄",
+        "payment" => "💳",
+        "customer" | "vendor" => "👤",
+        "search" => "🔍",
+        "filter" => "⏷",
+        _ => "",
+    }
+}
+
+/// Teal, underlined-on-hover text that acts as a link.
+pub fn link(ui: &mut Ui, text: &str) -> egui::Response {
+    let r = ui.add(egui::Label::new(RichText::new(text).color(TOKENS.accent)).sense(Sense::click()));
+    if r.hovered() {
+        ui.ctx().set_cursor_icon(egui::CursorIcon::PointingHand);
+    }
+    r
+}
+
+pub fn strong_link(ui: &mut Ui, text: &str) -> egui::Response {
+    let r = ui.add(egui::Label::new(RichText::new(text).color(TOKENS.accent).strong()).sense(Sense::click()));
+    if r.hovered() {
+        ui.ctx().set_cursor_icon(egui::CursorIcon::PointingHand);
+    }
+    r
+}
+
+/// BC's blue notification bar with a dismiss ×.
+pub fn notice_bar(ui: &mut Ui, text: &str, on_close: impl FnOnce()) {
+    egui::Frame::new().fill(TOKENS.notice).inner_margin(egui::Margin::symmetric(16, 8)).show(ui, |ui| {
+        ui.horizontal(|ui| {
+            ui.label(RichText::new("ⓘ").color(TOKENS.accent));
+            ui.label(text);
+            ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
+                if ui.add(egui::Button::new("✕").frame(false)).clicked() {
+                    on_close();
+                }
+            });
+        });
+    });
+}
+
+/// White rounded surface (BC places grids, FactBoxes and cards on these).
+pub fn card_frame() -> egui::Frame {
+    egui::Frame::new()
+        .fill(TOKENS.page)
+        .corner_radius(6)
+        .inner_margin(egui::Margin::same(12))
+        .shadow(egui::epaint::Shadow { offset: [0, 1], blur: 3, spread: 0, color: Color32::from_black_alpha(22) })
+}
+
+/// A short vertical separator in action bars.
+pub fn vsep(ui: &mut Ui) {
+    ui.add_space(4.0);
+    let (rect, _) = ui.allocate_exact_size(vec2(1.0, 20.0), Sense::hover());
+    ui.painter().rect_filled(rect, 0.0, TOKENS.border);
+    ui.add_space(4.0);
+}
+
+/// A thin horizontal divider.
+pub fn divider(ui: &mut Ui) {
+    let (rect, _) = ui.allocate_exact_size(vec2(ui.available_width(), 1.0), Sense::hover());
+    ui.painter().rect_filled(rect, 0.0, TOKENS.divider);
+}
+
+/// Display text of a value: amounts with thousands separators, dates dd/mm/yyyy.
+pub fn display(v: &Value, ty: &FieldType) -> String {
+    match (v, ty) {
+        (Value::Bool(_), _) => v.display(ty),
+        (_, FieldType::Integer) => v.to_string(),
+        _ => v.display(ty),
+    }
+}
+
+/// Right-aligned for numbers.
+pub fn is_numeric(ty: &FieldType) -> bool {
+    ty.is_numeric()
+}
+
+/// Lookup values for a relation field: (code, description).
+pub type Lookup = Vec<(String, String)>;
+
+/// Edits one field. Returns the new value (as JSON) when the user commits a change: Enter / focus
+/// out for text, selection for options and lookups, click for booleans.
+pub fn field_editor(
+    bufs: &mut HashMap<String, String>,
+    ui: &mut Ui,
+    id: &str,
+    f: &FieldDef,
+    v: &Value,
+    editable: bool,
+    lookup: Option<&Lookup>,
+    width: f32,
+) -> Option<Json> {
+    // Narrow grid cells can report no room at all; egui panics on negative widths.
+    let width = if width.is_finite() { width.max(24.0) } else { 120.0 };
+    let shown = display(v, &f.ty);
+    if !editable || f.is_flow() {
+        let text = RichText::new(if shown.is_empty() && f.ty.is_numeric() { "0.00".to_string() } else { shown });
+        let text = if f.is_flow() { text.color(TOKENS.accent) } else { text.color(TOKENS.text) };
+        ui.add_sized(vec2(width, 22.0), egui::Label::new(text).truncate().halign(if is_numeric(&f.ty) { Align::Max } else { Align::Min }));
+        return None;
+    }
+    match &f.ty {
+        FieldType::Option(opts) => {
+            let mut sel = v.as_str().to_string();
+            let before = sel.clone();
+            egui::ComboBox::from_id_salt(id).selected_text(if sel.is_empty() { " " } else { sel.as_str() }).width(width).show_ui(ui, |ui| {
+                for o in opts {
+                    ui.selectable_value(&mut sel, o.clone(), if o.is_empty() { " " } else { o.as_str() });
+                }
+            });
+            (sel != before).then(|| json!(sel))
+        }
+        FieldType::Boolean => {
+            let mut b = v.as_bool();
+            let r = toggle(ui, &mut b);
+            r.changed().then(|| json!(b))
+        }
+        _ => {
+            let mut out = None;
+            ui.horizontal(|ui| {
+                ui.spacing_mut().item_spacing.x = 2.0;
+                let lookup_w = if lookup.is_some() { 24.0 } else { 0.0 };
+                let buf = bufs.entry(id.to_string()).or_insert_with(|| shown.clone());
+                let mut te = egui::TextEdit::singleline(buf).desired_width((width - lookup_w).max(16.0)).id_salt(id);
+                if is_numeric(&f.ty) {
+                    te = te.align(egui::Align2::RIGHT_CENTER);
+                }
+                let r = ui.add(te);
+                let changed = *buf != shown;
+                if r.lost_focus() && changed {
+                    out = Some(json!(buf.clone()));
+                    bufs.remove(id);
+                } else if !r.has_focus() && !changed {
+                    bufs.remove(id);
+                }
+                if let Some(values) = lookup {
+                    ui.menu_button("⌄", |ui| {
+                        ui.set_min_width(260.0);
+                        egui::ScrollArea::vertical().max_height(320.0).show(ui, |ui| {
+                            if ui.selectable_label(false, RichText::new("(blank)").italics()).clicked() {
+                                out = Some(json!(""));
+                                ui.close();
+                            }
+                            for (code, desc) in values {
+                                let label = if desc.is_empty() { code.clone() } else { format!("{code}   {desc}") };
+                                if ui.selectable_label(code == v.as_str(), label).clicked() {
+                                    out = Some(json!(code));
+                                    ui.close();
+                                }
+                            }
+                        });
+                    });
+                    if out.is_some() {
+                        bufs.remove(id);
+                    }
+                }
+            });
+            out
+        }
+    }
+}
+
+/// BC-style toggle switch for Boolean fields.
+pub fn toggle(ui: &mut Ui, on: &mut bool) -> egui::Response {
+    let size = vec2(36.0, 18.0);
+    let (rect, mut r) = ui.allocate_exact_size(size, Sense::click());
+    if r.clicked() {
+        *on = !*on;
+        r.mark_changed();
+    }
+    let t = ui.ctx().animate_bool_responsive(r.id, *on);
+    let radius = rect.height() / 2.0;
+    let fill = if *on { TOKENS.accent } else { TOKENS.page };
+    let stroke = if *on { Stroke::new(1.0, TOKENS.accent) } else { Stroke::new(1.0, TOKENS.input_line) };
+    ui.painter().rect(rect, radius, fill, stroke, egui::StrokeKind::Inside);
+    let x = egui::lerp((rect.left() + radius)..=(rect.right() - radius), t);
+    let knob = if *on { Color32::WHITE } else { TOKENS.input_line };
+    ui.painter().circle_filled(egui::pos2(x, rect.center().y), radius - 4.0, knob);
+    r
+}
+
+/// A FactBox: bold caption and label / value rows (amounts in teal, as BC drill-downs).
+pub fn factbox(ui: &mut Ui, caption: &str, rows: &[(String, String, bool)]) {
+    ui.label(RichText::new(caption).font(theme::bold(15.0)).color(TOKENS.text));
+    ui.add_space(6.0);
+    egui::Grid::new(("factbox", caption)).num_columns(2).spacing(vec2(12.0, 7.0)).min_col_width(110.0).show(ui, |ui| {
+        for (label, value, numeric) in rows {
+            ui.label(RichText::new(label).color(TOKENS.text_dim));
+            ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
+                let t = RichText::new(value);
+                ui.label(if *numeric { t.color(TOKENS.accent) } else { t.color(TOKENS.text) });
+            });
+            ui.end_row();
+        }
+    });
+    ui.add_space(14.0);
+}
+
+/// Parses BC-style shortcut text ("F9", "Ctrl+F7") and reports whether it was pressed this frame.
+pub fn shortcut_pressed(ctx: &egui::Context, shortcut: &str) -> bool {
+    let mut mods = egui::Modifiers::NONE;
+    let mut key = None;
+    for part in shortcut.split('+') {
+        match part.trim() {
+            "Ctrl" => mods = mods | egui::Modifiers::COMMAND,
+            "Shift" => mods = mods | egui::Modifiers::SHIFT,
+            "Alt" => mods = mods | egui::Modifiers::ALT,
+            k => key = egui::Key::from_name(k),
+        }
+    }
+    match key {
+        Some(k) => ctx.input_mut(|i| i.consume_key(mods, k)),
+        None => false,
+    }
+}

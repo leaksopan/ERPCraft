@@ -1,0 +1,14 @@
+[package]
+name = "erpcraft-mcp"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+description = "ERPCraft MCP server: JSON-RPC 2.0 over stdio on top of the engine's commands"
+
+[lints]
+workspace = true
+
+[dependencies]
+erpcraft-engine = { workspace = true }
+erpcraft-meta = { workspace = true }
+serde_json = { workspace = true }

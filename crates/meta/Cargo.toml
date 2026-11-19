@@ -1,0 +1,15 @@
+[package]
+name = "erpcraft-meta"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+description = "ERPCraft metadata: tables, fields, pages, role centers and typed values (the AL object model, in Rust)"
+
+[lints]
+workspace = true
+
+[dependencies]
+serde = { workspace = true }
+serde_json = { workspace = true }
+chrono = { workspace = true }
+rust_decimal = { workspace = true }

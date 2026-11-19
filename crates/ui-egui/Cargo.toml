@@ -1,0 +1,18 @@
+[package]
+name = "erpcraft-ui-egui"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+description = "ERPCraft egui client: role center, list, card and document pages in the Business Central layout"
+
+[lints]
+workspace = true
+
+[dependencies]
+erpcraft-engine = { workspace = true }
+erpcraft-meta = { workspace = true }
+egui = { workspace = true }
+egui_extras = { workspace = true }
+serde_json = { workspace = true }
+chrono = { workspace = true }
+rust_decimal = { workspace = true }

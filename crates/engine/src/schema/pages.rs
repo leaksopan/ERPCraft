@@ -321,6 +321,12 @@ fn customer_actions() -> Vec<Act> {
         Act::page("Sales Orders", A::Navigate, "sales-order-list").link("Sell-to Customer No.", "No.").icon("order"),
         Act::page("Posted Sales Invoices", A::Navigate, "posted-sales-invoices").link("Sell-to Customer No.", "No."),
         Act::command("Statistics", A::Report, "customer.statistics").shortcut("F7").icon("stats"),
+        Act::command("Entry Statistics", A::Navigate, "customer.entry_statistics")
+            .icon("stats")
+            .tooltip("View entry statistics for the record."),
+        Act::command("Statistics by C&urrencies", A::Navigate, "customer.statistics_by_currencies")
+            .icon("currency")
+            .tooltip("View the statistics on customer ledger entries that have been posted for the customer in different currencies."),
     ]
 }
 
@@ -337,6 +343,12 @@ fn vendor_actions() -> Vec<Act> {
         Act::page("Purchase Orders", A::Navigate, "purchase-order-list").link("Buy-from Vendor No.", "No.").icon("order"),
         Act::page("Posted Purchase Invoices", A::Navigate, "posted-purchase-invoices").link("Buy-from Vendor No.", "No."),
         Act::command("Statistics", A::Report, "vendor.statistics").shortcut("F7").icon("stats"),
+        Act::command("Entry Statistics", A::Navigate, "vendor.entry_statistics")
+            .icon("stats")
+            .tooltip("View entry statistics for the record."),
+        Act::command("Statistics by C&urrencies", A::Navigate, "vendor.statistics_by_currencies")
+            .icon("currency")
+            .tooltip("View the statistics on vendor ledger entries that have been posted for the vendor in different currencies."),
     ]
 }
 

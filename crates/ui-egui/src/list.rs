@@ -181,7 +181,7 @@ pub fn action_menus(ui: &mut Ui, page: &PageDef, run: &mut Option<ActionDef>) {
     }
 }
 
-fn action_menu(ui: &mut Ui, caption: &str, actions: &[&ActionDef], run: &mut Option<ActionDef>) {
+pub(crate) fn action_menu(ui: &mut Ui, caption: &str, actions: &[&ActionDef], run: &mut Option<ActionDef>) {
     ui.menu_button(RichText::new(caption).color(TOKENS.text), |ui| {
         ui.set_min_width(200.0);
         for a in actions {

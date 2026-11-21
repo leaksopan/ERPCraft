@@ -24,6 +24,7 @@ pub mod dimensions;
 pub mod doc_tools;
 pub mod item_tools;
 pub mod navigate;
+pub mod party_stats;
 mod error;
 pub mod fa;
 pub mod item_journal;

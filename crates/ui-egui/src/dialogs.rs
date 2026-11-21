@@ -13,7 +13,14 @@ pub enum Dialog {
     Confirm { text: String, command: String, params: Json },
     Form { title: String, submit: Submit, fields: Vec<FormField> },
     /// `links`: per row, the page (and filters) a click opens (Navigate's related entries).
-    Report { title: String, columns: Vec<String>, rows: Vec<Vec<String>>, links: Vec<Option<(String, Vec<(String, String)>)>> },
+    Report {
+        title: String,
+        columns: Vec<String>,
+        rows: Vec<Vec<String>>,
+        links: Vec<Option<(String, Vec<(String, String)>)>>,
+        /// Further tables under their own captions (BC statistics pages' groups).
+        sections: Vec<(String, Vec<String>, Vec<Vec<String>>)>,
+    },
     /// BC's Select items: tick items, OK adds a line for each.
     SelectItems { command: String, base: Json, items: Vec<(String, String, bool)> },
 }
@@ -68,7 +75,28 @@ impl Dialog {
                     .collect()
             })
             .unwrap_or_default();
-        Dialog::Report { title, columns, rows, links }
+        let table = |v: &Json| -> (Vec<String>, Vec<Vec<String>>) {
+            let columns = v.get("columns").and_then(Json::as_array).map(|a| a.iter().map(cell).collect()).unwrap_or_default();
+            let rows = v
+                .get("rows")
+                .and_then(Json::as_array)
+                .map(|rows| rows.iter().map(|row| row.as_array().map(|a| a.iter().map(cell).collect()).unwrap_or_default()).collect())
+                .unwrap_or_default();
+            (columns, rows)
+        };
+        let sections = r
+            .get("sections")
+            .and_then(Json::as_array)
+            .map(|a| {
+                a.iter()
+                    .map(|s| {
+                        let (c, rs) = table(s);
+                        (s.get("caption").map(cell).unwrap_or_default(), c, rs)
+                    })
+                    .collect()
+            })
+            .unwrap_or_default();
+        Dialog::Report { title, columns, rows, links, sections }
     }
 
     /// A parameter form for `command`'s `fields` (names from its JSON schema).
@@ -295,7 +323,7 @@ pub fn show(app: &mut ErpApp, ctx: &egui::Context) {
                     }
                 });
             }
-            Dialog::Report { title, columns, rows, links } => {
+            Dialog::Report { title, columns, rows, links, sections } => {
                 ui.label(RichText::new(title.as_str()).font(theme::bold(theme::SUBTITLE)));
                 ui.add_space(8.0);
                 egui::ScrollArea::vertical().max_height(480.0).show(ui, |ui| {
@@ -327,6 +355,28 @@ pub fn show(app: &mut ErpApp, ctx: &egui::Context) {
                             ui.end_row();
                         }
                     });
+                    for (si, (caption, cols, srows)) in sections.iter().enumerate() {
+                        ui.add_space(14.0);
+                        ui.label(RichText::new(caption.as_str()).font(theme::bold(theme::BODY)));
+                        ui.add_space(4.0);
+                        egui::Grid::new(("report-section", si)).num_columns(cols.len()).striped(true).spacing(vec2(18.0, 5.0)).show(ui, |ui| {
+                            // Value columns: a fixed width, right-aligned under a right-aligned header.
+                            let right = |ui: &mut egui::Ui, text: RichText| {
+                                ui.allocate_ui_with_layout(vec2(110.0, 18.0), Layout::right_to_left(Align::Center), |ui| ui.label(text));
+                            };
+                            for (i, c) in cols.iter().enumerate() {
+                                let t = RichText::new(c).size(theme::SMALL).color(TOKENS.text_dim).strong();
+                                if i == 0 { ui.label(t); } else { right(ui, t); }
+                            }
+                            ui.end_row();
+                            for r in srows {
+                                for (i, c) in r.iter().enumerate() {
+                                    if i == 0 { ui.label(c); } else { right(ui, RichText::new(c)); }
+                                }
+                                ui.end_row();
+                            }
+                        });
+                    }
                 });
                 ui.add_space(10.0);
                 ui.with_layout(Layout::right_to_left(Align::Center), |ui| {

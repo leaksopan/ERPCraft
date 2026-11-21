@@ -276,14 +276,20 @@ pub fn action_tab_list(page: &PageDef) -> Vec<ActionTab<'_>> {
 }
 
 /// BC's action bar on cards: category tabs (Home, New Document, …) with the chosen category's
-/// actions on the row below.
+/// actions on the row below. "More options" adds the Actions, Related and Reports menus to the
+/// tab row (every action by area) and becomes "Fewer options".
 fn action_tabs(ui: &mut Ui, page: &PageDef, run: &mut Option<ActionDef>) {
-    let tabs = action_tab_list(page);
-    if tabs.is_empty() {
+    use erpcraft_engine::meta::ActionArea;
+    let all = action_tab_list(page);
+    let has_more = all.iter().any(|t| t.caption == "More options");
+    let tabs: Vec<ActionTab> = all.into_iter().filter(|t| t.caption != "More options").collect();
+    if tabs.is_empty() && !has_more {
         return;
     }
     let id = egui::Id::unique(("action_tab", &page.id));
-    let mut current = ui.ctx().data(|d| d.get_temp::<usize>(id)).unwrap_or(0).min(tabs.len() - 1);
+    let more_id = egui::Id::unique(("action_more", &page.id));
+    let mut current = ui.ctx().data(|d| d.get_temp::<usize>(id)).unwrap_or(0).min(tabs.len().saturating_sub(1));
+    let mut more = ui.ctx().data(|d| d.get_temp::<bool>(more_id)).unwrap_or(false);
     ui.vertical(|ui| {
         widgets::flat(ui);
         ui.horizontal(|ui| {
@@ -300,6 +306,27 @@ fn action_tabs(ui: &mut Ui, page: &PageDef, run: &mut Option<ActionDef>) {
                 }
                 if r.clicked() {
                     current = i;
+                }
+            }
+            if has_more {
+                ui.add_space(4.0);
+                ui.label(RichText::new("|").color(TOKENS.divider));
+                if more {
+                    let groups = [
+                        ("Actions", &[ActionArea::Home, ActionArea::Process, ActionArea::New][..]),
+                        ("Related", &[ActionArea::Navigate][..]),
+                        ("Reports", &[ActionArea::Report][..]),
+                    ];
+                    for (caption, areas) in groups {
+                        let acts: Vec<&ActionDef> = page.actions.iter().filter(|a| areas.contains(&a.area)).collect();
+                        if !acts.is_empty() {
+                            crate::list::action_menu(ui, &format!("{caption}  ▾"), &acts, run);
+                        }
+                    }
+                }
+                let label = if more { "Fewer options" } else { "More options" };
+                if ui.add(egui::Button::new(RichText::new(label).color(TOKENS.text_dim)).frame(false)).clicked() {
+                    more = !more;
                 }
             }
         });
@@ -322,7 +349,10 @@ fn action_tabs(ui: &mut Ui, page: &PageDef, run: &mut Option<ActionDef>) {
             }
         });
     });
-    ui.ctx().data_mut(|d| d.insert_temp(id, current));
+    ui.ctx().data_mut(|d| {
+        d.insert_temp(id, current);
+        d.insert_temp(more_id, more);
+    });
 }
 
 /// The FactBox pane: a white card with a "Details" tab header and the page's FactBoxes.

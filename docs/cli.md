@@ -41,7 +41,7 @@ The company is chosen as everywhere in ERPCraft: `--db`, else `$ERPCRAFT_DATABAS
 | `workdate [date]` | `session.workdate` | Shows the work date. The work date is not stored in the data file; use `--workdate` on each command. |
 | `search <query>` | `search` | Tell Me: pages and commands. |
 | `mcp` | — | MCP server on stdio over the company, or over the running app with `--connect`; see [mcp.md](mcp.md). |
-| `ui state\|back\|home` / `ui open <spec>` / `ui screenshot <file.png>` | `ui.*` control methods | Drive the running app's window (needs `--connect`). `open` takes `page`, `page:key` or `list>card:key`. |
+| `ui state\|back\|home` / `ui open <spec>` / `ui click <x> <y>` / `ui hover <x> <y>` / `ui screenshot <file.png>` | `ui.*` control methods | Drive the running app's window (needs `--connect`). `open` takes `page`, `page:key` or `list>card:key`. `click` and `hover` take window pixels, as the screenshot shows them. |
 | `help` | — | Usage. |
 
 Filters use Business Central filter syntax per field: `10000`, `<>Open`, `10000|20000`, `>100`,

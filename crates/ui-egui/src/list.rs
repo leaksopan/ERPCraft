@@ -32,7 +32,9 @@ pub fn show(app: &mut ErpApp, ui: &mut Ui, idx: usize, mut state: ListState) {
     // BC list header: one bar with "Caption: All ▾", search, New / Delete and the action menus.
     egui::Frame::new().fill(TOKENS.page).inner_margin(egui::Margin { left: 24, right: 16, top: 2, bottom: 2 }).show(ui, |ui| {
         ui.set_width(ui.available_width().max(0.0));
-        action_bar(app, ui, page, table, &mut state, inline_edit);
+        // A list opened over another page (a drill-down, a Related action) gets BC's ← back.
+        let can_back = idx > 0 && app.stack.get(..idx).is_some_and(|below| below.iter().any(|v| !matches!(v, View::RoleCenter)));
+        action_bar(app, ui, page, table, &mut state, inline_edit, can_back);
     });
     if state.filter_pane {
         egui::Panel::left(("filter_pane", &page.id))
@@ -81,13 +83,20 @@ pub fn show(app: &mut ErpApp, ui: &mut Ui, idx: usize, mut state: ListState) {
     }
 }
 
-fn action_bar(app: &mut ErpApp, ui: &mut Ui, page: &PageDef, table: &TableDef, state: &mut ListState, inline_edit: bool) {
+fn action_bar(app: &mut ErpApp, ui: &mut Ui, page: &PageDef, table: &TableDef, state: &mut ListState, inline_edit: bool, can_back: bool) {
     let selected = state.selected.clone();
     let ctx_key = selected.as_ref().map(|k| (table.name.as_str(), k));
     let mut run: Option<ActionDef> = None;
     ui.horizontal(|ui| {
         widgets::flat(ui);
         ui.set_min_height(36.0);
+        if can_back {
+            let back = egui::Button::new(RichText::new("←").size(15.0).color(TOKENS.accent_hover)).fill(TOKENS.accent_soft).corner_radius(14).min_size(vec2(28.0, 28.0));
+            if ui.add(back).on_hover_text("Back (Esc)").clicked() {
+                app.back();
+                return;
+            }
+        }
         ui.label(RichText::new(format!("{}:", page.caption)).font(theme::bold(theme::BODY)).color(TOKENS.text));
         ui.label(RichText::new("All ▾").color(TOKENS.accent));
         widgets::vsep(ui);
@@ -243,11 +252,15 @@ fn grid(app: &mut ErpApp, ui: &mut Ui, page: &PageDef, table: &TableDef, rows: &
     let mut row_tops: Vec<f32> = Vec::new();
     let mut span = (f32::MAX, f32::MIN);
     let mut body_clip = egui::Rect::NOTHING;
+    let grid_rect = ui.max_rect();
     ui.spacing_mut().item_spacing.y = 0.0;
+    // Column edges stay invisible until hovered (egui draws resize lines with this stroke).
+    ui.visuals_mut().widgets.noninteractive.bg_stroke = egui::Stroke::NONE;
     let mut builder = TableBuilder::new(ui)
         .id_salt(("list", &page.id))
         .striped(false)
-        .resizable(false)
+        // BC's columns can be dragged wider or narrower at the header's edge.
+        .resizable(true)
         .sense(egui::Sense::click())
         .auto_shrink([true, false])
         .cell_layout(Layout::left_to_right(Align::Center));
@@ -265,7 +278,7 @@ fn grid(app: &mut ErpApp, ui: &mut Ui, page: &PageDef, table: &TableDef, rows: &
         };
         builder = builder.column(Column::initial(w).at_least(40.0).clip(true));
         if i == 0 {
-            builder = builder.column(Column::exact(30.0));
+            builder = builder.column(Column::exact(30.0).resizable(false));
         }
     }
     builder
@@ -304,8 +317,10 @@ fn grid(app: &mut ErpApp, ui: &mut Ui, page: &PageDef, table: &TableDef, rows: &
                             }
                             return;
                         }
-                        if grid_value(ui, f, v, i == 0 && page.card_page.is_some(), selected) {
-                            open = Some((key.clone(), false));
+                        match grid_value(ui, f, v, i == 0 && page.card_page.is_some(), selected) {
+                            Some(CellClick::Key) => open = Some((key.clone(), false)),
+                            Some(CellClick::DrillDown) => crate::queue_drill_down(ui.ctx(), f, r),
+                            None => {}
                         }
                     });
                     if cell_resp.clicked() {
@@ -315,7 +330,10 @@ fn grid(app: &mut ErpApp, ui: &mut Ui, page: &PageDef, table: &TableDef, rows: &
                         row.col(|ui| {
                             let cell = ui.max_rect();
                             span.1 = span.1.max(cell.right());
-                            let hovered = ui.ctx().pointer_hover_pos().is_some_and(|p| p.y >= cell.top() && p.y < cell.bottom() && ui.clip_rect().contains(p));
+                            let hovered = ui
+                                .ctx()
+                                .pointer_hover_pos()
+                                .is_some_and(|p| p.y >= cell.top() && p.y < cell.bottom() && grid_rect.x_range().contains(p.x) && ui.ctx().layer_id_at(p) == Some(ui.layer_id()));
                             if let Some(act) = row_menu(ui, page, selected || hovered) {
                                 row_act = Some((key.clone(), act));
                             }
@@ -465,8 +483,34 @@ fn menu_style(ui: &mut Ui) {
     s.visuals.widgets.active.weak_bg_fill = TOKENS.border;
 }
 
-/// One cell's value. Returns true when the key link was clicked.
-fn grid_value(ui: &mut Ui, f: &erpcraft_engine::meta::FieldDef, v: &erpcraft_engine::meta::Value, key_link: bool, selected: bool) -> bool {
+/// What a click on a cell's value asked for.
+enum CellClick {
+    Key,
+    DrillDown,
+}
+
+/// A FlowField value as a link: teal, pointer on hover, underlined on hover.
+fn drill_link(ui: &mut Ui, t: RichText, align_right: bool) -> bool {
+    let draw = |ui: &mut Ui| {
+        let r = ui.add(egui::Label::new(t).sense(egui::Sense::click()));
+        if r.hovered() {
+            ui.ctx().set_cursor_icon(egui::CursorIcon::PointingHand);
+        }
+        r.clicked()
+    };
+    if align_right {
+        ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
+            ui.add_space(14.0);
+            draw(ui)
+        })
+        .inner
+    } else {
+        draw(ui)
+    }
+}
+
+/// One cell's value, and what a click on it asked for.
+fn grid_value(ui: &mut Ui, f: &erpcraft_engine::meta::FieldDef, v: &erpcraft_engine::meta::Value, key_link: bool, selected: bool) -> Option<CellClick> {
     use erpcraft_engine::meta::FieldType;
     let link = if selected { TOKENS.link_selected } else { TOKENS.link };
     let text = widgets::display_field(v, f);
@@ -480,7 +524,10 @@ fn grid_value(ui: &mut Ui, f: &erpcraft_engine::meta::FieldDef, v: &erpcraft_eng
         if r.hovered() {
             ui.ctx().set_cursor_icon(egui::CursorIcon::PointingHand);
         }
-        return r.clicked();
+        return r.clicked().then_some(CellClick::Key);
+    }
+    if f.is_flow() && f.drilldown.is_some() {
+        return drill_link(ui, body(&text).color(link), f.ty.is_numeric()).then_some(CellClick::DrillDown);
     }
     match &f.ty {
         // A stored Boolean is a read-only check box; a calculated one reads Yes / No as a link.
@@ -510,7 +557,7 @@ fn grid_value(ui: &mut Ui, f: &erpcraft_engine::meta::FieldDef, v: &erpcraft_eng
             ui.label(t);
         }
     }
-    false
+    None
 }
 
 /// The ⋮ of a row (shown on hover and on the current row): the page's actions by category, then

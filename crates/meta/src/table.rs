@@ -38,6 +38,15 @@ impl FieldType {
     }
 }
 
+/// Where clicking a FlowField's value goes (BC's drill-down): a list page filtered on the record
+/// (`link`: target field, this record's field) and on fixed expressions (`fixed`: field, filter).
+#[derive(Clone, Debug, Default, PartialEq, Eq)]
+pub struct DrillDown {
+    pub page: String,
+    pub link: Vec<(String, String)>,
+    pub fixed: Vec<(String, String)>,
+}
+
 /// AL `FieldClass`: a stored field, or one the engine calculates when a record is read.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum FieldClass {
@@ -60,6 +69,7 @@ pub struct FieldDef {
     /// AL `AutoFormatType` of a Decimal: 1 = amount (2 decimals), 2 = unit amount (2 to 5),
     /// 0 = as many decimals as the value has (up to 5), like BC's default.
     pub auto_format: u8,
+    pub drilldown: Option<DrillDown>,
 }
 
 impl FieldDef {
@@ -74,6 +84,7 @@ impl FieldDef {
             not_blank: false,
             tooltip: String::new(),
             auto_format: 0,
+            drilldown: None,
         }
     }
 

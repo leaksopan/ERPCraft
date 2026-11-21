@@ -486,7 +486,19 @@ fn fasttab(app: &mut ErpApp, ui: &mut Ui, page: &PageDef, table: &TableDef, rec:
                     let can_change = editable_page && f.editable && !f.is_flow() && !table.primary_key.contains(&f.name);
                     let wid = format!("card|{}|{}|{}|{}", table.name, key.display(), g.caption, f.name);
                     let width = value_width;
-                    if !is_editing && can_change {
+                    if f.is_flow() && f.drilldown.is_some() {
+                        let text = widgets::display_field(rec.get(&f.name), f);
+                        ui.allocate_ui_with_layout(vec2(width, 24.0), Layout::right_to_left(Align::Center), |ui| {
+                            ui.add_space(8.0);
+                            let r = ui.add(egui::Label::new(RichText::new(text).color(TOKENS.accent)).sense(Sense::click()));
+                            if r.hovered() {
+                                ui.ctx().set_cursor_icon(egui::CursorIcon::PointingHand);
+                            }
+                            if r.clicked() {
+                                crate::queue_drill_down(ui.ctx(), f, rec);
+                            }
+                        });
+                    } else if !is_editing && can_change {
                         // View mode: read-only box; a click starts editing.
                         if widgets::view_value(ui, f, rec.get(&f.name), width).clicked() {
                             activate = true;
@@ -680,15 +692,18 @@ pub fn factboxes(app: &ErpApp, ui: &mut Ui, page: &PageDef, rec: Option<&Record>
             }
         };
         let lcy = app.lcy_symbol();
-        let rows: Vec<(String, String, bool)> = match (target_table, &target) {
-            (Some(t), Some(r)) => fb
-                .fields
+        let fields: Vec<&erpcraft_engine::meta::FieldDef> = target_table.map(|t| fb.fields.iter().filter_map(|f| t.field(f)).collect()).unwrap_or_default();
+        let rows: Vec<(String, String, bool, bool)> = match &target {
+            Some(r) if !fields.is_empty() => fields
                 .iter()
-                .filter_map(|f| t.field(f))
-                .map(|f| (widgets::lcy_caption(&f.caption, &lcy), widgets::display_field(r.get(&f.name), f), f.ty.is_numeric()))
+                .map(|f| (widgets::lcy_caption(&f.caption, &lcy), widgets::display_field(r.get(&f.name), f), f.ty.is_numeric(), f.is_flow() && f.drilldown.is_some()))
                 .collect(),
-            _ => vec![("".into(), "(no record selected)".into(), false)],
+            _ => vec![("".into(), "(no record selected)".into(), false, false)],
         };
-        widgets::factbox(ui, &fb.caption, &rows);
+        if let (Some(i), Some(r)) = (widgets::factbox(ui, &fb.caption, &rows), &target)
+            && let Some(f) = fields.get(i)
+        {
+            crate::queue_drill_down(ui.ctx(), f, r);
+        }
     }
 }

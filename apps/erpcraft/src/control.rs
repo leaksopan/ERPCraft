@@ -214,21 +214,37 @@ pub fn dispatch(app: &mut ErpApp, method: &str, params: &Value) -> Outcome {
         }
         "ui.state" => Ok(state(app)),
         "ui.click" => ui_click(app, params),
+        "ui.hover" => ui_hover(app, params),
         "ui.screenshot" => return Outcome::Screenshot,
         other => Err(EngineError::not_found(format!(
-            "Unknown control method '{other}'. Methods: ping, engine.run, engine.commands, ui.open, ui.back, ui.home, ui.state, ui.click, ui.screenshot."
+            "Unknown control method '{other}'. Methods: ping, engine.run, engine.commands, ui.open, ui.back, ui.home, ui.state, ui.click, ui.hover, ui.screenshot."
         ))),
     };
     Outcome::Reply(result)
 }
 
-/// A left click at window point (x, y) in logical pixels: move, press, release over three frames.
-fn ui_click(app: &mut ErpApp, params: &Value) -> Result<Value, EngineError> {
+/// The window point for (x, y) given in screenshot pixels (the window's physical pixels).
+fn point(app: &ErpApp, params: &Value, method: &str) -> Result<egui::Pos2, EngineError> {
     let coord = |k: &str| params.get(k).and_then(Value::as_f64).filter(|v| v.is_finite() && (0.0..=100_000.0).contains(v));
-    let (Some(x), Some(y)) = (coord("x"), coord("y")) else {
-        return Err(EngineError::invalid("ui.click needs numbers 'x' and 'y' (window pixels)"));
-    };
-    let pos = egui::pos2(x as f32, y as f32);
+    let ppp = if app.pixels_per_point > 0.0 { app.pixels_per_point } else { 1.0 };
+    match (coord("x"), coord("y")) {
+        (Some(x), Some(y)) => Ok(egui::pos2(x as f32 / ppp, y as f32 / ppp)),
+        _ => Err(EngineError::invalid(format!("{method} needs numbers 'x' and 'y' (window pixels)"))),
+    }
+}
+
+/// Moves the pointer to (x, y) in screenshot pixels without clicking, so hover states show in a
+/// screenshot.
+fn ui_hover(app: &mut ErpApp, params: &Value) -> Result<Value, EngineError> {
+    let pos = point(app, params, "ui.hover")?;
+    app.synthetic_input.push_back(vec![egui::Event::PointerMoved(pos)]);
+    Ok(json!({"hovered": [pos.x, pos.y]}))
+}
+
+/// A left click at (x, y) in screenshot pixels: move, press, release over three frames.
+fn ui_click(app: &mut ErpApp, params: &Value) -> Result<Value, EngineError> {
+    let pos = point(app, params, "ui.click")?;
+    let (x, y) = (pos.x, pos.y);
     let button = |pressed| egui::Event::PointerButton { pos, button: egui::PointerButton::Primary, pressed, modifiers: egui::Modifiers::NONE };
     app.synthetic_input.extend([vec![egui::Event::PointerMoved(pos)], vec![button(true)], vec![button(false)]]);
     Ok(json!({"clicked": [x, y]}))

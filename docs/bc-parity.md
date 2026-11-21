@@ -42,6 +42,9 @@ This rewrites `crates/engine/src/schema/bc_gen.rs` from `schema::hand_written()`
 - **List columns.** The columns in BC's order.
 - **Navigation actions.** For example "Ledger Entries", when the target page exists here and its `RunPageLink` fields resolve.
 - **Action bar categories.** BC's `area(Promoted)` groups. "Process" shows as Home, and everything else is under "More options".
+- **FlowField drill-downs.**
+  - Source: each FlowField's `CalcFormula`, which names a table, opened on that table's `DrillDownPageId` with the formula's filters.
+  - Dropped filters: those on FlowFilter fields (Date Filter and the like), and those on fields the target table here doesn't have.
 
 Hand-written definitions win. To change something BC defines, change the hand-written schema or the generator, then run `gen` again.
 
@@ -62,6 +65,9 @@ The grid copies BC's Items list. The measurements come from the live web client'
 - **Header.** Captions are 12 px #505C6D. They wrap to three lines and sit at the bottom of the header, with numeric captions right-aligned. Hovering a caption gives a grey background and "⌄". Clicking opens a menu: Ascending, Descending, Filter..., Filter to this value, Clear filter, What's this?. "What's this?" shows the field's description.
 - **Sort.** The sorted column shows ↑ or ↓. With no sort chosen, the key column shows ↑.
 - **Key column.** A teal link (#007E87). On the selected row it is darker and underlined. A click opens the card.
+- **FlowField values.** They are links. A click opens the list behind the number, filtered the way BC sums it. This works in the grid, on cards and in FactBoxes. Example: a customer's Balance opens its Detailed Cust. Ledg. Entries.
+- **Lists opened over another page.** A drill-down or a Related action opens a list with BC's ← back button.
+- **Column widths.** Drag a column edge to change it. The edges stay invisible until hovered.
 - **⋮ column.** 30 px, right after the key column. It shows on hover and on the selected row. Its menu lists the page's actions by category, then View, Edit and Delete.
 - **Clicking a cell.** It selects the row and frames that cell. Up and Down move the selection.
 - **Values.** FlowFields are teal. A stored Boolean is a read-only check box, a FlowField Boolean reads Yes/No. Lookup fields are underlined on the selected row.

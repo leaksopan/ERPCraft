@@ -274,20 +274,34 @@ pub fn toggle(ui: &mut Ui, on: &mut bool) -> egui::Response {
 }
 
 /// A FactBox: bold caption and label / value rows (amounts in teal, as BC drill-downs).
-pub fn factbox(ui: &mut Ui, caption: &str, rows: &[(String, String, bool)]) {
+/// A FactBox: caption, then (label, value, numeric, drills down) rows. Returns the row whose value
+/// was clicked when it drills down.
+pub fn factbox(ui: &mut Ui, caption: &str, rows: &[(String, String, bool, bool)]) -> Option<usize> {
     ui.label(RichText::new(caption).font(theme::bold(15.0)).color(TOKENS.text));
     ui.add_space(6.0);
+    let mut clicked = None;
     egui::Grid::new(("factbox", caption)).num_columns(2).spacing(vec2(12.0, 7.0)).min_col_width(110.0).show(ui, |ui| {
-        for (label, value, numeric) in rows {
+        for (i, (label, value, numeric, drill)) in rows.iter().enumerate() {
             ui.label(RichText::new(label).color(TOKENS.text_dim));
             ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
                 let t = RichText::new(value);
-                ui.label(if *numeric { t.color(TOKENS.accent) } else { t.color(TOKENS.text) });
+                if *drill {
+                    let r = ui.add(egui::Label::new(t.color(TOKENS.accent)).sense(Sense::click()));
+                    if r.hovered() {
+                        ui.ctx().set_cursor_icon(egui::CursorIcon::PointingHand);
+                    }
+                    if r.clicked() {
+                        clicked = Some(i);
+                    }
+                } else {
+                    ui.label(if *numeric { t.color(TOKENS.accent) } else { t.color(TOKENS.text) });
+                }
             });
             ui.end_row();
         }
     });
     ui.add_space(14.0);
+    clicked
 }
 
 /// Parses BC-style shortcut text ("F9", "Ctrl+F7") and reports whether it was pressed this frame.

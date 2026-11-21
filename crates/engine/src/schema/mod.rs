@@ -38,7 +38,7 @@ pub fn hand_written() -> Metadata {
 
 /// Helpers the generated `bc_gen.rs` calls.
 mod gen_support {
-    use erpcraft_meta::{ActionArea, ActionDef, FieldDef, GroupDef, Metadata};
+    use erpcraft_meta::{ActionArea, ActionDef, DrillDown, FieldDef, GroupDef, Metadata};
 
     /// Appends the fields a table doesn't have yet; hand-written definitions win.
     pub fn fields(m: &mut Metadata, table: &str, fields: Vec<FieldDef>) {
@@ -130,6 +130,20 @@ mod gen_support {
     pub fn categories(m: &mut Metadata, page: &str, cats: &[(&str, &[&str])]) {
         if let Some(p) = m.pages.get_mut(page) {
             p.categories = cats.iter().map(|(c, a)| ((*c).to_string(), a.iter().map(|x| (*x).to_string()).collect())).collect();
+        }
+    }
+
+    /// A FlowField's drill-down: field, target page, (target, own field) links, (target, filter) fixed.
+    pub type Drill = (&'static str, &'static str, &'static [(&'static str, &'static str)], &'static [(&'static str, &'static str)]);
+
+    /// Sets the drill-downs of a table's FlowFields.
+    pub fn drilldowns(m: &mut Metadata, table: &str, drills: &[Drill]) {
+        let Some(t) = m.tables.get_mut(table) else { return };
+        let pairs = |s: &[(&str, &str)]| s.iter().map(|(a, b)| ((*a).to_string(), (*b).to_string())).collect::<Vec<_>>();
+        for (field, page, link, fixed) in drills {
+            if let Some(f) = t.fields.iter_mut().find(|f| f.name == *field) {
+                f.drilldown = Some(DrillDown { page: (*page).to_string(), link: pairs(link), fixed: pairs(fixed) });
+            }
         }
     }
 

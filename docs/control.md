@@ -82,6 +82,8 @@ Replies:
 | `ui.back` | — | Closes the top page (Esc). Returns `ui.state`. |
 | `ui.home` | — | Back to the role center. Returns `ui.state`. |
 | `ui.state` | — | `stack` (role center, lists with `page`/`filters`/`search`/`selected`, cards with `page`/`table`/`key`/`key_text`/`editing`/`expanded`/`list_page`), `top`, `dialog` (`error`/`confirm`/`form`/`report` or `null`), `notice`, `source` (password hidden), `revision`, `work_date` |
+| `ui.click` | `x`, `y` | A left click at that point, in screenshot pixels (the window's physical pixels): pointer move, press and release over three frames. |
+| `ui.hover` | `x`, `y` | Moves the pointer there (screenshot pixels) without clicking, so hover states show in the next screenshot. |
 | `ui.screenshot` | `path` | Writes a PNG of the window (8-bit RGBA, physical pixels) to `path` (relative paths are relative to the app's working directory) and returns `{path, width, height}` with the absolute path. Fails with `io` after 5 s if no frame was painted. |
 
 ## How it works

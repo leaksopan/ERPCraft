@@ -3,7 +3,7 @@
 
 use erpcraft_meta::{FieldDef as F, Metadata};
 
-use super::gen_support::{Nav, Tab, actions, categories, columns, fields, layout, relabel};
+use super::gen_support::{Nav, Tab, actions, categories, columns, drilldowns, fields, layout, relabel};
 
 pub fn extend(m: &mut Metadata) {
     relabel(
@@ -4486,6 +4486,89 @@ pub fn extend(m: &mut Metadata) {
             ("Process", &["Pay Vendor"]),
             ("New Document", &["Purchase Invoice", "Purchase Order", "Purchase Credit Memo"]),
             ("Vendor", &["Ledger E&ntries", "Statistics", "Orders", "Quotes"]),
+        ],
+    );
+    drilldowns(
+        m,
+        "Bank Account",
+        &[
+            ("Balance", "bank-account-ledger-entries", &[("Bank Account No.", "No.")], &[]),
+        ],
+    );
+    drilldowns(
+        m,
+        "Customer",
+        &[
+            ("Balance (LCY)", "detailed-cust-ledger-entries", &[("Customer No.", "No.")], &[]),
+            ("Balance Due (LCY)", "detailed-cust-ledger-entries", &[("Customer No.", "No.")], &[]),
+            ("Sales (LCY)", "customer-ledger-entries", &[("Customer No.", "No.")], &[]),
+            ("Payments (LCY)", "detailed-cust-ledger-entries", &[("Customer No.", "No.")], &[("Entry Type", "Initial Entry")]),
+        ],
+    );
+    drilldowns(
+        m,
+        "FA Depreciation Book",
+        &[
+            ("Acquisition Cost", "fa-ledger-entries", &[("FA No.", "FA No."), ("Depreciation Book Code", "Depreciation Book Code")], &[("FA Posting Type", "Acquisition Cost")]),
+            ("Depreciation", "fa-ledger-entries", &[("FA No.", "FA No."), ("Depreciation Book Code", "Depreciation Book Code")], &[("FA Posting Type", "Depreciation")]),
+            ("Book Value", "fa-ledger-entries", &[("FA No.", "FA No."), ("Depreciation Book Code", "Depreciation Book Code")], &[("Part of Book Value", "true")]),
+            ("Proceeds on Disposal", "fa-ledger-entries", &[("FA No.", "FA No."), ("Depreciation Book Code", "Depreciation Book Code")], &[("FA Posting Type", "Proceeds on Disposal")]),
+            ("Gain/Loss", "fa-ledger-entries", &[("FA No.", "FA No."), ("Depreciation Book Code", "Depreciation Book Code")], &[("FA Posting Type", "Gain/Loss")]),
+        ],
+    );
+    drilldowns(
+        m,
+        "G/L Account",
+        &[
+            ("Net Change", "general-ledger-entries", &[("G/L Account No.", "No.")], &[]),
+            ("Balance", "general-ledger-entries", &[("G/L Account No.", "No.")], &[]),
+        ],
+    );
+    drilldowns(
+        m,
+        "Item",
+        &[
+            ("Inventory", "item-ledger-entries", &[("Item No.", "No.")], &[]),
+        ],
+    );
+    drilldowns(
+        m,
+        "Purch. Cr. Memo Hdr.",
+        &[
+            ("Remaining Amount", "detailed-vendor-ledger-entries", &[], &[]),
+        ],
+    );
+    drilldowns(
+        m,
+        "Purch. Inv. Header",
+        &[
+            ("Remaining Amount", "detailed-vendor-ledger-entries", &[], &[]),
+            ("Closed", "vendor-ledger-entries", &[], &[("Open", "true")]),
+        ],
+    );
+    drilldowns(
+        m,
+        "Sales Cr.Memo Header",
+        &[
+            ("Remaining Amount", "detailed-cust-ledger-entries", &[], &[]),
+        ],
+    );
+    drilldowns(
+        m,
+        "Sales Invoice Header",
+        &[
+            ("Remaining Amount", "detailed-cust-ledger-entries", &[], &[]),
+            ("Closed", "customer-ledger-entries", &[], &[("Open", "true")]),
+        ],
+    );
+    drilldowns(
+        m,
+        "Vendor",
+        &[
+            ("Balance (LCY)", "detailed-vendor-ledger-entries", &[("Vendor No.", "No.")], &[]),
+            ("Balance Due (LCY)", "detailed-vendor-ledger-entries", &[("Vendor No.", "No.")], &[]),
+            ("Purchases (LCY)", "vendor-ledger-entries", &[("Vendor No.", "No.")], &[]),
+            ("Payments (LCY)", "detailed-vendor-ledger-entries", &[("Vendor No.", "No.")], &[("Entry Type", "Initial Entry")]),
         ],
     );
 }

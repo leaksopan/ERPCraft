@@ -43,6 +43,8 @@ pub struct ErpApp {
     pub role_center: String,
     /// FastTabs the user toggled away from their default (page id + caption).
     pub toggled_tabs: HashSet<String>,
+    /// Screen pixels per egui point, kept so control requests can speak in screenshot pixels.
+    pub pixels_per_point: f32,
     /// Input events the control channel feeds in, one batch per frame (`ui.click`).
     pub synthetic_input: std::collections::VecDeque<Vec<egui::Event>>,
     /// FastTabs showing their "Show more" fields.
@@ -70,6 +72,7 @@ impl ErpApp {
             toggled_tabs: HashSet::new(),
             show_more: HashSet::new(),
             synthetic_input: std::collections::VecDeque::new(),
+            pixels_per_point: 1.0,
             show_factbox: true,
             columns: HashMap::new(),
             next_refresh: 0.0,
@@ -79,6 +82,11 @@ impl ErpApp {
 
     /// Draws one frame into `ui` (the window's root).
     pub fn ui(&mut self, ui: &mut egui::Ui) {
+        self.pixels_per_point = ui.ctx().pixels_per_point();
+        if let Some((page, filters)) = ui.ctx().data_mut(|d| d.remove_temp::<(String, Vec<(String, String)>)>(egui::Id::unique(DRILL)))
+        {
+            self.open_page(&page, filters, None);
+        }
         self.auto_refresh(ui.ctx());
         self.shortcuts(ui.ctx());
         shell::app_bar(self, ui);
@@ -466,4 +474,24 @@ pub fn spec_pages(spec: &str) -> Vec<&str> {
             }
         }
     }
+}
+
+/// Memory key of a drill-down waiting for the next frame.
+const DRILL: &str = "erpcraft_drill_down";
+
+/// BC's drill-down on a FlowField value: opens the list behind the number, filtered on the record
+/// the way the field's CalcFormula sums it. Runs at the start of the next frame, so read-only
+/// drawing code (FactBoxes) can ask for it too.
+pub fn queue_drill_down(ctx: &egui::Context, f: &erpcraft_engine::meta::FieldDef, rec: &erpcraft_engine::meta::Record) {
+    let Some(d) = &f.drilldown else { return };
+    let mut filters: Vec<(String, String)> = d
+        .link
+        .iter()
+        .map(|(target, own)| {
+            let v = rec.get(own).to_string();
+            (target.clone(), if v.is_empty() { "''".to_string() } else { v })
+        })
+        .collect();
+    filters.extend(d.fixed.iter().cloned());
+    ctx.data_mut(|m| m.insert_temp(egui::Id::unique(DRILL), (d.page.clone(), filters)));
 }

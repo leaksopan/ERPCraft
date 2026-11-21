@@ -471,13 +471,57 @@ pub struct AlTable {
     pub id: u32,
     pub name: String,
     pub fields: Vec<AlTableField>,
+    /// `DrillDownPageId` (or `LookupPageId`): the page a FlowField over this table drills into.
+    pub drilldown_page: Option<String>,
+}
+
+/// Where a CalcFormula filter takes its value from.
+#[derive(Debug, PartialEq)]
+pub enum CalcSrc {
+    /// `field("No.")`: a field of the record the FlowField is on.
+    Field(String),
+    /// `const(Sale)` / `filter(<>0)`: a fixed filter expression.
+    Expr(String),
+}
+
+/// `sum("Cust. Ledger Entry"."Amount" where("Customer No." = field("No."), Open = const(true)))`.
+#[derive(Debug, PartialEq)]
+pub struct CalcFormula {
+    pub table: String,
+    pub clauses: Vec<(String, CalcSrc)>,
+}
+
+pub fn calc_formula(v: &str) -> Option<CalcFormula> {
+    let v = v.trim();
+    let inner = v.get(v.find('(')? + 1..v.rfind(')')?)?.trim();
+    let lower = inner.to_ascii_lowercase();
+    let (target, clauses) = match lower.find(" where(") {
+        Some(i) => (&inner[..i], inner.get(i + 7..inner.len().saturating_sub(1)).unwrap_or("")),
+        None => (inner, ""),
+    };
+    let table = split_all(target.trim(), '.').first().map(|t| unquote(t))?;
+    let mut out = Vec::new();
+    for c in split_all(clauses, ',').into_iter().filter(|c| !c.is_empty()) {
+        let (lhs, rhs) = c.split_once('=')?;
+        let rhs = rhs.trim();
+        let (kind, arg) = (rhs.get(..rhs.find('(')?)?.trim().to_ascii_lowercase(), rhs.get(rhs.find('(')? + 1..rhs.rfind(')')?)?);
+        let src = match kind.as_str() {
+            "field" => CalcSrc::Field(unquote(arg)),
+            "const" => CalcSrc::Expr(unquote(arg).trim_matches('\'').to_string()),
+            "filter" => CalcSrc::Expr(arg.trim().to_string()),
+            _ => continue,
+        };
+        out.push((unquote(lhs), src));
+    }
+    Some(CalcFormula { table, clauses: out })
 }
 
 pub fn al_table(src: &str) -> Option<AlTable> {
     let root = parse(src);
     let table = object(&root, "table")?;
     let (id, name) = object_id(&table.head)?;
-    let mut t = AlTable { id, name, fields: Vec::new() };
+    let page = |k: &str| table.prop(k).map(|v| unquote(v.trim().trim_start_matches("Page").trim_start_matches("page")));
+    let mut t = AlTable { id, name, fields: Vec::new(), drilldown_page: page("DrillDownPageId").or_else(|| page("LookupPageId")) };
     for f in table.kids.iter().filter(|k| k.kind().0 == "fields").flat_map(|k| k.kids.iter()) {
         let (kind, args) = f.kind();
         if kind != "field" {
@@ -636,6 +680,24 @@ page 21 "Customer Card"
         assert_eq!(p.actions[2].link, vec![("Customer No.".to_string(), "No.".to_string())]);
         assert_eq!(p.promoted_actions, vec!["&Post"]);
         assert_eq!(p.categories, vec![("Category_Process".to_string(), vec!["&Post".to_string()])]);
+    }
+
+    #[test]
+    fn reads_calc_formulas() {
+        let c = calc_formula(r#"sum("Detailed Cust. Ledg. Entry"."Amount (LCY)" where("Customer No." = field("No."),
+            "Currency Code" = field("Currency Filter"), "Excluded from calculation" = const(false), Amount = filter(<>0)))"#)
+        .unwrap();
+        assert_eq!(c.table, "Detailed Cust. Ledg. Entry");
+        assert_eq!(
+            c.clauses,
+            vec![
+                ("Customer No.".into(), CalcSrc::Field("No.".into())),
+                ("Currency Code".into(), CalcSrc::Field("Currency Filter".into())),
+                ("Excluded from calculation".into(), CalcSrc::Expr("false".into())),
+                ("Amount".into(), CalcSrc::Expr("<>0".into())),
+            ]
+        );
+        assert_eq!(calc_formula(r#"exist("Item Substitution" where(Type = const(Item), "No." = field("No.")))"#).unwrap().table, "Item Substitution");
     }
 
     #[test]

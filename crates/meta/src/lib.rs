@@ -20,7 +20,7 @@ pub use page::{
     RoleCenterDef, ViewFilter,
 };
 pub use record::{Key, Record};
-pub use table::{FieldClass, FieldDef, FieldType, TableDef};
+pub use table::{DrillDown, FieldClass, FieldDef, FieldType, TableDef};
 pub use value::{Value, format_decimal};
 
 use std::collections::BTreeMap;

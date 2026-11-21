@@ -4374,7 +4374,7 @@ pub fn extend(m: &mut Metadata) {
         &[
             ("Process", &["Find entries..."]),
             ("Print/Send", &["&Print"]),
-            ("Credit Memo", &["Dimensions", "Co&mments", "Vendor"]),
+            ("Credit Memo", &["Dimensions", "Statistics", "Co&mments", "Vendor"]),
         ],
     );
     categories(
@@ -4400,7 +4400,7 @@ pub fn extend(m: &mut Metadata) {
         &[
             ("Process", &["Find entries..."]),
             ("Print/Send", &["&Print"]),
-            ("Invoice", &["Dimensions", "Co&mments", "Vendor"]),
+            ("Invoice", &["Dimensions", "Statistics", "Co&mments", "Vendor"]),
         ],
     );
     categories(
@@ -4448,7 +4448,7 @@ pub fn extend(m: &mut Metadata) {
         &[
             ("Process", &["Find entries..."]),
             ("Print/Send", &["&Print"]),
-            ("Credit Memo", &["Dimensions", "Co&mments", "Customer"]),
+            ("Credit Memo", &["Dimensions", "Statistics", "Co&mments", "Customer"]),
         ],
     );
     categories(
@@ -4474,7 +4474,7 @@ pub fn extend(m: &mut Metadata) {
         &[
             ("Process", &["Find entries..."]),
             ("Print/Send", &["&Print"]),
-            ("Invoice", &["Dimensions", "Co&mments", "Customer"]),
+            ("Invoice", &["Dimensions", "Statistics", "Co&mments", "Customer"]),
         ],
     );
     categories(
@@ -4504,7 +4504,7 @@ pub fn extend(m: &mut Metadata) {
         m,
         "purchase-credit-memo",
         &[
-            ("Process", &["P&ost", "Preview Posting", "Post and New", "Re&lease", "Re&open"]),
+            ("Process", &["P&ost", "Preview Posting", "Post and &Print", "Post and New", "Re&lease", "Re&open"]),
             ("Prepare", &["Copy Document"]),
             ("Request Approval", &["Send A&pproval Request", "Cancel Approval Re&quest"]),
             ("Credit Memo", &["Statistics", "Dimensions", "Approvals", "Co&mments", "Vendor"]),
@@ -4522,7 +4522,7 @@ pub fn extend(m: &mut Metadata) {
         "purchase-credit-memos",
         &[
             ("Release", &["Re&lease", "Re&open"]),
-            ("Posting", &["P&ost", "Preview Posting"]),
+            ("Posting", &["P&ost", "Post and &Print", "Preview Posting"]),
             ("Credit Memo", &["Dimensions", "Statistics", "Co&mments", "Vendor"]),
         ],
     );
@@ -4530,7 +4530,7 @@ pub fn extend(m: &mut Metadata) {
         m,
         "purchase-invoice",
         &[
-            ("Process", &["P&ost", "Preview Posting", "Post and New", "Re&lease", "Re&open"]),
+            ("Process", &["P&ost", "Preview Posting", "Post and New", "Post and &Print", "Re&lease", "Re&open"]),
             ("Prepare", &["Copy Document"]),
             ("Request Approval", &["Send A&pproval Request", "Cancel Approval Re&quest"]),
             ("Invoice", &["Dimensions", "Statistics", "Co&mments", "Approvals", "Vendor"]),
@@ -4548,7 +4548,7 @@ pub fn extend(m: &mut Metadata) {
         "purchase-invoices",
         &[
             ("Release", &["Re&lease", "Re&open"]),
-            ("Posting", &["P&ost", "Preview Posting"]),
+            ("Posting", &["P&ost", "Preview Posting", "Post and &Print"]),
             ("Invoice", &["Dimensions", "Statistics", "Co&mments", "Vendor"]),
         ],
     );
@@ -4563,7 +4563,7 @@ pub fn extend(m: &mut Metadata) {
         m,
         "purchase-order",
         &[
-            ("Process", &["P&ost", "Preview Posting", "Post and New", "Re&lease", "Re&open"]),
+            ("Process", &["P&ost", "Preview Posting", "Post and &Print", "Post and New", "Re&lease", "Re&open"]),
             ("Prepare", &["Copy Document"]),
             ("Print/Send", &["&Print"]),
             ("Request Approval", &["Send A&pproval Request", "Cancel Approval Re&quest"]),
@@ -4583,7 +4583,7 @@ pub fn extend(m: &mut Metadata) {
         "purchase-order-list",
         &[
             ("Release", &["Re&lease", "Re&open"]),
-            ("Posting", &["P&ost", "Preview Posting"]),
+            ("Posting", &["P&ost", "Preview Posting", "Post and &Print"]),
             ("Print/Send", &["&Print"]),
             ("Order", &["Dimensions", "Statistics", "Co&mments", "Receipts"]),
         ],

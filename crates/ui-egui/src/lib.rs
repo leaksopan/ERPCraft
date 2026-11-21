@@ -436,7 +436,7 @@ impl ErpApp {
             self.dialog = Some(Dialog::params(a.caption.replace('&', ""), command, Json::Object(params), missing));
             return;
         }
-        if command == "document.print" && !params.contains_key("path") {
+        if (command == "document.print" || command.ends_with(".post_and_print")) && !params.contains_key("path") {
             params.insert("path".into(), json!(print_path(context)));
         }
         if let Some(q) = &a.confirm {

@@ -116,3 +116,17 @@ fn comments_number_their_lines_and_go_with_the_posted_invoice() {
     let master = s.run("record.new", &json!({"table": "Comment Line", "values": {"Table Name": "Customer", "No.": "10000", "Comment": "Prefers WhatsApp"}})).unwrap();
     assert_eq!(master["record"]["Line No."], 10000);
 }
+
+#[test]
+fn post_and_print_and_posted_statistics() {
+    let mut s = demo();
+    let r = s.run("sales.document.post_and_print", &json!({"document_type": "Order", "no": "S-ORD1002"})).unwrap();
+    assert!(r["title"].as_str().unwrap().starts_with("Sales - Invoice"), "{r}");
+    assert!(!r["pdf_base64"].as_str().unwrap().is_empty());
+    let inv = r["posted_no"].as_str().unwrap().to_string();
+    let st = s.run("document.posted_statistics", &json!({"table": "Sales Invoice Header", "key": inv})).unwrap();
+    let rows = st["report"]["rows"].as_array().unwrap();
+    assert_eq!(rows[0][0], "Amount");
+    assert!(rows.iter().any(|row| row[0] == "Profit %"));
+    assert!(s.run("document.posted_statistics", &json!({"table": "Customer", "key": "10000"})).is_err());
+}

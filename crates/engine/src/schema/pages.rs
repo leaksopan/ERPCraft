@@ -385,6 +385,11 @@ fn doc_actions(sales: bool, doc_type: &str) -> Vec<Act> {
             .icon("post")
             .tooltip(if sales { "Post the sales document and create a new, empty one." } else { "Post the purchase document and create a new, empty one." });
         v.push(if doc_type == "Order" { post_new.ask(&["mode"]) } else { post_new.confirm("Do you want to post the document?") });
+        let post_print = Act::command("Post and &Print", A::Process, &format!("{p}.document.post_and_print"))
+            .shortcut("Shift+F9")
+            .icon("print")
+            .tooltip("Finalize and prepare to print the document or journal. The values and quantities are posted to the related accounts.");
+        v.push(if doc_type == "Order" { post_print.ask(&["mode"]) } else { post_print.confirm("Do you want to post and print the document?") });
         v.push(
             Act::command("Preview Posting", A::Process, &format!("{p}.document.preview_post"))
                 .icon("preview")
@@ -676,6 +681,7 @@ fn posted_pair(
         .action(Act::page("Ledger Entries", A::Navigate, ledger_page).link("Document No.", "No."))
         .action(Act::page("G/L Entries", A::Navigate, "general-ledger-entries").link("Document No.", "No."))
         .action(Act::command("Print...", A::Report, "document.print").icon("print"))
+        .action(Act::command("Statistics", A::Process, "document.posted_statistics").shortcut("F7").icon("stats"))
         .keywords("posted history"),
     );
     m.add_page(

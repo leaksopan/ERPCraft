@@ -4,6 +4,7 @@
 use std::collections::BTreeSet;
 
 use erpcraft_meta::{Key, Record, Value};
+use rust_decimal::Decimal;
 use serde_json::{Map, Value as Json, json};
 
 use crate::commands::{CommandDef, doc_ref, opt_str};
@@ -244,6 +245,87 @@ fn s_items() -> Json {
         "required": ["no", "items"]})
 }
 
+/// BC's Post and Print: posts, then prints the posted invoice or credit memo to `path`.
+fn post_and_print(ctx: &mut Ctx, side: &Side, p: &Json) -> Result<Json> {
+    let (doc_type, no) = doc_ref(p, side)?;
+    let mode = PostMode::parse(opt_str(p, "mode"))?;
+    let posted = posting::post_document(ctx, side, &doc_type, &no, mode)?;
+    let (Some(table), Some(posted_no)) = (posted.get("posted_table").and_then(Json::as_str), posted.get("posted_no").and_then(Json::as_str)) else {
+        // Shipped or received only: nothing invoiced to print.
+        return Ok(posted);
+    };
+    let t = ctx.table(table)?;
+    let key = Key(vec![Value::text(posted_no)]);
+    let (bytes, title, pages) = crate::print::render(ctx, &t.name, &key, None)?;
+    let mut out = posted.clone();
+    out["title"] = json!(title);
+    out["pages"] = json!(pages);
+    match opt_str(p, "path").map(str::trim).filter(|s| !s.is_empty()) {
+        Some(path) => {
+            if !path.to_ascii_lowercase().ends_with(".pdf") {
+                refuse!("The file name must end in .pdf.");
+            }
+            let path = std::path::Path::new(path);
+            if let Some(dir) = path.parent().filter(|d| !d.as_os_str().is_empty()) {
+                std::fs::create_dir_all(dir).map_err(|e| EngineError::io(format!("{}: {e}", dir.display())))?;
+            }
+            std::fs::write(path, &bytes).map_err(|e| EngineError::io(format!("{}: {e}", path.display())))?;
+            out["path"] = json!(path.display().to_string());
+        }
+        None => out["pdf_base64"] = json!(crate::print::base64(&bytes)),
+    }
+    Ok(out)
+}
+
+/// BC's posted invoice / credit memo Statistics: amounts, VAT, cost and profit of the posted lines.
+fn posted_statistics(ctx: &mut Ctx, p: &Json) -> Result<Json> {
+    let table = opt_str(p, "table").ok_or_else(|| EngineError::invalid("missing parameter 'table'"))?;
+    let (line_table, sales) = match table {
+        "Sales Invoice Header" => ("Sales Invoice Line", true),
+        "Sales Cr.Memo Header" => ("Sales Cr.Memo Line", true),
+        "Purch. Inv. Header" => ("Purch. Inv. Line", false),
+        "Purch. Cr. Memo Hdr." => ("Purch. Cr. Memo Line", false),
+        other => refuse!("Statistics are available for posted invoices and credit memos, not {other}."),
+    };
+    let t = ctx.table(table)?;
+    let key = Key::from_json(t, p.get("key").unwrap_or(&Json::Null)).map_err(EngineError::invalid)?;
+    let h = ctx.get(&t.name, &key)?;
+    let no = h.str("No.").to_string();
+    let lines: Vec<&Record> = ctx.db.rows(line_table).filter(|l| l.str("Document No.") == no).collect();
+    let sum = |f: &str| -> Decimal { lines.iter().map(|l| l.get(f).as_dec()).sum() };
+    let amount = sum("Amount");
+    let incl = sum("Amount Including VAT");
+    let mut rows = vec![
+        json!(["Amount", amount.to_string()]),
+        json!(["VAT Amount", (incl - amount).to_string()]),
+        json!(["Amount Including VAT", incl.to_string()]),
+        json!(["Quantity", sum("Quantity").to_string()]),
+        json!(["No. of Lines", lines.len()]),
+    ];
+    if sales {
+        let cost: Decimal = lines.iter().map(|l| l.get("Quantity").as_dec() * l.get("Unit Cost (LCY)").as_dec()).sum();
+        let cost = crate::ctx::round_amount(cost);
+        let profit = amount - cost;
+        let pct = if amount.is_zero() { Decimal::ZERO } else { crate::ctx::round_amount(profit * Decimal::ONE_HUNDRED / amount) };
+        rows.push(json!(["Cost (LCY)", cost.to_string()]));
+        rows.push(json!(["Profit (LCY)", profit.to_string()]));
+        rows.push(json!(["Profit %", pct.to_string()]));
+    }
+    Ok(json!({"report": {"title": format!("{} Statistics - {no}", t.caption), "columns": ["", "Value"], "rows": rows}}))
+}
+
+fn s_posted_stats() -> Json {
+    json!({"type": "object", "properties": {"table": {"type": "string"}, "key": {}}, "required": ["table", "key"]})
+}
+
+fn s_post_print() -> Json {
+    json!({"type": "object", "properties": {
+        "document_type": {"type": "string", "default": "Order"}, "no": {"type": "string"},
+        "mode": {"type": "string", "description": "orders only: Ship / Receive, Invoice, or both (the default)"},
+        "path": {"type": "string", "description": "write the PDF here (must end in .pdf); without it the PDF comes back as base64"}},
+        "required": ["no"]})
+}
+
 macro_rules! per_side {
     ($sales:ident, $purch:ident, $f:ident) => {
         fn $sales(c: &mut Ctx, p: &Json) -> Result<Json> {
@@ -259,6 +341,7 @@ per_side!(sales_test, purch_test, test_report);
 per_side!(sales_post_new, purch_post_new, post_and_new);
 per_side!(sales_copy, purch_copy, copy_document);
 per_side!(sales_items, purch_items, select_items);
+per_side!(sales_post_print, purch_post_print, post_and_print);
 
 macro_rules! cmd {
     ($id:literal, $label:literal, $group:literal, $mutates:expr, $params:expr, $run:expr, $summary:literal) => {
@@ -273,6 +356,9 @@ pub static COMMANDS: &[CommandDef] = &[
     cmd!("sales.document.copy", "Copy Document", "Sales", true, s_copy, sales_copy, "Copy the lines (and customer) of another sales document or posted invoice / credit memo."),
     cmd!("sales.document.select_items", "Select items", "Sales", true, s_items, sales_items, "Add a line for each of the chosen items."),
     cmd!("purchase.document.select_items", "Select items", "Purchasing", true, s_items, purch_items, "Add a line for each of the chosen items."),
+    cmd!("sales.document.post_and_print", "Post and Print", "Sales", true, s_post_print, sales_post_print, "Post a sales document and print the posted invoice or credit memo."),
+    cmd!("purchase.document.post_and_print", "Post and Print", "Purchasing", true, s_post_print, purch_post_print, "Post a purchase document and print the posted invoice or credit memo."),
+    cmd!("document.posted_statistics", "Statistics", "Documents", false, s_posted_stats, posted_statistics, "Amounts, VAT, cost and profit of a posted invoice or credit memo."),
     cmd!("purchase.document.preview_post", "Preview Posting", "Purchasing", false, s_doc_mode, purch_preview, "The entries posting a purchase document would make, without posting it."),
     cmd!("purchase.document.test_report", "Test Report", "Purchasing", false, s_doc_mode, purch_test, "What would stop a purchase document from posting."),
     cmd!("purchase.document.post_and_new", "Post and New", "Purchasing", true, s_doc_mode, purch_post_new, "Post a purchase document and open a new one of the same type."),

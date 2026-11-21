@@ -177,6 +177,15 @@ mod gen_support {
         }
     }
 
+    /// Pages that are BC worksheets (journals and worksheets).
+    pub fn worksheets(m: &mut Metadata, pages: &[&str]) {
+        for id in pages {
+            if let Some(p) = m.pages.get_mut(*id) {
+                p.worksheet = true;
+            }
+        }
+    }
+
     /// The action bar's categories, as BC's page promotes them.
     pub fn categories(m: &mut Metadata, page: &str, cats: &[(&str, &[&str])]) {
         if let Some(p) = m.pages.get_mut(page) {

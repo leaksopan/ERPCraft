@@ -111,7 +111,8 @@ fn action_bar(app: &mut ErpApp, ui: &mut Ui, page: &PageDef, table: &TableDef, s
                 state.search_open = false;
             }
         }
-        if page.editable || page.card_page.is_some() {
+        let tabbed = page.worksheet && !page.categories.is_empty();
+        if (page.editable || page.card_page.is_some()) && !tabbed {
             if widgets::action_button(ui, "+", "New").clicked() {
                 if let Some(card) = &page.card_page {
                     app.new_record_on(card);
@@ -136,7 +137,9 @@ fn action_bar(app: &mut ErpApp, ui: &mut Ui, page: &PageDef, table: &TableDef, s
             let target = app.session.record(&table.name, k).and_then(|r| app.session.card_page_for(&table.name, &r)).unwrap_or_else(|| card.clone());
             app.open_page(&target, Vec::new(), Some(k.clone()));
         }
-        action_menus(ui, page, &mut run);
+        if !tabbed {
+            action_menus(ui, page, &mut run);
+        }
         ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
             if !page.factboxes.is_empty() {
                 let tip = if app.show_factbox { "Hide FactBox pane" } else { "Show FactBox pane" };
@@ -152,6 +155,50 @@ fn action_bar(app: &mut ErpApp, ui: &mut Ui, page: &PageDef, table: &TableDef, s
             }
         });
     });
+    // BC's worksheets (journals): Manage | Home | Line | ... tabs, the chosen one's actions below.
+    if page.worksheet && !page.categories.is_empty() {
+        let tabs: Vec<crate::card::ActionTab> = crate::card::action_tab_list(page).into_iter().filter(|t| t.caption != "More options").collect();
+        let id = egui::Id::unique(("worksheet_tab", &page.id));
+        let home = tabs.iter().position(|t| t.caption == "Home").map_or(0, |i| i + 1);
+        let mut current = ui.ctx().data(|d| d.get_temp::<usize>(id)).unwrap_or(home).min(tabs.len());
+        ui.horizontal(|ui| {
+            widgets::flat(ui);
+            let captions: Vec<String> = std::iter::once("Manage".to_string()).chain(tabs.iter().map(|t| t.caption.clone())).collect();
+            for (i, c) in captions.iter().enumerate() {
+                let sel = i == current;
+                let r = ui.add(egui::Button::new(RichText::new(c).color(if sel { TOKENS.accent } else { TOKENS.text })).frame(false));
+                if sel {
+                    ui.painter().line_segment([r.rect.left_bottom() + vec2(6.0, 0.0), r.rect.right_bottom() - vec2(6.0, 0.0)], egui::Stroke::new(2.0, TOKENS.accent));
+                }
+                if r.clicked() {
+                    current = i;
+                }
+            }
+            let all: Vec<&ActionDef> = page.actions.iter().collect();
+            action_menu(ui, "More options", &all, &mut run);
+        });
+        ui.horizontal(|ui| {
+            widgets::flat(ui);
+            ui.set_min_height(32.0);
+            if current == 0 {
+                if page.editable && widgets::action_button(ui, "+", "New Line").clicked() && inline_edit {
+                    app.dialog = Some(Dialog::new_record(page, table, &state.filters));
+                }
+                if widgets::action_button(ui, "🗑", "Delete Line").clicked()
+                    && let Some(k) = &selected
+                {
+                    app.dialog = Some(Dialog::Confirm {
+                        text: format!("Delete {} {}?", table.caption, k.display()),
+                        command: "record.delete".into(),
+                        params: json!({"table": table.name, "key": k.to_json()}),
+                    });
+                }
+            } else if let Some(tab) = tabs.get(current - 1) {
+                crate::card::action_row(ui, tab, &mut run);
+            }
+        });
+        ui.ctx().data_mut(|d| d.insert_temp(id, current));
+    }
     if let Some(a) = run {
         app.selection = state.marked.clone();
         app.run_action(&a, ctx_key);

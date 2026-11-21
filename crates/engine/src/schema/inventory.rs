@@ -20,7 +20,7 @@ pub const ITEM_JOURNALS: &[(&str, &str, &str, u32, &str, &str, &str)] = &[
     ("ITEM", "Item", "item-journal", 40, "Item Journals", "I-JNL", "ITEMJNL"),
     ("RECLASS", "Transfer", "item-reclass-journal", 393, "Item Reclass. Journals", "I-RCLSS", "RECLASSJNL"),
     ("PHYS INV", "Phys. Inventory", "phys-inventory-journal", 392, "Phys. Inventory Journals", "I-PHYS", "PHYSINVJNL"),
-    ("REVAL", "Revaluation", "revaluation-journal", 5803, "Revaluation Journals", "I-REVAL", "REVALJNL"),
+    ("REVAL", "Revaluation", "revaluation-journal", 5803, "Item Revaluation Journals", "I-REVAL", "REVALJNL"),
 ];
 
 pub fn register(m: &mut Metadata) {
@@ -205,7 +205,7 @@ fn pages(m: &mut Metadata) {
             .keywords("inventory stock adjustment opname");
         if *ty == "Revaluation" {
             p = p.action(
-                Act::command("Calculate Inve&ntory Value", A::Process, "item_journal.calculate_inventory_value")
+                Act::command("Calculate Inve&ntory Value...", A::Process, "item_journal.calculate_inventory_value")
                     .param("template", template)
                     .param("batch", "DEFAULT")
                     .ask(&["posting_date", "by_location"])

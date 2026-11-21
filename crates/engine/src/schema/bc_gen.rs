@@ -3,7 +3,7 @@
 
 use erpcraft_meta::{CalcFormula, CalcFunc, FieldDef as F, Metadata};
 
-use super::gen_support::{Nav, Tab, actions, calcs, categories, columns, drilldowns, fields, layout, mirror, relabel};
+use super::gen_support::{Nav, Tab, actions, calcs, categories, columns, drilldowns, fields, layout, mirror, relabel, worksheets};
 
 pub fn extend(m: &mut Metadata) {
     relabel(
@@ -6287,6 +6287,7 @@ pub fn extend(m: &mut Metadata) {
     columns(m, "vendor-list", &["No.", "Name", "Responsibility Center", "Location Code", "Phone No.", "Contact", "Allow Multiple Posting Groups", "Search Name", "Balance (LCY)", "Balance Due (LCY)", "Payments (LCY)"]);
     columns(m, "vendor-posting-groups", &["Code", "Description", "View All Accounts on Lookup", "Payables Account", "Service Charge Acc.", "Payment Disc. Debit Acc.", "Payment Disc. Credit Acc.", "Invoice Rounding Account", "Debit Curr. Appln. Rndg. Acc.", "Credit Curr. Appln. Rndg. Acc.", "Debit Rounding Account", "Credit Rounding Account", "Payment Tolerance Debit Acc.", "Payment Tolerance Credit Acc."]);
     columns(m, "workflows", &["Description", "Enabled"]);
+    worksheets(m, &["account-schedule", "allocations", "cash-receipt-journal", "column-layout", "fa-gl-journal", "general-journal", "item-charge-assignment-purch", "item-charge-assignment-sales", "item-journal", "item-reclass-journal", "payment-journal", "phys-inventory-journal", "recurring-general-journal", "req-worksheet", "reservation", "revaluation-journal", "standard-cost-worksheet", "vat-statement"]);
     actions(
         m,
         "allocations",

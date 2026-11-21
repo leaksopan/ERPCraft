@@ -240,6 +240,8 @@ pub struct PageDef {
     /// The action bar's categories (AL `area(Promoted)`): caption and action captions, in order.
     /// Empty: the bar shows one tab per action area.
     pub categories: Vec<(String, Vec<String>)>,
+    /// BC's Worksheet page type (journals, worksheets): the action bar has tabs like a card.
+    pub worksheet: bool,
     pub view: Vec<ViewFilter>,
     /// Field values a new record gets on this page (AL `SourceTableView` filters become defaults).
     pub editable: bool,
@@ -262,6 +264,7 @@ impl PageDef {
             factboxes: Vec::new(),
             actions: Vec::new(),
             categories: Vec::new(),
+            worksheet: false,
             view: Vec::new(),
             editable: true,
             keywords: String::new(),

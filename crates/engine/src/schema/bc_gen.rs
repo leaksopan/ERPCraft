@@ -4291,7 +4291,7 @@ pub fn extend(m: &mut Metadata) {
     mirror(m, "posted-purchase-receipts", "posted-purchase-receipt", &["&Print"]);
     mirror(m, "posted-sales-credit-memos", "posted-sales-credit-memo", &["Attach as PDF"]);
     mirror(m, "posted-sales-invoices", "posted-sales-invoice", &["Attach as PDF"]);
-    mirror(m, "posted-sales-shipments", "posted-sales-shipment", &["&Print"]);
+    mirror(m, "posted-sales-shipments", "posted-sales-shipment", &["&Print", "Attach as PDF"]);
     mirror(m, "purchase-credit-memos", "purchase-credit-memo", &["Approvals", "Send A&pproval Request", "Cancel Approval Re&quest"]);
     mirror(m, "purchase-invoices", "purchase-invoice", &["Approvals", "Send A&pproval Request", "Cancel Approval Re&quest"]);
     mirror(m, "purchase-order-list", "purchase-order", &["Approvals", "Attach as PDF", "Send A&pproval Request", "Cancel Approval Re&quest"]);
@@ -4507,7 +4507,7 @@ pub fn extend(m: &mut Metadata) {
         "item-card",
         &[
             ("Process", &["Copy Item", "Adjust Inventory"]),
-            ("Item", &["Attachments", "Co&mments", "Dimensions"]),
+            ("Item", &["Attachments", "Co&mments", "Dimensions", "Items b&y Location"]),
         ],
     );
     categories(
@@ -4531,7 +4531,7 @@ pub fn extend(m: &mut Metadata) {
         "item-list",
         &[
             ("Process", &["Adjust Inventory", "Copy Item"]),
-            ("Item", &["Dimensions-Single", "Co&mments"]),
+            ("Item", &["Dimensions-Single", "Co&mments", "Items b&y Location"]),
         ],
     );
     categories(
@@ -4661,7 +4661,7 @@ pub fn extend(m: &mut Metadata) {
         "posted-sales-shipment",
         &[
             ("Process", &["&Print", "Find entries..."]),
-            ("Print/Send", &["&Print"]),
+            ("Print/Send", &["&Print", "Attach as PDF"]),
             ("Shipment", &["Dimensions", "Co&mments"]),
         ],
     );
@@ -4670,7 +4670,7 @@ pub fn extend(m: &mut Metadata) {
         "posted-sales-shipments",
         &[
             ("Process", &["&Print", "Find entries...", "Dimensions", "Co&mments"]),
-            ("Print/Send", &["&Print"]),
+            ("Print/Send", &["&Print", "Attach as PDF"]),
         ],
     );
     categories(

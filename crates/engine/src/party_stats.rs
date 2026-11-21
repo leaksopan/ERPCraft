@@ -77,12 +77,12 @@ fn entries(ctx: &Ctx, party: &Party, no: &str) -> Result<Vec<Record>> {
     Ok(v)
 }
 
-fn money(d: Decimal) -> String {
+pub(crate) fn money(d: Decimal) -> String {
     format!("{:.2}", round_amount(d))
 }
 
 /// This Period (the work date's month), This Year, Last Year and To Date.
-fn periods(work: NaiveDate) -> [(String, NaiveDate, NaiveDate); 4] {
+pub(crate) fn periods(work: NaiveDate) -> [(String, NaiveDate, NaiveDate); 4] {
     let first = |y: i32, m: u32| NaiveDate::from_ymd_opt(y, m, 1).unwrap_or(work);
     let month_start = first(work.year(), work.month());
     let next_month = if work.month() == 12 { first(work.year() + 1, 1) } else { first(work.year(), work.month() + 1) };

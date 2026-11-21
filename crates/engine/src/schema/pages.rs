@@ -386,6 +386,18 @@ fn item_actions() -> Vec<Act> {
             .tooltip("Increase or decrease the item's inventory quantity manually by entering a new quantity. Adjusting the inventory quantity manually might be relevant after a physical count or if you do not record purchased quantities."),
         Act::page("Ledger E&ntries", A::Navigate, "item-ledger-entries").link("Item No.", "No.").shortcut("Ctrl+F7").icon("ledger"),
         Act::command("Item Availability", A::Report, "item.availability").icon("stats"),
+        Act::command("Item Statistics", A::Navigate, "item.statistics")
+            .icon("stats")
+            .tooltip("View statistical information, such as the value of posted entries, for the record."),
+        Act::command("Entry Statistics", A::Navigate, "item.entry_statistics")
+            .icon("stats")
+            .tooltip("View statistics for item ledger entries."),
+        Act::command("T&urnover", A::Navigate, "item.turnover")
+            .icon("stats")
+            .tooltip("View a detailed account of item turnover by periods after you have set the relevant filters for location and variant."),
+        Act::command("Items b&y Location", A::Navigate, "item.by_location")
+            .icon("list")
+            .tooltip("Show a list of items grouped by location."),
     ]
 }
 

@@ -40,3 +40,18 @@ fn attach_as_pdf_files_the_print_under_the_document() {
     assert_eq!((a["File Extension"].as_str(), a["File Type"].as_str(), a["Document Type"].as_str()), (Some("pdf"), Some("PDF"), Some("Order")));
     assert!(a["File Name"].as_str().unwrap().starts_with("Order Confirmation"));
 }
+
+#[test]
+fn a_posted_shipment_can_attach_its_print() {
+    let mut s = demo();
+    let posted = s.run("sales.document.post", &json!({"document_type": "Order", "no": "S-ORD1002", "mode": "Ship"})).unwrap();
+    let ship = posted["shipment_no"].as_str().or_else(|| posted["posted_no"].as_str()).map(str::to_string).unwrap_or_default();
+    let ship = if ship.is_empty() {
+        s.run("record.list", &json!({"table": "Sales Shipment Header"})).unwrap()["records"][0]["No."].as_str().unwrap().to_string()
+    } else {
+        ship
+    };
+    s.run("document.attach_as_pdf", &json!({"table": "Sales Shipment Header", "key": ship})).unwrap();
+    let list = s.run("record.list", &json!({"table": "Document Attachment", "filters": {"No.": ship}})).unwrap();
+    assert_eq!(list["records"][0]["File Extension"], "pdf", "{list}");
+}

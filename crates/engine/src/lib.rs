@@ -25,6 +25,7 @@ pub mod doc_tools;
 pub mod item_tools;
 pub mod navigate;
 pub mod party_stats;
+pub mod item_stats;
 mod error;
 pub mod fa;
 pub mod item_journal;

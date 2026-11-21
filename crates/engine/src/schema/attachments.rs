@@ -76,7 +76,7 @@ pub fn register(m: &mut Metadata) {
         list = if has_doc_type { list.link("Document Type", "Document Type") } else { list.link("Document Type", "=Quote") };
         p.actions.push(list);
         p.actions.push(Act::command("Attach a file...", A::Process, "attachment.attach_file").icon("attach").ask(&["path"]).tooltip("Attach a file to this record."));
-        if open_document || p.source_table.as_deref().is_some_and(|t| t.contains("Inv.") || t.contains("Invoice") || t.contains("Cr.")) {
+        if open_document || p.source_table.as_deref().is_some_and(|t| t.contains("Inv.") || t.contains("Invoice") || t.contains("Cr.") || t.contains("Shipment") || t.contains("Rcpt.")) {
             p.actions.push(
                 Act::command("Attach as PDF", A::Report, "document.attach_as_pdf")
                     .icon("print")

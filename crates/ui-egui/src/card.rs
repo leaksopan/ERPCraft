@@ -313,10 +313,15 @@ fn action_tabs(ui: &mut Ui, page: &PageDef, run: &mut Option<ActionDef>) {
     let more_id = egui::Id::unique(("action_more", &page.id));
     let mut current = ui.ctx().data(|d| d.get_temp::<usize>(id)).unwrap_or(0).min(tabs.len().saturating_sub(1));
     let mut more = ui.ctx().data(|d| d.get_temp::<bool>(more_id)).unwrap_or(false);
+    // One category only (BC's Home): its actions sit on the bar itself, no tab heading.
+    let single = tabs.len() == 1 && tabs[0].caption == "Home";
     ui.vertical(|ui| {
         widgets::flat(ui);
         ui.horizontal(|ui| {
-            for (i, tab) in tabs.iter().enumerate() {
+            if single {
+                action_row(ui, &tabs[0], run);
+            }
+            for (i, tab) in tabs.iter().enumerate().filter(|_| !single) {
                 let sel = i == current;
                 let t = RichText::new(&tab.caption).color(if sel { TOKENS.accent } else { TOKENS.text });
                 let r = ui.add(egui::Button::new(t).frame(false));
@@ -355,11 +360,13 @@ fn action_tabs(ui: &mut Ui, page: &PageDef, run: &mut Option<ActionDef>) {
         });
         let (line, _) = ui.allocate_exact_size(vec2(ui.available_width(), 1.0), Sense::hover());
         ui.painter().rect_filled(line, 0.0, TOKENS.divider);
-        ui.horizontal(|ui| {
-            if let Some(tab) = tabs.get(current) {
-                action_row(ui, tab, run);
-            }
-        });
+        if !single {
+            ui.horizontal(|ui| {
+                if let Some(tab) = tabs.get(current) {
+                    action_row(ui, tab, run);
+                }
+            });
+        }
     });
     ui.ctx().data_mut(|d| {
         d.insert_temp(id, current);

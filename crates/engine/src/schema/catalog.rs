@@ -98,10 +98,9 @@ pub fn register(m: &mut Metadata) {
                 F::code("No. Series", 20).read_only(),
             ])
             .key(&["Entry No."])
-            .describe_by("Description")
             .pages("catalog-item-list", Some("catalog-item-card")),
     );
-    let mut list = PageDef::new("catalog-item-list", 5726, "Catalog Item List", PageKind::List, Some(NONSTOCK_ITEM));
+    let mut list = PageDef::new("catalog-item-list", 5726, "Catalog Items", PageKind::List, Some(NONSTOCK_ITEM));
     list.columns = ["Entry No.", "Item No.", "Manufacturer Code", "Vendor No.", "Vendor Item No.", "Description", "Unit of Measure", "Published Cost", "Negotiated Cost", "Unit Price", "Item Templ. Code", "Last Date Modified"]
         .iter()
         .map(|c| (*c).to_string())

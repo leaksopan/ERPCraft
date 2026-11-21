@@ -38,6 +38,7 @@ pub mod transfer;
 pub mod tracking;
 pub mod costing;
 pub mod item_charge;
+pub mod reqwksh;
 mod error;
 pub mod fa;
 pub mod item_journal;

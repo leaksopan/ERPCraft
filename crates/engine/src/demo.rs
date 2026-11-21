@@ -378,6 +378,9 @@ pub fn master_data(ctx: &mut Ctx) -> Result<()> {
                    "Vendor No.": vendor, "Reorder Point": if *ty == "Service" { 0 } else { 10 }}),
         )?;
     }
+    // The requisition worksheet.
+    raw(ctx, "Req. Wksh. Template", json!({"Name": "REQ", "Description": "Requisition Worksheet", "Type": "Req."}))?;
+    raw(ctx, "Requisition Wksh. Name", json!({"Worksheet Template Name": "REQ", "Name": "DEFAULT", "Description": "Default worksheet"}))?;
     // Item charges: freight and insurance on purchases.
     for (no, desc) in [("FREIGHT", "Freight charges"), ("INSURANCE", "Transport insurance")] {
         raw(ctx, "Item Charge", json!({"No.": no, "Description": desc, "Gen. Prod. Posting Group": "PARTS", "VAT Prod. Posting Group": "STANDARD", "Search Description": desc.to_uppercase()}))?;

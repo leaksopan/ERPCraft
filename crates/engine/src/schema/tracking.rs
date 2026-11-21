@@ -115,6 +115,74 @@ pub fn register(m: &mut Metadata) {
     if let Some(p) = m.pages.get_mut("item-ledger-entries") {
         p.actions.push(Act::page("&Value Entries", A::Navigate, "value-entries").link("Item Ledger Entry No.", "Entry No.").icon("ledger").shortcut("Ctrl+F7").tooltip("View the history of posted amounts that affect the value of the item. Value entries are created for every transaction with the item."));
     }
+    // Planning: the item's reordering fields and the requisition worksheet.
+    ensure(
+        m,
+        crate::schema::tables::ITEM,
+        vec![
+            F::option("Reordering Policy", &["", "Fixed Reorder Qty.", "Maximum Qty.", "Order", "Lot-for-Lot"]),
+            F::decimal("Reorder Point"),
+            F::decimal("Reorder Quantity"),
+            F::decimal("Maximum Inventory"),
+            F::decimal("Safety Stock Quantity"),
+            F::decimal("Minimum Order Quantity"),
+            F::decimal("Order Multiple"),
+            F::code("Lead Time Calculation", 20),
+            F::option("Replenishment System", &["Purchase", "Prod. Order", "", "Assembly", "Transfer"]),
+        ],
+    );
+    m.add_table(
+        TableDef::new(crate::reqwksh::REQ_TEMPLATE, 244)
+            .fields(vec![F::code("Name", 10).not_blank(), F::text("Description", 80), F::option("Type", &["Req.", "For. Labor", "Planning"]), F::boolean("Recurring")])
+            .key(&["Name"])
+            .describe_by("Description")
+            .pages("req-worksheet-templates", None),
+    );
+    m.add_table(
+        TableDef::new(crate::reqwksh::REQ_NAME, 245)
+            .fields(vec![F::code("Worksheet Template Name", 10).relation(crate::reqwksh::REQ_TEMPLATE), F::code("Name", 10), F::text("Description", 100)])
+            .key(&["Worksheet Template Name", "Name"]),
+    );
+    m.add_table(
+        TableDef::new(crate::reqwksh::REQ_LINE, 246)
+            .fields(vec![
+                F::code("Worksheet Template Name", 10),
+                F::code("Journal Batch Name", 10),
+                F::integer("Line No."),
+                F::option("Type", &["", "G/L Account", "Item"]),
+                F::code("No.", 20),
+                F::text("Description", 100),
+                F::decimal("Quantity"),
+                F::decimal("Original Quantity").read_only(),
+                F::code("Vendor No.", 20).relation(crate::schema::tables::VENDOR),
+                F::decimal("Direct Unit Cost"),
+                F::date("Due Date"),
+                F::date("Order Date"),
+                F::code("Location Code", 10),
+                F::code("Unit of Measure Code", 10),
+                F::decimal("Qty. per Unit of Measure"),
+                F::decimal("Quantity (Base)"),
+                F::option("Action Message", &["", "New", "Change Qty.", "Reschedule", "Resched. & Chg. Qty.", "Cancel"]),
+                F::boolean("Accept Action Message"),
+                F::option("Replenishment System", &["Purchase", "Prod. Order", "", "Assembly", "Transfer"]),
+            ])
+            .key(&["Worksheet Template Name", "Journal Batch Name", "Line No."]),
+    );
+    let mut templates = PageDef::new("req-worksheet-templates", 293, "Req. Worksheet Templates", PageKind::List, Some(crate::reqwksh::REQ_TEMPLATE));
+    templates.columns = ["Name", "Description", "Recurring"].iter().map(|c| (*c).to_string()).collect();
+    templates.editable = true;
+    m.add_page(templates);
+    let mut wksh = PageDef::new("req-worksheet", 291, "Requisition Worksheets", PageKind::List, Some(crate::reqwksh::REQ_LINE))
+        .view("Worksheet Template Name", "REQ")
+        .view("Journal Batch Name", "DEFAULT");
+    wksh.columns = ["Type", "No.", "Action Message", "Accept Action Message", "Description", "Location Code", "Original Quantity", "Quantity", "Unit of Measure Code", "Direct Unit Cost", "Order Date", "Due Date", "Vendor No."].iter().map(|c| (*c).to_string()).collect();
+    wksh.editable = true;
+    wksh.keywords = "requisition reorder planning purchase suggestion".to_string();
+    wksh.actions = vec![
+        Act::command("Calculate Plan", A::Process, "reqwksh.calculate_plan").icon("new").ask(&["order_date"]).tooltip("Use a batch job to help you calculate a supply plan for items and stockkeeping units that have the Replenishment System field set to Purchase or Transfer."),
+        Act::command("Carry &Out Action Message", A::Process, "reqwksh.carry_out").icon("post").confirm("Do you want to carry out the action messages and create purchase orders?").tooltip("Use a batch job to help you create actual supply orders from the order proposals."),
+    ];
+    m.add_page(wksh);
     // Item charges and their purchase assignment.
     m.add_table(
         TableDef::new(crate::item_charge::ITEM_CHARGE, 5800)

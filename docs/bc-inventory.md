@@ -23,7 +23,7 @@ orders this list into phases.
 | Foundation | 8 | 58 | 0 | 2 |
 | HumanResources | 0 | 57 | 0 | 15 |
 | Integration | 0 | 87 | 0 | 0 |
-| Inventory | 34 | 312 | 1 | 101 |
+| Inventory | 36 | 312 | 1 | 101 |
 | Invoicing | 0 | 7 | 0 | 0 |
 | Manufacturing | 0 | 134 | 0 | 50 |
 | Modules | 2 | 93 | 0 | 1 |
@@ -38,7 +38,7 @@ orders this list into phases.
 | Utilities | 0 | 12 | 0 | 2 |
 | Warehouse | 0 | 144 | 0 | 35 |
 | eServices | 0 | 25 | 0 | 0 |
-| **Base Application** | **175** | **2638** | **16** | **659** |
+| **Base Application** | **177** | **2638** | **16** | **659** |
 
 ### (root)
 
@@ -1754,7 +1754,7 @@ Pages 0 / 87, reports 0 / 0.
 
 ### Inventory
 
-Pages 34 / 312, reports 1 / 101.
+Pages 36 / 312, reports 1 / 101.
 
 <details><summary>Inventory / Analysis: pages 0 / 34, reports 0 / 8</summary>
 
@@ -2184,11 +2184,11 @@ Pages 34 / 312, reports 1 / 101.
 
 </details>
 
-<details><summary>Inventory / Requisition: pages 0 / 12, reports 0 / 5</summary>
+<details><summary>Inventory / Requisition: pages 2 / 12, reports 0 / 5</summary>
 
-- [ ] Page 291 Req. Worksheet (Worksheet)
+- [x] Page 291 Req. Worksheet (Worksheet)
 - [ ] Page 292 Req. Worksheet Template List (List)
-- [ ] Page 293 Req. Worksheet Templates (List)
+- [x] Page 293 Req. Worksheet Templates (List)
 - [ ] Page 295 Req. Wksh. Names (List)
 - [ ] Page 296 Recurring Req. Worksheet (Worksheet)
 - [ ] Page 500 Available - Requisition Lines (List)

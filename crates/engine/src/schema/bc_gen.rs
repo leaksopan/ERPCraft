@@ -1753,8 +1753,10 @@ pub fn extend(m: &mut Metadata) {
             ("Last Direct Cost", "Last Direct Cost", "Specifies the most recent direct unit cost of the item.", 2),
             ("Vendor No.", "Vendor No.", "Specifies the vendor code of who supplies this item by default.", 0),
             ("Vendor Item No.", "Vendor Item No.", "Specifies the number that the vendor uses for this item.", 0),
+            ("Lead Time Calculation", "Lead Time Calculation", "Specifies a date formula for the amount of time it takes to replenish the item.", 0),
             ("Reorder Point", "Reorder Point", "Specifies a stock quantity that sets the inventory below the level that you must replenish the item.", 0),
             ("Maximum Inventory", "Maximum Inventory", "Specifies a quantity that you want to use as a maximum inventory level.", 0),
+            ("Reorder Quantity", "Reorder Quantity", "Specifies a standard lot size quantity to be used for all order proposals.", 0),
             ("Blocked", "Blocked", "Specifies that transactions with the item cannot be posted, for example, because the item is in quarantine.", 0),
             ("Last Date Modified", "Last Date Modified", "Specifies when the item card was last modified.", 0),
             ("Inventory", "Inventory", "Specifies how many units, such as pieces, boxes, or cans, of the item are in inventory.", 0),
@@ -1764,8 +1766,13 @@ pub fn extend(m: &mut Metadata) {
             ("Gen. Prod. Posting Group", "Gen. Prod. Posting Group", "Specifies the item's product type to link transactions made for this item with the appropriate general ledger account according to the general posting setup.", 0),
             ("VAT Prod. Posting Group", "VAT Prod. Posting Group", "Specifies the VAT product posting group. Links business transactions made for the item, resource, or G/L account with the general ledger, to account for VAT amounts resulting from trade with that record.", 0),
             ("Serial Nos.", "Serial Nos.", "Specifies a number series code to assign consecutive serial numbers to items produced.", 0),
+            ("Minimum Order Quantity", "Minimum Order Quantity", "Specifies a minimum allowable quantity for an item order proposal.", 0),
+            ("Safety Stock Quantity", "Safety Stock Quantity", "Specifies a quantity of stock to have in inventory to protect against supply-and-demand fluctuations during replenishment lead time.", 0),
+            ("Order Multiple", "Order Multiple", "Specifies a parameter used by the planning system to round the quantity of planned supply orders to a multiple of this value.", 0),
+            ("Replenishment System", "Replenishment System", "Specifies the type of supply order created by the planning system when the item needs to be replenished.", 0),
             ("Sales Unit of Measure", "Sales Unit of Measure", "Specifies the unit of measure code used when you sell the item.", 0),
             ("Purch. Unit of Measure", "Purch. Unit of Measure", "Specifies the unit of measure code used when you purchase the item.", 0),
+            ("Reordering Policy", "Reordering Policy", "Specifies the reordering policy that is used to calculate the lot size per planning period (time bucket).", 0),
             ("Item Category Code", "Item Category Code", "Specifies the category that the item belongs to. Item categories also contain any assigned item attributes.", 0),
             ("Item Tracking Code", "Item Tracking Code", "Specifies how serial, lot or package numbers assigned to the item are tracked in the supply chain.", 0),
             ("Lot Nos.", "Lot Nos.", "Specifies the number series code that will be used when assigning lot numbers.", 0),
@@ -1784,7 +1791,6 @@ pub fn extend(m: &mut Metadata) {
             F::option("Price/Profit Calculation", &["Profit=Price-Cost", "Price=Cost+Profit", "No Relationship"]).tooltip("Specifies the relationship between the Unit Cost, Unit Price, and Profit Percentage fields associated with this item."),
             F::decimal("Indirect Cost %").tooltip("Specifies the percentage of the item's last purchase cost that includes indirect costs, such as freight that is associated with the purchase of the item."),
             F::boolean("Cost is Adjusted").read_only().tooltip("Specifies whether the item's unit cost has been adjusted, either automatically or manually."),
-            F::code("Lead Time Calculation", 32).tooltip("Specifies a date formula for the amount of time it takes to replenish the item."),
             F::decimal("Gross Weight").tooltip("Specifies the gross weight of the item."),
             F::decimal("Net Weight").tooltip("Specifies the net weight of the item."),
             F::decimal("Unit Volume").tooltip("Specifies the volume of one unit of the item."),
@@ -2794,6 +2800,53 @@ pub fn extend(m: &mut Metadata) {
             F::option("Document Type", &["", "Payment", "Invoice", "Credit Memo", "Finance Charge Memo", "Reminder", "Refund"]).tooltip("Specifies the document type of the customer entry on the reminder line or finance charge memo line."),
             F::code("Document No.", 20).tooltip("Specifies the document number of the customer entry on the reminder line or finance charge memo line."),
             F::boolean("Canceled").tooltip("Specifies if the issued reminder or finance charge has been canceled."),
+        ],
+    );
+    relabel(
+        m,
+        "Req. Wksh. Template",
+        &[
+            ("Name", "Name", "Specifies the name of the requisition worksheet template you are creating.", 0),
+            ("Description", "Description", "Specifies a description of the requisition worksheet template you are creating.", 0),
+            ("Recurring", "Recurring", "Specifies whether the requisition worksheet template will be a recurring requisition worksheet.", 0),
+            ("Type", "Type", "Specifies the type of the requisition worksheet template.", 0),
+        ],
+    );
+    fields(
+        m,
+        "Req. Wksh. Template",
+        vec![
+            F::boolean("Increment Batch Name").tooltip("Specifies if batch names using this template are automatically incremented. Example: The posting following BATCH001 is automatically named BATCH002."),
+        ],
+    );
+    relabel(
+        m,
+        "Requisition Line",
+        &[
+            ("Worksheet Template Name", "Worksheet Template Name", "Specifies the name of the requisition worksheet template.", 0),
+            ("Journal Batch Name", "Journal Batch Name", "Specifies the name of the journal batch, a personalized journal layout, that the entries were posted from.", 0),
+            ("Line No.", "Line No.", "Specifies the number of the requisition worksheet line.", 0),
+            ("Type", "Type", "Specifies the type of requisition worksheet line you are creating.", 0),
+            ("No.", "No.", "Specifies the number of the involved entry or record, according to the specified number series.", 0),
+            ("Description", "Description", "Specifies text that describes the entry.", 0),
+            ("Quantity", "Quantity", "Specifies the number of units of the item.", 0),
+            ("Vendor No.", "Vendor No.", "Specifies the number of the vendor who will ship the items in the purchase order.", 0),
+            ("Direct Unit Cost", "Direct Unit Cost", "Specifies the cost of one unit of the selected item or resource.", 2),
+            ("Due Date", "Due Date", "Specifies the date when you can expect to receive the items.", 0),
+            ("Location Code", "Location Code", "Specifies a code for an inventory location where the items that are being ordered will be registered.", 0),
+            ("Order Date", "Order Date", "Specifies the date when the related order was created.", 0),
+            ("Unit of Measure Code", "Unit of Measure Code", "Specifies how each unit of the item or resource is measured, such as in pieces or hours. By default, the value in the Base Unit of Measure field on the item or resource card is inserted.", 0),
+            ("Original Quantity", "Original Quantity", "Specifies the quantity stated on the production or purchase order, when an action message proposes to change the quantity on an order.", 0),
+            ("Replenishment System", "Replenishment System", "Specifies which kind of order to use to create replenishment orders and order proposals.", 0),
+            ("Action Message", "Action Message", "Specifies an action to take to rebalance the demand-supply situation.", 0),
+            ("Accept Action Message", "Accept Action Message", "Specifies whether to accept the action message proposed for the line.", 0),
+        ],
+    );
+    fields(
+        m,
+        "Requisition Line",
+        vec![
+            F::option("Price Calculation Method", &["", "Lowest Price"]).tooltip("Specifies the method that will be used for unit cost calculation in the line."),
         ],
     );
     relabel(
@@ -5119,6 +5172,8 @@ pub fn extend(m: &mut Metadata) {
     columns(m, "reminder-list", &["No.", "Customer No.", "Name", "Currency Code", "Remaining Amount", "Assigned User ID"]);
     columns(m, "reminder-subform", &["Type", "No.", "Document Type", "Document No.", "Due Date", "Description", "Remaining Amount", "Amount"]);
     columns(m, "reminder-terms", &["Code", "Description", "Max. No. of Reminders", "Post Interest", "Post Additional Fee", "Post Add. Fee per Line", "Minimum Amount (LCY)", "Note About Line Fee on Report"]);
+    columns(m, "req-worksheet", &["Price Calculation Method", "Location Code"]);
+    columns(m, "req-worksheet-templates", &["Increment Batch Name"]);
     columns(m, "requests-to-approve", &["Sender ID", "Due Date", "Status", "Amount", "Amount (LCY)", "Currency Code"]);
     columns(m, "sales-comment-sheet", &["Date", "Comment"]);
     layout(

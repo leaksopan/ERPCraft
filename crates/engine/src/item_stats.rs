@@ -181,6 +181,118 @@ fn by_location(ctx: &mut Ctx, p: &Json) -> Result<Json> {
     Ok(json!({"report": {"title": format!("Items by Location - {no}"), "columns": ["Location Code", "Name", "Inventory"], "rows": rows}}))
 }
 
+// ---- Item availability by event / period / location (BC pages 5530, 157, 492) -------------------
+
+/// One expected movement of an item: (date, location, quantity +in / -out, what it is).
+struct Movement {
+    date: NaiveDate,
+    location: String,
+    qty: Decimal,
+    what: String,
+}
+
+fn per(l: &Record) -> Decimal {
+    match l.get("Qty. per Unit of Measure").as_dec() {
+        d if d.is_zero() => Decimal::ONE,
+        d => d,
+    }
+}
+
+/// Open sales / purchase / transfer lines of an item as future movements (BC's gross
+/// requirements and scheduled receipts).
+fn movements(ctx: &Ctx, no: &str) -> Vec<Movement> {
+    let mut v = Vec::new();
+    let work = ctx.work_date;
+    for (table, sign, date_field) in [("Sales Line", Decimal::NEGATIVE_ONE, "Shipment Date"), ("Purchase Line", Decimal::ONE, "Expected Receipt Date")] {
+        for l in ctx.db.rows(table).filter(|l| l.str("Type") == "Item" && l.str("No.") == no && l.str("Document Type") == "Order") {
+            let q = l.get("Outstanding Quantity").as_dec() * per(l);
+            if q.is_zero() {
+                continue;
+            }
+            let side = if table == "Sales Line" { "Sales Order" } else { "Purchase Order" };
+            v.push(Movement { date: l.get(date_field).as_date().unwrap_or(work), location: l.str("Location Code").to_string(), qty: sign * q, what: format!("{side} {}", l.str("Document No.")) });
+        }
+    }
+    for l in ctx.db.rows(crate::schema::transfer::TRANSFER_LINE).filter(|l| l.str("Item No.") == no) {
+        let out = (l.get("Quantity").as_dec() - l.get("Quantity Shipped").as_dec()) * per(l);
+        let inn = (l.get("Quantity").as_dec() - l.get("Quantity Received").as_dec()) * per(l);
+        let doc = l.str("Document No.");
+        if !out.is_zero() {
+            v.push(Movement { date: l.get("Shipment Date").as_date().unwrap_or(work), location: l.str("Transfer-from Code").to_string(), qty: -out, what: format!("Transfer Shipment {doc}") });
+        }
+        if !inn.is_zero() {
+            v.push(Movement { date: l.get("Receipt Date").as_date().unwrap_or(work), location: l.str("Transfer-to Code").to_string(), qty: inn, what: format!("Transfer Receipt {doc}") });
+        }
+    }
+    v.sort_by(|a, b| a.date.cmp(&b.date).then(b.qty.cmp(&a.qty)));
+    v
+}
+
+fn on_hand(ctx: &Ctx, no: &str, location: Option<&str>) -> Decimal {
+    entries(ctx, no).filter(|e| location.is_none_or(|l| e.str("Location Code") == l)).map(|e| e.get("Quantity").as_dec()).sum()
+}
+
+fn n(d: Decimal) -> String {
+    d.normalize().to_string()
+}
+
+/// BC's Item Availability by Event: today's inventory, then every open order's movement with the
+/// projected inventory after it.
+fn by_event(ctx: &mut Ctx, p: &Json) -> Result<Json> {
+    let no = item_no(ctx, p)?;
+    let mut balance = on_hand(ctx, &no, None);
+    let mut rows = vec![json!([ctx.work_date.to_string(), "Inventory", "", "", n(balance)])];
+    for m in movements(ctx, &no) {
+        balance += m.qty;
+        let (gross, receipt) = if m.qty < Decimal::ZERO { (n(-m.qty), String::new()) } else { (String::new(), n(m.qty)) };
+        rows.push(json!([m.date.to_string(), m.what, gross, receipt, n(balance)]));
+    }
+    Ok(json!({"report": {"title": format!("Item Availability by Event - {no}"), "columns": ["Date", "Source", "Gross Requirement", "Scheduled Receipt", "Projected Inventory"], "rows": rows}}))
+}
+
+/// BC's Item Availability by Periods: per month from the work date, the requirements, receipts
+/// and the projected available balance at the end of it.
+fn by_period(ctx: &mut Ctx, p: &Json) -> Result<Json> {
+    let no = item_no(ctx, p)?;
+    let moves = movements(ctx, &no);
+    let mut balance = on_hand(ctx, &no, None);
+    let first = NaiveDate::from_ymd_opt(ctx.work_date.year(), ctx.work_date.month(), 1).unwrap_or(ctx.work_date);
+    let mut rows = Vec::new();
+    for i in 0..6u32 {
+        let start = first.checked_add_months(Months::new(i)).unwrap_or(first);
+        let end = start.checked_add_months(Months::new(1)).and_then(|d| d.pred_opt()).unwrap_or(start);
+        // Anything overdue counts in the first period.
+        let in_period = |m: &&Movement| (i == 0 && m.date < start) || (m.date >= start && m.date <= end);
+        let gross: Decimal = moves.iter().filter(in_period).filter(|m| m.qty < Decimal::ZERO).map(|m| -m.qty).sum();
+        let receipts: Decimal = moves.iter().filter(in_period).filter(|m| m.qty > Decimal::ZERO).map(|m| m.qty).sum();
+        balance += receipts - gross;
+        rows.push(json!([start.to_string(), start.format("%B %Y").to_string(), n(gross), n(receipts), n(balance)]));
+    }
+    Ok(json!({"report": {"title": format!("Item Availability by Periods - {no}"), "columns": ["Period Start", "Period Name", "Gross Requirement", "Scheduled Receipt", "Projected Available Balance"], "rows": rows}}))
+}
+
+/// BC's Item Availability by Location: per location, inventory, requirements, receipts and the
+/// projected available balance.
+fn by_availability_location(ctx: &mut Ctx, p: &Json) -> Result<Json> {
+    let no = item_no(ctx, p)?;
+    let moves = movements(ctx, &no);
+    let mut locs: Vec<(String, String)> = vec![(String::new(), "(no location)".to_string())];
+    locs.extend(ctx.db.rows("Location").map(|l| (l.str("Code").to_string(), l.str("Name").to_string())));
+    let rows: Vec<Json> = locs
+        .iter()
+        .filter_map(|(code, name)| {
+            let inv = on_hand(ctx, &no, Some(code));
+            let gross: Decimal = moves.iter().filter(|m| m.location == *code && m.qty < Decimal::ZERO).map(|m| -m.qty).sum();
+            let receipts: Decimal = moves.iter().filter(|m| m.location == *code && m.qty > Decimal::ZERO).map(|m| m.qty).sum();
+            if inv.is_zero() && gross.is_zero() && receipts.is_zero() {
+                return None;
+            }
+            Some(json!([code, name, n(inv), n(gross), n(receipts), n(inv + receipts - gross)]))
+        })
+        .collect();
+    Ok(json!({"report": {"title": format!("Item Availability by Location - {no}"), "columns": ["Code", "Name", "Inventory", "Gross Requirement", "Scheduled Receipt", "Projected Available Balance"], "rows": rows}}))
+}
+
 fn s_no() -> Json {
     json!({"type": "object", "properties": {"no": {"type": "string"}, "table": {"type": "string"}, "key": {}}})
 }
@@ -189,5 +301,8 @@ pub static COMMANDS: &[CommandDef] = &[
     CommandDef { id: "item.statistics", label: "Item Statistics", group: "Inventory", summary: "An item's inventory value, net sales, gross margin, return rate and sales growth per period.", mutates: false, params: s_no, run: statistics },
     CommandDef { id: "item.entry_statistics", label: "Entry Statistics", group: "Inventory", summary: "An item's most recently posted receipt, purchase, shipment, sale and adjustments.", mutates: false, params: s_no, run: entry_statistics },
     CommandDef { id: "item.turnover", label: "Turnover", group: "Inventory", summary: "An item's purchases and sales per month for the last twelve months.", mutates: false, params: s_no, run: turnover },
+    CommandDef { id: "item.availability_by_event", label: "Event", group: "Inventory", summary: "An item's projected inventory after each open order, by date.", mutates: false, params: s_no, run: by_event },
+    CommandDef { id: "item.availability_by_period", label: "Period", group: "Inventory", summary: "An item's requirements, receipts and projected balance per month.", mutates: false, params: s_no, run: by_period },
+    CommandDef { id: "item.availability_by_location", label: "Location", group: "Inventory", summary: "An item's inventory, requirements, receipts and projected balance per location.", mutates: false, params: s_no, run: by_availability_location },
     CommandDef { id: "item.by_location", label: "Items by Location", group: "Inventory", summary: "An item's inventory at each location.", mutates: false, params: s_no, run: by_location },
 ];

@@ -6342,7 +6342,7 @@ pub fn extend(m: &mut Metadata) {
         "item-card",
         &[
             ("Process", &["Copy Item", "Adjust Inventory"]),
-            ("Item", &["Attachments", "Co&mments", "Dimensions", "Attributes", "Items b&y Location"]),
+            ("Item", &["Attachments", "Co&mments", "Dimensions", "Event", "Period", "Location", "Attributes", "Items b&y Location"]),
         ],
     );
     categories(
@@ -6380,7 +6380,7 @@ pub fn extend(m: &mut Metadata) {
         "item-list",
         &[
             ("Process", &["Adjust Inventory", "Copy Item"]),
-            ("Item", &["Dimensions-&Multiple", "Dimensions-Single", "Co&mments", "Items b&y Location", "Item References"]),
+            ("Item", &["Dimensions-&Multiple", "Dimensions-Single", "Co&mments", "Items b&y Location", "Event", "Period", "Location", "Item References"]),
             ("Attributes", &["Attributes"]),
         ],
     );

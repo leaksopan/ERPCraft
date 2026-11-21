@@ -40,3 +40,20 @@ fn item_statistics_follow_the_posted_sale() {
     assert!(l["report"]["rows"].as_array().unwrap().len() >= 1);
     assert!(s.run("item.turnover", &json!({"no": "NOPE"})).is_err());
 }
+
+#[test]
+fn availability_by_event_period_and_location_add_up() {
+    let mut s = demo();
+    let inv: f64 = s.run("record.get", &json!({"table": "Item", "key": "1100"})).unwrap()["Inventory"].as_str().map(|x| x.parse().unwrap()).unwrap_or(0.0);
+    let ev = s.run("item.availability_by_event", &json!({"no": "1100"})).unwrap();
+    let rows = ev["report"]["rows"].as_array().unwrap();
+    assert_eq!(rows[0][1], "Inventory");
+    let last: f64 = rows.last().unwrap()[4].as_str().unwrap().parse().unwrap();
+    let pr = s.run("item.availability_by_period", &json!({"no": "1100"})).unwrap();
+    let end: f64 = pr["report"]["rows"].as_array().unwrap().last().unwrap()[4].as_str().unwrap().parse().unwrap();
+    assert_eq!(last, end, "events and periods end at the same projection");
+    let loc = s.run("item.availability_by_location", &json!({"no": "1100"})).unwrap();
+    let total: f64 = loc["report"]["rows"].as_array().unwrap().iter().map(|r| r[5].as_str().unwrap().parse::<f64>().unwrap()).sum();
+    assert_eq!(total, last, "the locations add up to it");
+    assert!(rows.len() > 1 || last == inv);
+}

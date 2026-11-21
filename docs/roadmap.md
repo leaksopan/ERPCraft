@@ -27,7 +27,7 @@ Each target is checked by a script or a screenshot, not by eye.
 | 3 | Every W1 app's pages and reports exist (or are decided out) | inventory, W1 apps section | 0 / ~1,700 pages |
 | 4 | Every page we have matches BC's structure | `cargo run -p bc-parity -- --summary --check` exits 0 | ✅ blocking 0 |
 | 5 | Every field BC shows on our pages exists | "needs table field" = 0 | 67 |
-| 6 | Every action BC offers on our pages exists and works | "actions missing" = 0 | 1,393 |
+| 6 | Every action BC offers on our pages exists and works | "actions missing" = 0 | 1,387 |
 | 7 | Every page looks and behaves like BC | [visual checklist](#visual-parity-checklist) | 7 pages |
 | 8 | Every function has tests | `cargo test --workspace` | ✅ 27 suites |
 
@@ -120,7 +120,7 @@ The order follows impact for Auto Craft (a workshop and auto-parts business): mo
 - [ ] Stockkeeping units, item variants, units of measure per item, item references, substitutions, catalog items (item units of measure with conversion on documents, variants, references, substitutions, extended texts, translations, attributes, categories done; SKUs, catalog items, variants on documents to do)
 - [ ] Physical inventory orders and recordings, counting periods
 - [ ] Costing: Adjust Cost – Item Entries, Post Inventory Cost to G/L, revaluation journal, standard cost worksheet (value entries, Adjust Cost with moving average, Post Inventory Cost to G/L, automatic cost posting done; FIFO / LIFO / specific, revaluation journal, standard cost worksheet to do)
-- [ ] Requisition worksheet, reordering policies, item availability by period, location, event and BOM level (requisition worksheet with Calculate Plan by reordering policy and Carry Out Action Message done; availability by period / location / event to do)
+- [ ] Requisition worksheet, reordering policies, item availability by period, location, event and BOM level (requisition worksheet with Calculate Plan by reordering policy and Carry Out Action Message, item availability by event / period / location done; by BOM level, variant to do)
 - [ ] Item budgets and analysis reports, item attributes and categories
 - [ ] Every Inventory report in the inventory
 

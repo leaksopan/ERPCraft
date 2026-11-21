@@ -228,6 +228,18 @@ pub fn show(app: &mut ErpApp, ui: &mut Ui, idx: usize, mut state: CardState, lay
 pub struct ActionTab<'a> {
     pub caption: String,
     pub actions: Vec<&'a ActionDef>,
+    /// Per action: the promoted group it sits in (caption, shown as a split button).
+    pub groups: Vec<Option<(String, bool)>>,
+}
+
+/// A promoted category entry: "split » Posting » P&ost" / "menu » Calculate » &Calculate Lines"
+/// or a plain caption. Returns (group, action caption).
+fn category_entry(c: &str) -> (Option<(String, bool)>, &str) {
+    let mut parts = c.splitn(3, " \u{bb} ");
+    match (parts.next(), parts.next(), parts.next()) {
+        (Some(kind @ ("split" | "menu")), Some(group), Some(action)) => (Some((group.to_string(), kind == "split")), action),
+        _ => (None, c),
+    }
 }
 
 /// The action bar's tabs: BC's promoted categories ("Process" shows as Home) when the page has
@@ -235,9 +247,9 @@ pub struct ActionTab<'a> {
 pub fn action_tab_list(page: &PageDef) -> Vec<ActionTab<'_>> {
     use erpcraft_engine::meta::ActionArea;
     let norm = |s: &str| s.replace('&', "").trim_end_matches("...").trim().to_ascii_lowercase();
-    let by_area = |area: ActionArea, caption: &str| ActionTab {
-        caption: caption.to_string(),
-        actions: page.actions.iter().filter(|a| a.area == area).collect(),
+    let by_area = |area: ActionArea, caption: &str| {
+        let actions: Vec<&ActionDef> = page.actions.iter().filter(|a| a.area == area).collect();
+        ActionTab { caption: caption.to_string(), groups: vec![None; actions.len()], actions }
     };
     let areas = [
         (ActionArea::Home, "Home"),
@@ -252,23 +264,34 @@ pub fn action_tab_list(page: &PageDef) -> Vec<ActionTab<'_>> {
         let mut tabs: Vec<ActionTab> = page
             .categories
             .iter()
-            .map(|(cat, captions)| ActionTab {
-                caption: if cat == "Process" { "Home".to_string() } else { cat.clone() },
-                actions: captions.iter().filter_map(|c| page.actions.iter().find(|a| norm(&a.caption) == norm(c))).collect(),
+            .map(|(cat, captions)| {
+                let found: Vec<(&ActionDef, Option<(String, bool)>)> = captions
+                    .iter()
+                    .filter_map(|c| {
+                        let (group, caption) = category_entry(c);
+                        page.actions.iter().find(|a| norm(&a.caption) == norm(caption)).map(|a| (a, group))
+                    })
+                    .collect();
+                ActionTab {
+                    caption: if cat == "Process" { "Home".to_string() } else { cat.clone() },
+                    actions: found.iter().map(|(a, _)| *a).collect(),
+                    groups: found.into_iter().map(|(_, g)| g).collect(),
+                }
             })
             .collect();
-        // Actions BC doesn't promote (and ERPCraft's own) stay on the first tab, like BC's Home.
+        // Only ERPCraft's own Home actions (BC has none of that name) join the first tab; what BC
+        // doesn't promote is under More options, as in BC.
         let promoted: Vec<&ActionDef> = tabs.iter().flat_map(|t| t.actions.iter().copied()).collect();
-        let rest: Vec<&ActionDef> = page
-            .actions
-            .iter()
-            .filter(|a| matches!(a.area, ActionArea::Home | ActionArea::Process) && !promoted.iter().any(|p| std::ptr::eq(*p, *a)))
-            .collect();
+        let rest: Vec<&ActionDef> = page.actions.iter().filter(|a| a.area == ActionArea::Home && !promoted.iter().any(|p| std::ptr::eq(*p, *a))).collect();
         match tabs.iter_mut().find(|t| t.caption == "Home") {
-            Some(home) => home.actions.extend(rest),
-            None => tabs.insert(0, ActionTab { caption: "Home".to_string(), actions: rest }),
+            Some(home) => {
+                home.groups.extend(rest.iter().map(|_| None));
+                home.actions.extend(rest);
+            }
+            None if !rest.is_empty() => tabs.insert(0, ActionTab { caption: "Home".to_string(), groups: vec![None; rest.len()], actions: rest }),
+            None => {}
         }
-        tabs.push(ActionTab { caption: "More options".to_string(), actions: page.actions.iter().collect() });
+        tabs.push(ActionTab { caption: "More options".to_string(), groups: vec![None; page.actions.len()], actions: page.actions.iter().collect() });
         tabs
     };
     tabs.retain(|t| !t.actions.is_empty());
@@ -334,7 +357,31 @@ fn action_tabs(ui: &mut Ui, page: &PageDef, run: &mut Option<ActionDef>) {
         ui.painter().rect_filled(line, 0.0, TOKENS.divider);
         ui.horizontal(|ui| {
             if let Some(tab) = tabs.get(current) {
-                for a in tab.actions.iter().copied() {
+                let mut i = 0;
+                while i < tab.actions.len() {
+                    // A promoted group: its actions together, as BC's split button or sub-menu.
+                    if let Some((group, split)) = tab.groups.get(i).cloned().flatten() {
+                        let mut j = i;
+                        while j < tab.actions.len() && tab.groups.get(j).cloned().flatten().is_some_and(|(g, _)| g == group) {
+                            j += 1;
+                        }
+                        let members: Vec<&ActionDef> = tab.actions[i..j].to_vec();
+                        if split {
+                            let first = members[0];
+                            let r = widgets::action_button(ui, widgets::glyph(&first.icon), &first.caption.replace('&', ""));
+                            let r = if first.tooltip.is_empty() { r } else { r.on_hover_text(&first.tooltip) };
+                            if r.clicked() {
+                                *run = Some(first.clone());
+                            }
+                            crate::list::action_menu(ui, "▾", &members, run);
+                        } else {
+                            crate::list::action_menu(ui, &format!("{group}  ▾"), &members, run);
+                        }
+                        i = j;
+                        continue;
+                    }
+                    let a = tab.actions[i];
+                    i += 1;
                     let r = widgets::action_button(ui, widgets::glyph(&a.icon), &a.caption.replace('&', ""));
                     let tip = match (&a.shortcut, a.tooltip.is_empty()) {
                         (Some(s), true) => s.clone(),
@@ -632,10 +679,15 @@ fn lines_part(app: &mut ErpApp, ui: &mut Ui, host: &PageDef, header: &Record, pa
             let r = ui.label(RichText::new("Manage").color(TOKENS.accent));
             ui.painter().line_segment([r.rect.left_bottom() + vec2(0.0, 3.0), r.rect.right_bottom() + vec2(0.0, 3.0)], egui::Stroke::new(2.0, TOKENS.accent));
         }
-        // BC's "Line" menu: the lines page's actions, on the selected line.
-        let actions: Vec<&ActionDef> = page.actions.iter().collect();
-        if !actions.is_empty() {
-            crate::list::action_menu(ui, "Line  ▾", &actions, &mut line_action);
+        // BC's "Line" menu (what to look at for the selected line) and "Functions" menu (what to
+        // do with it), as on the subforms.
+        use erpcraft_engine::meta::ActionArea;
+        let (navigate, functions): (Vec<&ActionDef>, Vec<&ActionDef>) = page.actions.iter().partition(|a| matches!(a.area, ActionArea::Navigate | ActionArea::Report));
+        if !navigate.is_empty() {
+            crate::list::action_menu(ui, "Line  ▾", &navigate, &mut line_action);
+        }
+        if !functions.is_empty() {
+            crate::list::action_menu(ui, "Functions  ▾", &functions, &mut line_action);
         }
     });
     if let Some(a) = line_action {

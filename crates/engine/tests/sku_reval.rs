@@ -84,3 +84,12 @@ fn a_revaluation_raises_the_value_and_later_costs() {
     assert_eq!(cost, -600_000.0);
     assert_eq!(sum(&mut s, "Value Entry", json!({"Item No.": "RX"}), "Cost Amount (Actual)"), 600_000.0, "half the revalued inventory is left");
 }
+
+#[test]
+fn the_inventory_value_test_leaves_the_journal_empty() {
+    let mut s = Session::in_memory();
+    s.run("company.init", &json!({"demo": true})).unwrap();
+    let r = s.run("item_journal.calculate_inventory_value_test", &json!({})).unwrap();
+    assert!(!r["report"]["rows"].as_array().unwrap().is_empty());
+    assert_eq!(rows(&mut s, "Item Journal Line", json!({"Journal Template Name": "REVAL"})).len(), 0);
+}

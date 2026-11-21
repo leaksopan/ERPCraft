@@ -104,3 +104,17 @@ fn a_catalog_item_becomes_an_item_from_its_template() {
     assert!(entry.starts_with("NS"), "{entry}");
     assert_eq!(s.run("catalog.create_item", &json!({"entry_no": entry})).unwrap()["item_no"], entry.as_str());
 }
+
+#[test]
+fn templates_copy_and_catalog_reports() {
+    let mut s = Session::in_memory();
+    s.run("company.init", &json!({"demo": true})).unwrap();
+    s.run("record.new", &json!({"table": "Item Templ.", "values": {"Code": "NEW", "Description": "New template"}})).unwrap();
+    s.run("item_templ.copy", &json!({"table": "Item Templ.", "key": "NEW", "from_code": "PARTS"})).unwrap();
+    let t = s.run("record.get", &json!({"table": "Item Templ.", "key": "NEW"})).unwrap();
+    assert_eq!((t["Description"].as_str().unwrap(), t["Inventory Posting Group"].as_str().unwrap()), ("New template", "PARTS"));
+    s.run("catalog.create_item", &json!({"entry_no": "NS0000"})).unwrap();
+    let r = s.run("catalog.sales", &json!({})).unwrap();
+    assert_eq!(r["report"]["rows"][0][1], "AF-2041");
+    s.run("catalog.substitutions", &json!({})).unwrap();
+}

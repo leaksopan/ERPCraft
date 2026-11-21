@@ -98,10 +98,9 @@ pub fn on_insert(ctx: &mut Ctx, t: &TableDef, r: &mut Record) -> Result<bool> {
             {
                 r.set("Posting No. Series", Value::text(&s));
             }
-            for f in ["Order Date", "Posting Date"] {
-                if r.get(f).as_date().is_none() {
-                    r.set(f, Value::Date(ctx.work_date));
-                }
+            // BC's InitRecord: only the posting date starts at the work date.
+            if r.get("Posting Date").as_date().is_none() {
+                r.set("Posting Date", Value::Date(ctx.work_date));
             }
             r.set("Status", Value::text("Open"));
             Ok(true)
@@ -322,7 +321,7 @@ fn next_period(from: NaiveDate, frequency: i64) -> (NaiveDate, NaiveDate) {
 fn calculate_counting_period(ctx: &mut Ctx, p: &Json) -> Result<Json> {
     let h = order_of(ctx, p)?;
     check_open(&h)?;
-    let date = h.get("Order Date").as_date().unwrap_or(ctx.work_date);
+    let date = h.get("Order Date").as_date().or_else(|| h.get("Posting Date").as_date()).unwrap_or(ctx.work_date);
     let due = |i: &Record| {
         !i.str("Phys Invt Counting Period Code").is_empty()
             && i.get("Next Counting Start Date").as_date().is_none_or(|s| s <= date)
@@ -611,10 +610,80 @@ fn test_report(ctx: &mut Ctx, p: &Json) -> Result<Json> {
     Ok(json!({"report": {"title": format!("Phys. Invt. Order - Test {no}"), "columns": REPORT_COLUMNS, "rows": report_rows(&lines), "sections": [{"caption": "Warnings", "columns": ["Description"], "rows": problems}]}}))
 }
 
-/// BC's Phys. Invt. Order Statistics.
+/// An open or posted order (by the card the command runs from, or `no` with `posted`).
+fn any_order(ctx: &Ctx, p: &Json) -> Result<(Record, Vec<Record>, bool)> {
+    let posted = opt_str(p, "table") == Some(PSTD_ORDER_HEADER) || p.get("posted").and_then(Json::as_bool).unwrap_or(false);
+    if !posted {
+        let h = order_of(ctx, p)?;
+        let lines = order_lines(ctx, h.str("No."));
+        return Ok((h, lines, false));
+    }
+    let no = match opt_str(p, "table") {
+        Some(PSTD_ORDER_HEADER) => key_part(p, 0),
+        _ => opt_str(p, "no").map(str::to_string),
+    }
+    .ok_or_else(|| EngineError::invalid("missing parameter 'no'"))?;
+    let h = ctx.get_code(PSTD_ORDER_HEADER, &no)?;
+    let mut lines: Vec<Record> = ctx.db.rows(PSTD_ORDER_LINE).filter(|l| l.str("Document No.") == no).cloned().collect();
+    lines.sort_by_key(|l| l.get("Line No.").as_int());
+    Ok((h, lines, true))
+}
+
+/// BC's Phys. Inventory Order Diff. (report 5876) / Posted Phys. Invt. Order Diff. (5877): each
+/// line's expected and recorded quantity with the difference and its value.
+fn diff_report(ctx: &mut Ctx, p: &Json) -> Result<Json> {
+    let (h, lines, posted) = any_order(ctx, p)?;
+    let rows: Vec<Json> = lines
+        .iter()
+        .filter(|l| !l.str("Item No.").is_empty())
+        .map(|l| {
+            let n = |f: &str| l.get(f).as_dec().normalize().to_string();
+            let unit = l.get("Unit Amount").as_dec();
+            let pos = crate::ctx::round_amount(l.get("Pos. Qty. (Base)").as_dec() * unit);
+            let neg = crate::ctx::round_amount(l.get("Neg. Qty. (Base)").as_dec() * unit);
+            json!([l.str("Item No."), l.str("Variant Code"), l.str("Location Code"), l.str("Description"), l.str("Base Unit of Measure Code"), n("Qty. Expected (Base)"), n("Qty. Recorded (Base)"), n("Pos. Qty. (Base)"), n("Neg. Qty. (Base)"), format!("{pos:.2}"), format!("{neg:.2}")])
+        })
+        .collect();
+    let title = if posted { "Posted Phys. Invt. Order Diff." } else { "Phys. Inventory Order Diff." };
+    Ok(json!({"report": {"title": format!("{title} {}", h.str("No.")), "columns": ["Item No.", "Variant Code", "Location Code", "Description", "Base Unit of Measure Code", "Qty. Expected (Base)", "Qty. Recorded (Base)", "Pos. Qty. (Base)", "Neg. Qty. (Base)", "Amount Pos.", "Amount Neg."], "rows": rows}}))
+}
+
+/// BC's Phys. Invt. Recording (report 5875) / Posted Phys. Invt. Recording (5878): the counting
+/// sheet of a recording, open or posted.
+fn recording_report(ctx: &mut Ctx, p: &Json) -> Result<Json> {
+    let table = opt_str(p, "table").unwrap_or(RECORD_HEADER);
+    let (header_table, line_table) = if table == PSTD_RECORD_HEADER { (PSTD_RECORD_HEADER, PSTD_RECORD_LINE) } else { (RECORD_HEADER, RECORD_LINE) };
+    let (order, rec) = match opt_str(p, "table") {
+        Some(_) => (key_part(p, 0), key_part(p, 1).and_then(|s| s.parse::<i64>().ok())),
+        None => (opt_str(p, "order_no").map(str::to_string), p.get("recording_no").and_then(Json::as_i64)),
+    };
+    let order = order.ok_or_else(|| EngineError::invalid("missing parameter 'order_no'"))?;
+    let headers: Vec<Record> = ctx.db.rows(header_table).filter(|h| h.str("Order No.") == order && rec.is_none_or(|r| h.get("Recording No.").as_int() == r)).cloned().collect();
+    if headers.is_empty() {
+        refuse!("There is no recording of order {order} to print.");
+    }
+    let mut sections = Vec::new();
+    for h in &headers {
+        let n = h.get("Recording No.").as_int();
+        let mut lines: Vec<Record> = ctx.db.rows(line_table).filter(|l| l.str("Order No.") == order && l.get("Recording No.").as_int() == n).cloned().collect();
+        lines.sort_by_key(|l| l.get("Line No.").as_int());
+        let rows: Vec<Json> = lines
+            .iter()
+            .map(|l| {
+                let q = if l.get("Recorded").as_bool() { l.get("Quantity").as_dec().normalize().to_string() } else { String::new() };
+                json!([l.str("Item No."), l.str("Variant Code"), l.str("Location Code"), l.str("Bin Code"), l.str("Description"), l.str("Lot No."), l.str("Serial No."), l.str("Unit of Measure Code"), q, l.str("Shelf No.")])
+            })
+            .collect();
+        sections.push(json!({"caption": format!("Recording {n} - {}", h.str("Description")), "columns": ["Item No.", "Variant Code", "Location Code", "Bin Code", "Description", "Lot No.", "Serial No.", "Unit of Measure Code", "Quantity", "Shelf No."], "rows": rows}));
+    }
+    let title = if header_table == PSTD_RECORD_HEADER { "Posted Phys. Invt. Recording" } else { "Phys. Invt. Recording" };
+    Ok(json!({"report": {"title": format!("{title} {order}"), "columns": [], "rows": [], "sections": sections}}))
+}
+
+/// BC's Phys. Invt. Order Statistics (and Posted Phys. Invt. Order Stat.).
 fn statistics(ctx: &mut Ctx, p: &Json) -> Result<Json> {
-    let h = order_of(ctx, p)?;
-    let lines: Vec<Record> = order_lines(ctx, h.str("No.")).into_iter().filter(|l| !l.str("Item No.").is_empty()).collect();
+    let (h, lines, _) = any_order(ctx, p)?;
+    let lines: Vec<Record> = lines.into_iter().filter(|l| !l.str("Item No.").is_empty()).collect();
     let count = |f: &dyn Fn(&Record) -> bool| lines.iter().filter(|l| f(l)).count();
     let amount = |f: &dyn Fn(&Record) -> bool, q: &str| -> Decimal { lines.iter().filter(|l| f(l)).map(|l| crate::ctx::round_amount(l.get(q).as_dec() * l.get("Unit Amount").as_dec())).sum() };
     let pos = |l: &Record| l.str("Entry Type") == "Positive Adjmt.";
@@ -758,8 +827,88 @@ fn post(ctx: &mut Ctx, p: &Json) -> Result<Json> {
     Ok(json!({"posted_no": posted_no, "message": format!("Phys. Invt. Order {no} was posted as {posted_no}.")}))
 }
 
+/// BC's Show Duplicate Lines: lines with the same item, variant, location and bin.
+fn show_duplicates(ctx: &mut Ctx, p: &Json) -> Result<Json> {
+    let h = order_of(ctx, p)?;
+    let lines = order_lines(ctx, h.str("No."));
+    let key = |l: &Record| (l.str("Item No.").to_string(), l.str("Variant Code").to_string(), l.str("Location Code").to_string(), l.str("Bin Code").to_string());
+    let rows: Vec<Json> = lines
+        .iter()
+        .filter(|l| !l.str("Item No.").is_empty() && lines.iter().filter(|o| key(o) == key(l)).count() > 1)
+        .map(|l| json!([l.get("Line No.").as_int(), l.str("Item No."), l.str("Variant Code"), l.str("Location Code"), l.str("Bin Code"), l.str("Description")]))
+        .collect();
+    let message = if rows.is_empty() { "There are no duplicate lines.".to_string() } else { format!("{} line(s) have duplicates.", rows.len()) };
+    Ok(json!({"message": message, "report": {"title": format!("Duplicate Lines - {}", h.str("No.")), "columns": ["Line No.", "Item No.", "Variant Code", "Location Code", "Bin Code", "Description"], "rows": rows}}))
+}
+
+/// BC's Calculate Expected Qty. on one order line.
+fn calc_line_qty(ctx: &mut Ctx, p: &Json) -> Result<Json> {
+    let t = ctx.table(ORDER_LINE)?;
+    let key = Key::from_json(t, p.get("key").unwrap_or(&Json::Null)).map_err(EngineError::invalid)?;
+    let mut l = ctx.get(ORDER_LINE, &key)?;
+    check_open(&ctx.get_code(ORDER_HEADER, l.str("Document No."))?)?;
+    if l.str("Item No.").is_empty() {
+        refuse!("Item No. must have a value in Phys. Invt. Order Line: Document No.={}, Line No.={}. It cannot be zero or empty.", l.str("Document No."), l.get("Line No.").as_int());
+    }
+    l.set("Qty. Expected (Base)", dec(on_hand(ctx, l.str("Item No."), l.str("Location Code"))));
+    l.set("Qty. Exp. Calculated", Value::Bool(true));
+    l.set("Last Item Ledger Entry No.", Value::Int(last_entry(ctx, l.str("Item No."), l.str("Location Code"))));
+    ctx.db.modify(t, l)?;
+    Ok(json!({"message": "The expected quantity was calculated."}))
+}
+
+/// BC's Preview Posting: the entries posting would make, without keeping them.
+fn preview_post(ctx: &mut Ctx, p: &Json) -> Result<Json> {
+    let saved = ctx.db.clone();
+    let ile_before = ctx.db.next_entry_no(ITEM_LEDGER);
+    let gl_before = ctx.db.next_entry_no(crate::schema::tables::GL_ENTRY);
+    let out = post(ctx, p);
+    let result = out.map(|_| {
+        let items: Vec<Json> = ctx
+            .db
+            .rows(ITEM_LEDGER)
+            .filter(|e| e.get("Entry No.").as_int() >= ile_before)
+            .map(|e| json!([e.str("Posting Date"), e.str("Entry Type"), e.str("Document No."), e.str("Item No."), e.str("Location Code"), e.get("Quantity").as_dec().normalize().to_string(), format!("{:.2}", e.get("Cost Amount (Actual)").as_dec())]))
+            .collect();
+        let gl: Vec<Json> = ctx
+            .db
+            .rows(crate::schema::tables::GL_ENTRY)
+            .filter(|e| e.get("Entry No.").as_int() >= gl_before)
+            .map(|e| json!([e.str("Posting Date"), e.str("Document No."), e.str("G/L Account No."), e.str("Description"), format!("{:.2}", e.get("Amount").as_dec())]))
+            .collect();
+        json!({"report": {"title": "Posting Preview", "columns": [], "rows": [], "sections": [
+            {"caption": format!("Item Ledger Entry ({})", items.len()), "columns": ["Posting Date", "Entry Type", "Document No.", "Item No.", "Location Code", "Quantity", "Cost Amount (Actual)"], "rows": items},
+            {"caption": format!("G/L Entry ({})", gl.len()), "columns": ["Posting Date", "Document No.", "G/L Account No.", "Description", "Amount"], "rows": gl}
+        ]}})
+    });
+    *ctx.db = saved;
+    result
+}
+
+/// BC's Post and Print: post, then the Posted Phys. Invt. Order Diff. of the posted order.
+fn post_and_print(ctx: &mut Ctx, p: &Json) -> Result<Json> {
+    let posted = post(ctx, p)?;
+    let no = posted.get("posted_no").and_then(Json::as_str).unwrap_or_default().to_string();
+    let mut report = diff_report(ctx, &json!({"no": no, "posted": true}))?;
+    report["message"] = posted.get("message").cloned().unwrap_or(Json::Null);
+    report["posted_no"] = json!(no);
+    Ok(report)
+}
+
+fn s_line_key() -> Json {
+    json!({"type": "object", "properties": {"table": {"type": "string"}, "key": {}}, "required": ["key"]})
+}
+
 fn s_order() -> Json {
     json!({"type": "object", "properties": {"no": {"type": "string"}, "table": {"type": "string"}, "key": {}}})
+}
+
+fn s_any_order() -> Json {
+    json!({"type": "object", "properties": {"no": {"type": "string"}, "posted": {"type": "boolean"}, "table": {"type": "string"}, "key": {}}})
+}
+
+fn s_rec_report() -> Json {
+    json!({"type": "object", "properties": {"order_no": {"type": "string"}, "recording_no": {"type": "integer"}, "table": {"type": "string"}, "key": {}}})
 }
 
 fn s_calc() -> Json {
@@ -792,6 +941,12 @@ pub static COMMANDS: &[CommandDef] = &[
     CommandDef { id: "physinvt.finish", label: "Finish", group: "Inventory", summary: "Finish the order: compare expected and recorded quantities.", mutates: true, params: s_order, run: finish },
     CommandDef { id: "physinvt.reopen", label: "Reopen", group: "Inventory", summary: "Reopen a finished physical inventory order.", mutates: true, params: s_order, run: reopen },
     CommandDef { id: "physinvt.test_report", label: "Test Report", group: "Inventory", summary: "The adjustments posting would make, with warnings.", mutates: false, params: s_order, run: test_report },
-    CommandDef { id: "physinvt.statistics", label: "Statistics", group: "Inventory", summary: "Lines and amounts with and without differences.", mutates: false, params: s_order, run: statistics },
+    CommandDef { id: "physinvt.statistics", label: "Statistics", group: "Inventory", summary: "Lines and amounts with and without differences.", mutates: false, params: s_any_order, run: statistics },
+    CommandDef { id: "physinvt.diff_report", label: "Phys. Inventory Order Diff.", group: "Inventory", summary: "Expected and recorded quantities per line, with the differences and their value.", mutates: false, params: s_any_order, run: diff_report },
+    CommandDef { id: "physinvt.recording_report", label: "Phys. Invt. Recording", group: "Inventory", summary: "The counting sheet of a recording (open or posted).", mutates: false, params: s_rec_report, run: recording_report },
+    CommandDef { id: "physinvt.show_duplicates", label: "Show Duplicate Lines", group: "Inventory", summary: "Lines with the same item, variant, location and bin.", mutates: false, params: s_order, run: show_duplicates },
+    CommandDef { id: "physinvt.calc_line_qty", label: "Calculate Expected Qty.", group: "Inventory", summary: "Recalculate one order line's expected quantity.", mutates: true, params: s_line_key, run: calc_line_qty },
+    CommandDef { id: "physinvt.preview_post", label: "Preview Posting", group: "Inventory", summary: "The entries posting the order would make.", mutates: false, params: s_order, run: preview_post },
+    CommandDef { id: "physinvt.post_and_print", label: "Post and Print", group: "Inventory", summary: "Post the order and print its differences.", mutates: true, params: s_order, run: post_and_print },
     CommandDef { id: "physinvt.post", label: "Post", group: "Inventory", summary: "Post the differences as inventory adjustments and file the order as posted.", mutates: true, params: s_order, run: post },
 ];

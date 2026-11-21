@@ -119,3 +119,29 @@ fn counting_periods_pick_the_due_items() {
     let err = s.run("physinvt.calculate_counting_period", &json!({"no": no2})).unwrap_err();
     assert!(err.message.contains("no items with a counting period due"), "{}", err.message);
 }
+
+#[test]
+fn reports_of_open_and_posted_orders() {
+    let mut s = Session::in_memory();
+    s.run("company.init", &json!({"demo": true})).unwrap();
+    let no = new_order(&mut s);
+    let h = s.run("record.get", &json!({"table": "Phys. Invt. Order Header", "key": no})).unwrap();
+    assert!(h["Order Date"].is_null() && h["Posting Date"].is_string(), "BC's InitRecord sets only the posting date: {h}");
+    s.run("physinvt.calculate_lines", &json!({"no": no})).unwrap();
+    let rec_no = s.run("physinvt.make_recording", &json!({"no": no})).unwrap()["recording_no"].as_i64().unwrap();
+    let sheet = s.run("physinvt.recording_report", &json!({"table": "Phys. Invt. Record Header", "key": [no, rec_no]})).unwrap();
+    assert!(!sheet["report"]["sections"][0]["rows"].as_array().unwrap().is_empty());
+    for l in rows(&mut s, "Phys. Invt. Record Line", json!({"Order No.": no})) {
+        s.run("record.validate", &json!({"table": "Phys. Invt. Record Line", "key": [no, rec_no, l["Line No."]], "field": "Quantity", "value": 0})).unwrap();
+    }
+    s.run("physinvt.finish_recording", &json!({"order_no": no, "recording_no": rec_no})).unwrap();
+    s.run("physinvt.finish", &json!({"no": no})).unwrap();
+    let diff = s.run("physinvt.diff_report", &json!({"no": no})).unwrap();
+    assert!(diff["report"]["rows"].as_array().unwrap().iter().all(|r| r[6] == "0"));
+    let pno = s.run("physinvt.post", &json!({"no": no})).unwrap()["posted_no"].as_str().unwrap().to_string();
+    let posted = s.run("physinvt.diff_report", &json!({"table": "Pstd. Phys. Invt. Order Hdr", "key": pno})).unwrap();
+    assert_eq!(posted["report"]["rows"].as_array().unwrap().len(), diff["report"]["rows"].as_array().unwrap().len());
+    assert!(posted["report"]["title"].as_str().unwrap().starts_with("Posted Phys. Invt. Order Diff."));
+    s.run("physinvt.statistics", &json!({"no": pno, "posted": true})).unwrap();
+    s.run("physinvt.recording_report", &json!({"table": "Pstd. Phys. Invt. Record Hdr", "key": [pno, rec_no]})).unwrap();
+}

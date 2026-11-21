@@ -364,13 +364,27 @@ pub fn generate(meta: &Metadata, src: &Sources) -> String {
     for (id, al) in &pages {
         let have = have_by_page.get(id).cloned().unwrap_or_default();
         let caption_of = |name: &str| al.actions.iter().find(|a| a.name.eq_ignore_ascii_case(name) && a.vis != al::Vis::Hidden).map(|a| a.caption.clone());
+        // Promoted sub-groups: action name -> "split » Posting » " / "menu » Calculate » ".
+        let mut grouped: BTreeMap<String, String> = BTreeMap::new();
+        for (cat, names) in al.categories.iter().filter(|(c, _)| c.starts_with('\u{a7}')) {
+            let mut parts = cat.trim_start_matches('\u{a7}').splitn(2, '\u{a7}');
+            let (kind, caption) = (parts.next().unwrap_or("menu"), parts.next().unwrap_or(""));
+            for n in names {
+                grouped.entry(n.to_ascii_lowercase()).or_insert_with(|| format!("{kind} \u{bb} {caption} \u{bb} "));
+            }
+        }
         let cats: Vec<String> = al
             .categories
             .iter()
+            .filter(|(cat, _)| !cat.starts_with('\u{a7}'))
             .filter_map(|(cat, names)| {
                 let mut seen = BTreeSet::new();
-                let acts: Vec<String> =
-                    names.iter().filter_map(|n| caption_of(n)).filter(|c| have.contains(&norm(c)) && seen.insert(norm(c))).collect();
+                let acts: Vec<String> = names
+                    .iter()
+                    .filter_map(|n| caption_of(n).map(|c| (n, c)))
+                    .filter(|(_, c)| have.contains(&norm(c)) && seen.insert(norm(c)))
+                    .map(|(n, c)| format!("{}{c}", grouped.get(&n.to_ascii_lowercase()).map_or("", String::as_str)))
+                    .collect();
                 (!acts.is_empty()).then(|| format!("            ({cat:?}, {}),", strs(&acts)))
             })
             .collect();

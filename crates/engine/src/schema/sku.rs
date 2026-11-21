@@ -30,6 +30,14 @@ pub const FROM_ITEM: &[&str] = &[
     "Phys Invt Counting Period Code",
 ];
 
+fn sku_reservations() -> Act {
+    Act::page("&Reservation Entries", A::Navigate, "reservation-entries").link("Item No.", "Item No.").link("Location Code", "Location Code").icon("list").tooltip("View all reservations that are made for the item, either manually or automatically.")
+}
+
+fn sku_tracking() -> Act {
+    Act::page("Item &Tracking Entries", A::Navigate, "item-tracking-entries").link("Item No.", "Item No.").link("Location Code", "Location Code").icon("list").tooltip("View serial, lot or package numbers that are assigned to items.")
+}
+
 pub fn register(m: &mut Metadata) {
     // Item variants on lines and entries (BC's Variant Code, related to Item Variant).
     for table in [
@@ -93,6 +101,7 @@ pub fn register(m: &mut Metadata) {
     list.columns = ["Item No.", "Location Code", "Variant Code", "Replenishment System", "Description", "Inventory", "Reordering Policy", "Unit Cost", "Last Direct Cost"].iter().map(|c| (*c).to_string()).collect();
     list.card_page = Some("stockkeeping-unit-card".to_string());
     list.keywords = "sku stockkeeping location planning".to_string();
+    list.actions = vec![sku_reservations(), sku_tracking()];
     m.add_page(list);
     m.add_page(
         PageDef::new("stockkeeping-unit-card", 5700, "Stockkeeping Unit Card", PageKind::Card, Some(SKU))
@@ -102,7 +111,9 @@ pub fn register(m: &mut Metadata) {
             .group(G::new("Replenishment", &["Replenishment System", "Lead Time Calculation", "Vendor No.", "Vendor Item No.", "Transfer-from Code"]))
             .group(G::new("Planning", &["Reordering Policy", "Safety Stock Quantity", "Reorder Point", "Reorder Quantity", "Maximum Inventory", "Minimum Order Quantity", "Order Multiple"]))
             .group(G::new("Warehouse", &["Phys Invt Counting Period Code", "Last Counting Period Update", "Next Counting Start Date", "Next Counting End Date"]).collapsed())
-            .action(Act::page("Item Ledger E&ntries", A::Navigate, "item-ledger-entries").link("Item No.", "Item No.").link("Location Code", "Location Code").icon("list").shortcut("Ctrl+F7").tooltip("View the history of transactions that have been posted for the selected record.")),
+            .action(Act::page("Item Ledger E&ntries", A::Navigate, "item-ledger-entries").link("Item No.", "Item No.").link("Location Code", "Location Code").icon("list").shortcut("Ctrl+F7").tooltip("View the history of transactions that have been posted for the selected record."))
+            .action(sku_reservations())
+            .action(sku_tracking()),
     );
     for page in ["item-card", "item-list"] {
         if let Some(p) = m.pages.get_mut(page) {

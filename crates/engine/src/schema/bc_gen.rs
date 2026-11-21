@@ -1613,6 +1613,8 @@ pub fn extend(m: &mut Metadata) {
             F::code("Invt. Cost Jnl. Batch Name", 10).caption("Jnl. Batch Name Cost Posting").tooltip("Specifies the name of the journal batch to use for automatic and expected cost posting."),
             F::boolean("Copy Comments Order to Shpt.").tooltip("Specifies that you want to copy the comments entered on the transfer order to the transfer shipment."),
             F::boolean("Copy Comments Order to Rcpt.").tooltip("Specifies that you want to copy the comments entered on the transfer order to the transfer receipt."),
+            F::code("Outbound Whse. Handling Time", 32).tooltip("Specifies a date formula that calculates the time it takes to get items ready to ship. The time element is used to calculate the delivery date as follows: Shipment Date + Outbound Warehouse Handling Time = Planned Shipment Date + Shipping Time = Planned Delivery Date."),
+            F::code("Inbound Whse. Handling Time", 32).tooltip("Specifies a date formula that calculates the time it takes to make items available in inventory after they have been received. The time element is used to calculate the expected receipt date as follows: Order Date + Lead Time Calculation = Planned Receipt Date + Inbound Warehouse Handling Time + Safety Lead Time = Expected Receipt Date."),
             F::boolean("Expected Cost Posting to G/L").tooltip("Specifies if value entries originating from receipt or shipment posting, but not from invoice posting are recoded in the general ledger. Expected costs represent the estimation of, for example, a purchased item's cost that you record before you receive the invoice for the item. To post expected costs, interim accounts must exist in the general ledger for the relevant posting groups. Expected costs are only managed for item transactions, not for immaterial transaction types, such as capacity and item charges."),
             F::option("Default Costing Method", &["FIFO", "LIFO", "Specific", "Average", "Standard"]).tooltip("Specifies how your items' cost flow is recorded and whether an actual or budgeted value is capitalized and used in the cost calculation. Your choice of costing method determines how the unit cost is calculated by making assumptions about the flow of physical items through your company. A different costing method on item cards will override this default. For more information, see \"Design Details: Costing Methods\" in Help."),
             F::option("Average Cost Calc. Type", &["", "Item", "Item & Location & Variant"]).tooltip("Specifies how costs are calculated for items using the Average costing method. Item: One average cost per item in the company is calculated. Item & Location & Variant: An average cost per item for each location and for each variant of the item in the company is calculated. This means that the average cost of this item depends on where it is stored and which variant, such as color, of the item you have selected."),
@@ -1627,6 +1629,13 @@ pub fn extend(m: &mut Metadata) {
             F::code("Package Nos.", 20).tooltip("Specifies the number series that will be used to assign numbers to item tracking packages."),
             F::text("Package Caption", 30).tooltip("Specifies the alternative caption of Package tracking dimension that you want to use for captions for this dimension. For example, Size."),
             F::code("Item Group Dimension Code", 20).relation("Dimension").tooltip("Specifies the dimension code that you want to use for product groups in analysis reports."),
+            F::code("Inventory Put-away Nos.", 20).tooltip("Specifies the number series that will be used to assign numbers to inventory put-always."),
+            F::code("Inventory Pick Nos.", 20).tooltip("Specifies the number series that will be used to assign numbers to inventory picks."),
+            F::code("Posted Invt. Put-away Nos.", 20).tooltip("Specifies the number series that will be used to assign numbers to posted inventory put-always."),
+            F::code("Posted Invt. Pick Nos.", 20).tooltip("Specifies the number series that will be used to assign numbers to posted inventory picks."),
+            F::code("Inventory Movement Nos.", 20).tooltip("Specifies the number series that will be used to assign numbers to inventory movements."),
+            F::code("Registered Invt. Movement Nos.", 20).tooltip("Specifies the number series that will be used to assign numbers to registered inventory movements."),
+            F::code("Internal Movement Nos.", 20).tooltip("Specifies the number series that will be used to assign numbers to internal movements."),
         ],
     );
     relabel(
@@ -1815,6 +1824,11 @@ pub fn extend(m: &mut Metadata) {
             F::code("Default Deferral Template Code", 10).tooltip("Specifies the default template that governs how to defer revenues and expenses to the periods when they occurred."),
             F::boolean("Substitutes Exist").calc(CalcFormula::new(CalcFunc::Exist, "Item Substitution", "", &[("No.", "No.")], &[("Type", "Item")])).tooltip("Specifies that a substitute exists for this item."),
             F::code("Purchasing Code", 10).tooltip("Specifies the code for a special procurement method, such as drop shipment."),
+            F::code("Warehouse Class Code", 10).tooltip("Specifies the warehouse class code for the item."),
+            F::code("Special Equipment Code", 10).tooltip("Specifies the code of the equipment that warehouse employees must use when handling the item."),
+            F::code("Put-away Template Code", 10).tooltip("Specifies the code of the put-away template by which the program determines the most appropriate zone and bin for storage of the item after receipt."),
+            F::code("Put-away Unit of Measure Code", 10).tooltip("Specifies the code of the item unit of measure in which the program will put the item away."),
+            F::boolean("Use Cross-Docking").tooltip("Specifies if this item can be cross-docked."),
             F::code("Over-Receipt Code", 20).tooltip("Specifies the policy that will be used for the item if more items than ordered are received."),
             F::boolean("Critical").tooltip("Specifies if the item is included in availability calculations to promise a shipment date for its parent item."),
             F::code("Common Item No.", 20).tooltip("Specifies the unique common item number that the intercompany partners agree upon."),
@@ -1948,6 +1962,7 @@ pub fn extend(m: &mut Metadata) {
             F::date("Expiration Date").tooltip("Specifies the last date on which the recurring journal will be posted, if you have indicated that the journal is recurring."),
             F::code("New Shortcut Dimension 1 Code", 20).tooltip("Specifies the new dimension value code that the item journal line will be linked to."),
             F::code("New Shortcut Dimension 2 Code", 20).tooltip("Specifies the new dimension value code that the item journal line will be linked to."),
+            F::code("Bin Code", 20).tooltip("Specifies the bin where the items are picked or put away."),
             F::code("Serial No.", 50).tooltip("Specifies the serial number of the item."),
             F::code("Lot No.", 50).tooltip("Specifies the lot number of the item."),
             F::date("Warranty Date").tooltip("Specifies the warranty expiration date of the item."),
@@ -2094,6 +2109,9 @@ pub fn extend(m: &mut Metadata) {
             F::code("Serial Nos.", 20).tooltip("Specifies a number series code to assign consecutive serial numbers to items produced."),
             F::option("Replenishment System", &["Purchase", "Prod. Order", "Transfer", ""]).tooltip("Specifies the type of supply order created by the planning system when the item needs to be replenished."),
             F::code("Lot Nos.", 20).tooltip("Specifies the number series code that will be used when assigning lot numbers."),
+            F::code("Special Equipment Code", 10).tooltip("Specifies the code of the equipment that warehouse employees must use when handling the item."),
+            F::code("Put-away Template Code", 10).tooltip("Specifies the code of the put-away template by which the program determines the most appropriate zone and bin for storage of the item after receipt."),
+            F::code("Warehouse Class Code", 10).tooltip("Specifies the warehouse class code for the item."),
             F::boolean("Sales Blocked").tooltip("Specifies that the item cannot be entered on sales documents, except return orders and credit memos, and journals."),
             F::boolean("Purchasing Blocked").tooltip("Specifies that the item cannot be entered on purchase documents, except return orders and credit memos, and journals."),
         ],
@@ -2755,6 +2773,7 @@ pub fn extend(m: &mut Metadata) {
             F::date("Requested Receipt Date").read_only().tooltip("Specifies the date that you want the vendor to deliver to the ship-to address. The value in the field is used to calculate the latest date you can order the items to have them delivered on the requested receipt date. If you do not need delivery on a specific date, you can leave the field blank."),
             F::date("Promised Receipt Date").read_only().tooltip("Specifies the date that the vendor has promised to deliver the order."),
             F::code("Lead Time Calculation", 32).read_only().tooltip("Specifies a date formula for the amount of time it takes to replenish the item."),
+            F::code("Inbound Whse. Handling Time", 32).read_only().tooltip("Specifies the time it takes to make items part of available inventory, after the items have been posted as received."),
         ],
     );
     relabel(
@@ -2888,6 +2907,7 @@ pub fn extend(m: &mut Metadata) {
             F::date("Requested Receipt Date").tooltip("Specifies the date that you want the vendor to deliver to the ship-to address. The value in the field is used to calculate the latest date you can order the items to have them delivered on the requested receipt date. If you do not need delivery on a specific date, you can leave the field blank."),
             F::date("Promised Receipt Date").tooltip("Specifies the date that the vendor has promised to deliver the order."),
             F::code("Lead Time Calculation", 32).tooltip("Specifies a date formula for the amount of time it takes to replenish the item."),
+            F::code("Inbound Whse. Handling Time", 32).tooltip("Specifies the time it takes to make items part of available inventory, after the items have been posted as received."),
             F::code("Vendor Authorization No.", 35).tooltip("Specifies the compensation agreement identification number, sometimes referred to as the RMA No. (Returns Materials Authorization)."),
             F::boolean("Receipt on Invoice").tooltip("Specifies whether the receipt is posted with the invoice."),
             F::decimal("Doc. Amount Incl. VAT").auto_format(1).tooltip("Specifies the total amount (including VAT) of the purchase invoice or credit memo as specified in the external document. When this value comes from an e-document service, it's value can't be changed."),
@@ -2939,6 +2959,7 @@ pub fn extend(m: &mut Metadata) {
             F::code("Tax Area Code", 20).tooltip("Specifies the tax area that is used to calculate and post sales tax."),
             F::code("Tax Group Code", 20).tooltip("Specifies the tax group that is used to calculate and post sales tax."),
             F::code("Selected Alloc. Account No.", 20).caption("Allocation Account No.").tooltip("Specifies the allocation account number that will be used to distribute the amounts during the posting process."),
+            F::code("Bin Code", 20).tooltip("Specifies the bin where the items are picked or put away."),
             F::code("Item Reference No.", 50).tooltip("Specifies the referenced item number."),
             F::date("Promised Receipt Date").tooltip("Specifies the date that the vendor has promised to deliver the order."),
             F::date("Planned Receipt Date").tooltip("Specifies the date when the item is planned to arrive in inventory. Forward calculation: planned receipt date = order date + vendor lead time (per the vendor calendar and rounded to the next working day in first the vendor calendar and then the location calendar). If no vendor calendar exists, then: planned receipt date = order date + vendor lead time (per the location calendar). Backward calculation: order date = planned receipt date - vendor lead time (per the vendor calendar and rounded to the previous working day in first the vendor calendar and then the location calendar). If no vendor calendar exists, then: order date = planned receipt date - vendor lead time (per the location calendar)."),
@@ -3014,6 +3035,7 @@ pub fn extend(m: &mut Metadata) {
             F::boolean("Copy Line Descr. to G/L Entry").tooltip("Specifies that the description on document lines of type G/L Account will be carried to the resulting general ledger entries."),
             F::code("Debit Acc. for Non-Item Lines", 20).tooltip("Specifies the G/L account that is automatically inserted on purchase lines of type debit that are created from electronic documents when the incoming document line does not contain an identifiable item. Any incoming document line that does not have a GTIN or the vendor's item number will be converted to a purchase line of type G/L Account, and the No. field on the purchase line will contain the account that you select in the G/L Account for Non-Item Lines field."),
             F::code("Credit Acc. for Non-Item Lines", 20).tooltip("Specifies the G/L account that is automatically inserted on purchase lines of type credit that are created from electronic documents when the incoming document line does not contain an identifiable item. Any incoming document line that does not have a GTIN or the vendor's item number will be converted to a purchase line of type G/L Account, and the No. field on the purchase line will contain the account that you select in the G/L Account for Non-Item Lines field."),
+            F::option("Auto Post Non-Invt. via Whse.", &["None", "Attached/Assigned", "All"]).tooltip("Specifies if non-inventory item lines in a purchase document will be posted automatically when the document is posted via warehouse. None: Do not automatically post non-inventory item lines. Attached/Assigned: Post item charges and other non-inventory item lines assigned or attached to regular items. All: Post all non-inventory item lines."),
             F::code("Posted Return Shpt. Nos.", 20).tooltip("Specifies the code for the number series that will be used to assign numbers to posted return shipments."),
             F::boolean("Copy Cmts Ret.Ord. to Ret.Shpt").tooltip("Specifies that comments are copied from the purchase return order to the posted return shipment."),
             F::boolean("Copy Cmts Ret.Ord. to Cr. Memo").tooltip("Specifies whether to copy comments from purchase return orders to purchase credit memos."),
@@ -3298,6 +3320,7 @@ pub fn extend(m: &mut Metadata) {
             F::code("Fin. Charge Jnl. Batch Name", 10).caption("Finance Charge Journal Batch Name").tooltip("Specifies which general journal batch to use for finance charges."),
             F::code("Canceled Issued Reminder Nos.", 20).tooltip("Specifies the code for the number series that will be used to assign numbers to canceled issued reminders."),
             F::code("Canc. Iss. Fin. Ch. Mem. Nos.", 20).caption("Canceled Issued Fin. Charge Memo Nos.").tooltip("Specifies the code for the number series that will be used to assign numbers to canceled issued finance charge memos."),
+            F::option("Auto Post Non-Invt. via Whse.", &["None", "Attached/Assigned", "All"]).tooltip("Specifies if non-inventory item lines in a sales document will be posted automatically when the document is posted via warehouse. None: Do not automatically post non-inventory item lines. Attached/Assigned: Post item charges and other non-inventory item lines assigned or attached to regular items. All: Post all non-inventory item lines."),
             F::code("Posted Return Receipt Nos.", 20).tooltip("Specifies the code for the number series that will be used to assign numbers to posted return receipts."),
             F::boolean("Copy Cmts Ret.Ord. to Ret.Rcpt").tooltip("Specifies that comments are copied from the sales return order to the posted return receipt."),
             F::boolean("Copy Cmts Ret.Ord. to Cr. Memo").tooltip("Specifies whether to copy comments from sales return orders to sales credit memos."),
@@ -3532,6 +3555,7 @@ pub fn extend(m: &mut Metadata) {
             F::code("Responsibility Center", 10).tooltip("Specifies the code of the responsibility center, such as a distribution hub, that is associated with the involved user, company, customer, or vendor."),
             F::option("Shipping Advice", &["Partial", "Complete"]).tooltip("Specifies if the customer accepts partial shipment of orders."),
             F::code("Shipping Time", 32).tooltip("Specifies how long it takes from when the items are shipped from the warehouse to when they are delivered."),
+            F::code("Outbound Whse. Handling Time", 32).tooltip("Specifies a date formula for the time it takes to get items ready to ship from this location. The time element is used in the calculation of the delivery date as follows: Shipment Date + Outbound Warehouse Handling Time = Planned Shipment Date + Shipping Time = Planned Delivery Date."),
             F::code("Shipping Agent Service Code", 10).tooltip("Specifies the code for the service, such as a one-day delivery, that is offered by the shipping agent."),
             F::boolean("Late Order Shipping").calc(CalcFormula::new(CalcFunc::Exist, "Sales Line", "", &[("Document Type", "Document Type"), ("Sell-to Customer No.", "Sell-to Customer No."), ("Document No.", "No.")], &[("Outstanding Quantity", "<> 0")])).tooltip("Indicates a delay in the shipment of one or more lines, or that the shipment date is either the same as or earlier than the work date."),
         ],
@@ -3763,6 +3787,7 @@ pub fn extend(m: &mut Metadata) {
             F::date("Requested Delivery Date").tooltip("Specifies the date that the customer has asked for the order to be delivered."),
             F::date("Promised Delivery Date").tooltip("Specifies the date that you have promised to deliver the order, as a result of the Order Promising function."),
             F::code("Shipping Time", 32).tooltip("Specifies how long it takes from when the items are shipped from the warehouse to when they are delivered."),
+            F::code("Outbound Whse. Handling Time", 32).tooltip("Specifies a date formula for the time it takes to get items ready to ship from this location. The time element is used in the calculation of the delivery date as follows: Shipment Date + Outbound Warehouse Handling Time = Planned Shipment Date + Shipping Time = Planned Delivery Date."),
             F::code("Shipping Agent Service Code", 10).tooltip("Specifies which shipping agent service is used to transport the items on the sales document to the customer."),
         ],
     );
@@ -3883,6 +3908,9 @@ pub fn extend(m: &mut Metadata) {
         "Stockkeeping Unit",
         vec![
             F::option("Assembly Policy", &["Assemble-to-Stock", "Assemble-to-Order"]).tooltip("Specifies which default order flow is used to supply this SKU by assembly."),
+            F::code("Put-away Template Code", 10).tooltip("Specifies the put-away template that the program uses when it performs a put-away for the SKU."),
+            F::code("Put-away Unit of Measure Code", 10).tooltip("Specifies the code of the unit of measure that the program uses when it performs a put-away for the SKU."),
+            F::boolean("Use Cross-Docking").tooltip("Specifies if the SKU can be cross-docked."),
         ],
     );
     relabel(
@@ -3937,6 +3965,8 @@ pub fn extend(m: &mut Metadata) {
             F::code("Transaction Specification", 10).tooltip("Specifies a specification of the document's transaction, for the purpose of reporting to INTRASTAT."),
             F::option("Direct Transfer Posting", &["", "Shipment and Receipt", "Direct Transfer"]).tooltip("Specifies the posting type for direct transfer. The posting type determines how inventory is updated for the transfer order."),
             F::option("Shipping Advice", &["Partial", "Complete"]).tooltip("Specifies an instruction to the warehouse that ships the items, for example, that it is acceptable to do partial shipment."),
+            F::code("Outbound Whse. Handling Time", 32).tooltip("Specifies a date formula for the time it takes to get items ready to ship from this location. The time element is used in the calculation of the delivery date as follows: Shipment Date + Outbound Warehouse Handling Time = Planned Shipment Date + Shipping Time = Planned Delivery Date."),
+            F::code("Inbound Whse. Handling Time", 32).tooltip("Specifies the time it takes to make items part of available inventory, after the items have been posted as received."),
         ],
     );
     relabel(
@@ -4933,8 +4963,8 @@ pub fn extend(m: &mut Metadata) {
         &[
             Tab {
                 caption: "General",
-                fields: &["Automatic Cost Posting", "Expected Cost Posting to G/L", "Automatic Cost Adjustment", "Cost Adjustment Logging", "Earliest Allowed Val. Date", "Default Costing Method", "Average Cost Calc. Type", "Average Cost Period", "Copy Comments Order to Shpt.", "Copy Comments Order to Rcpt.", "Copy Comments to Invt. Doc.", "Prevent Negative Inventory", "Variant Mandatory if Exists", "Skip Prompt to Create Item", "Copy Item Descr. to Entries", "Allow Inventory Adjustment"],
-                additional: &["Expected Cost Posting to G/L", "Average Cost Calc. Type", "Average Cost Period", "Copy Comments Order to Shpt.", "Copy Comments Order to Rcpt.", "Copy Comments to Invt. Doc."],
+                fields: &["Automatic Cost Posting", "Expected Cost Posting to G/L", "Automatic Cost Adjustment", "Cost Adjustment Logging", "Earliest Allowed Val. Date", "Default Costing Method", "Average Cost Calc. Type", "Average Cost Period", "Copy Comments Order to Shpt.", "Copy Comments Order to Rcpt.", "Copy Comments to Invt. Doc.", "Outbound Whse. Handling Time", "Inbound Whse. Handling Time", "Prevent Negative Inventory", "Variant Mandatory if Exists", "Skip Prompt to Create Item", "Copy Item Descr. to Entries", "Allow Inventory Adjustment"],
+                additional: &["Expected Cost Posting to G/L", "Average Cost Calc. Type", "Average Cost Period", "Copy Comments Order to Shpt.", "Copy Comments Order to Rcpt.", "Copy Comments to Invt. Doc.", "Outbound Whse. Handling Time", "Inbound Whse. Handling Time"],
                 ..Tab::default()
             },
             Tab {
@@ -4949,8 +4979,8 @@ pub fn extend(m: &mut Metadata) {
             },
             Tab {
                 caption: "Numbering",
-                fields: &["Item Nos.", "Nonstock Item Nos.", "Transfer Order Nos.", "Posted Transfer Shpt. Nos.", "Posted Transfer Rcpt. Nos.", "Posted Direct Trans. Nos.", "Phys. Invt. Order Nos.", "Posted Phys. Invt. Order Nos.", "Invt. Receipt Nos.", "Posted Invt. Receipt Nos.", "Invt. Shipment Nos.", "Posted Invt. Shipment Nos.", "Package Nos."],
-                additional: &["Nonstock Item Nos.", "Transfer Order Nos.", "Posted Transfer Shpt. Nos.", "Posted Transfer Rcpt. Nos.", "Phys. Invt. Order Nos.", "Posted Phys. Invt. Order Nos.", "Invt. Receipt Nos.", "Posted Invt. Receipt Nos.", "Invt. Shipment Nos.", "Posted Invt. Shipment Nos.", "Package Nos."],
+                fields: &["Item Nos.", "Nonstock Item Nos.", "Transfer Order Nos.", "Posted Transfer Shpt. Nos.", "Posted Transfer Rcpt. Nos.", "Posted Direct Trans. Nos.", "Inventory Put-away Nos.", "Posted Invt. Put-away Nos.", "Inventory Pick Nos.", "Posted Invt. Pick Nos.", "Inventory Movement Nos.", "Registered Invt. Movement Nos.", "Internal Movement Nos.", "Phys. Invt. Order Nos.", "Posted Phys. Invt. Order Nos.", "Invt. Receipt Nos.", "Posted Invt. Receipt Nos.", "Invt. Shipment Nos.", "Posted Invt. Shipment Nos.", "Package Nos."],
+                additional: &["Nonstock Item Nos.", "Transfer Order Nos.", "Posted Transfer Shpt. Nos.", "Posted Transfer Rcpt. Nos.", "Inventory Put-away Nos.", "Posted Invt. Put-away Nos.", "Inventory Pick Nos.", "Posted Invt. Pick Nos.", "Inventory Movement Nos.", "Registered Invt. Movement Nos.", "Internal Movement Nos.", "Phys. Invt. Order Nos.", "Posted Phys. Invt. Order Nos.", "Invt. Receipt Nos.", "Posted Invt. Receipt Nos.", "Invt. Shipment Nos.", "Posted Invt. Shipment Nos.", "Package Nos."],
                 ..Tab::default()
             },
             Tab {
@@ -5057,6 +5087,13 @@ pub fn extend(m: &mut Metadata) {
                 promoted: &["Item Tracking Code"],
                 ..Tab::default()
             },
+            Tab {
+                caption: "Warehouse",
+                fields: &["Warehouse Class Code", "Special Equipment Code", "Put-away Template Code", "Put-away Unit of Measure Code", "Phys Invt Counting Period Code", "Last Phys. Invt. Date", "Last Counting Period Update", "Next Counting Start Date", "Next Counting End Date", "Use Cross-Docking"],
+                promoted: &["Put-away Unit of Measure Code", "Phys Invt Counting Period Code"],
+                additional: &["Special Equipment Code", "Use Cross-Docking"],
+                ..Tab::default()
+            },
         ],
     );
     columns(m, "item-categories", &["Code", "Description"]);
@@ -5074,7 +5111,7 @@ pub fn extend(m: &mut Metadata) {
     columns(m, "item-charge-assignment-purch", &["Applies-to Doc. Type", "Applies-to Doc. No.", "Applies-to Doc. Line No.", "Item No.", "Description", "Qty. to Assign", "Qty. to Handle", "Qty. Assigned", "Amount to Assign", "Amount to Handle"]);
     columns(m, "item-charge-assignment-sales", &["Applies-to Doc. Type", "Applies-to Doc. No.", "Applies-to Doc. Line No.", "Item No.", "Description", "Qty. to Assign", "Qty. to Handle", "Qty. Assigned", "Amount to Assign", "Amount to Handle"]);
     columns(m, "item-charges", &["No.", "Description", "Gen. Prod. Posting Group", "Tax Group Code", "VAT Prod. Posting Group", "Search Description"]);
-    columns(m, "item-journal", &["Posting Date", "Price Calculation Method", "Document No.", "Item No.", "Description", "Location Code", "Quantity", "Unit of Measure Code", "Unit Amount", "Amount", "Discount Amount", "Unit Cost", "Applies-to Entry", "Serial No.", "Lot No.", "Package No.", "Expiration Date", "Warranty Date", "Shortcut Dimension 1 Code", "Shortcut Dimension 2 Code"]);
+    columns(m, "item-journal", &["Posting Date", "Price Calculation Method", "Document No.", "Item No.", "Description", "Location Code", "Bin Code", "Quantity", "Unit of Measure Code", "Unit Amount", "Amount", "Discount Amount", "Unit Cost", "Applies-to Entry", "Serial No.", "Lot No.", "Package No.", "Expiration Date", "Warranty Date", "Shortcut Dimension 1 Code", "Shortcut Dimension 2 Code"]);
     columns(m, "item-journal-templates", &["Name", "Description", "Type", "Recurring", "No. Series", "Posting No. Series", "Source Code", "Reason Code", "Increment Batch Name"]);
     columns(m, "item-ledger-entries", &["Posting Date", "Entry Type", "Document Type", "Document No.", "Item No.", "Description", "Global Dimension 1 Code", "Global Dimension 2 Code", "Location Code", "Quantity", "Invoiced Quantity", "Remaining Quantity", "Sales Amount (Actual)", "Cost Amount (Actual)", "Cost Amount (Non-Invtbl.)", "Open", "Applied Entry to Adjust", "Order Type", "Entry No.", "Shortcut Dimension 3 Code", "Shortcut Dimension 4 Code", "Shortcut Dimension 5 Code", "Shortcut Dimension 6 Code", "Shortcut Dimension 7 Code", "Shortcut Dimension 8 Code"]);
     columns(m, "item-list", &["No.", "Description", "Type", "Inventory", "Substitutes Exist", "Base Unit of Measure", "Cost is Adjusted", "Unit Cost", "Unit Price", "Vendor No.", "Default Deferral Template Code"]);
@@ -5129,6 +5166,12 @@ pub fn extend(m: &mut Metadata) {
                 caption: "Item Tracking",
                 fields: &["Item Tracking Code", "Serial Nos.", "Lot Nos."],
                 promoted: &["Item Tracking Code"],
+                ..Tab::default()
+            },
+            Tab {
+                caption: "Warehouse",
+                fields: &["Warehouse Class Code", "Special Equipment Code", "Put-away Template Code"],
+                additional: &["Special Equipment Code"],
                 ..Tab::default()
             },
         ],
@@ -5217,20 +5260,21 @@ pub fn extend(m: &mut Metadata) {
     columns(m, "phys-inventory-recording-list", &["Order No.", "Recording No.", "Description", "Status", "Person Responsible", "Date Recorded", "Time Recorded", "Person Recorded"]);
     columns(m, "phys-invt-counting-periods", &["Code", "Description", "Count Frequency per Year"]);
     columns(m, "phys-invt-recording-lines", &["Order No.", "Recording No.", "Item No.", "Item Reference No.", "Description", "Unit of Measure Code", "Location Code", "Use Item Tracking", "Serial No.", "Lot No.", "Package No.", "Quantity", "Recorded"]);
-    columns(m, "phys-invt-recording-subform", &["Item Reference No."]);
+    columns(m, "phys-invt-recording-subform", &["Item No.", "Item Reference No.", "Description", "Location Code", "Use Item Tracking", "Serial No.", "Lot No.", "Package No.", "Unit of Measure Code", "Quantity", "Recorded"]);
     layout(
         m,
         "physical-inventory-order",
         &[
             Tab {
                 caption: "General",
-                fields: &["Shortcut Dimension 1 Code", "Shortcut Dimension 2 Code"],
+                fields: &["No.", "Description", "Location Code", "Person Responsible", "No. Finished Recordings", "Order Date", "Posting Date", "Status", "Shortcut Dimension 1 Code", "Shortcut Dimension 2 Code"],
+                promoted: &["Location Code", "Status"],
                 ..Tab::default()
             },
         ],
     );
     columns(m, "physical-inventory-order-lines", &["Document No.", "Item No.", "Description", "Location Code", "Base Unit of Measure Code", "Qty. Expected (Base)", "Qty. Exp. Calculated", "Qty. Recorded (Base)", "On Recording Lines", "No. Finished Rec.-Lines", "Entry Type", "Quantity (Base)", "Unit Amount"]);
-    columns(m, "physical-inventory-order-subf", &["Item Reference No.", "Shortcut Dimension 1 Code", "Shortcut Dimension 2 Code"]);
+    columns(m, "physical-inventory-order-subf", &["Item No.", "Item Reference No.", "Description", "Location Code", "Base Unit of Measure Code", "Qty. Expected (Base)", "Qty. Exp. Calculated", "Use Item Tracking", "Qty. Recorded (Base)", "On Recording Lines", "No. Finished Rec.-Lines", "Pos. Qty. (Base)", "Neg. Qty. (Base)", "Shortcut Dimension 1 Code", "Shortcut Dimension 2 Code"]);
     columns(m, "physical-inventory-orders", &["No.", "Description", "Status", "Order Date", "Posting Date", "Person Responsible", "No. Finished Recordings"]);
     layout(
         m,
@@ -5246,7 +5290,7 @@ pub fn extend(m: &mut Metadata) {
     );
     columns(m, "posted-phys-invt-order-lines", &["Document No.", "Item No.", "Description", "Location Code", "Base Unit of Measure Code", "Qty. Expected (Base)", "Qty. Recorded (Base)", "Entry Type", "Quantity (Base)", "No. Finished Rec.-Lines", "Unit Amount"]);
     columns(m, "posted-phys-invt-order-list", &["No.", "Description", "Order Date", "Posting Date", "Person Responsible", "No. Finished Recordings"]);
-    columns(m, "posted-phys-invt-order-subf", &["Shortcut Dimension 1 Code", "Shortcut Dimension 2 Code"]);
+    columns(m, "posted-phys-invt-order-subf", &["Item No.", "Description", "Location Code", "Base Unit of Measure Code", "Qty. Expected (Base)", "Use Item Tracking", "Qty. Recorded (Base)", "No. Finished Rec.-Lines", "Pos. Qty. (Base)", "Neg. Qty. (Base)", "Shortcut Dimension 1 Code", "Shortcut Dimension 2 Code"]);
     columns(m, "posted-phys-invt-rec-lines", &["Order No.", "Recording No.", "Item No.", "Description", "Unit of Measure Code", "Location Code", "Serial No.", "Lot No.", "Quantity"]);
     columns(m, "posted-phys-invt-rec-list", &["Order No.", "Recording No.", "Description", "Person Responsible", "Date Recorded", "Time Recorded", "Person Recorded"]);
     columns(m, "posted-phys-invt-rec-subf", &["Item No.", "Description", "Location Code", "Serial No.", "Lot No.", "Package No.", "Unit of Measure Code", "Quantity"]);
@@ -5356,7 +5400,7 @@ pub fn extend(m: &mut Metadata) {
             },
             Tab {
                 caption: "Shipping",
-                fields: &["Ship-to Name", "Ship-to Address", "Ship-to Address 2", "Ship-to City", "Ship-to Post Code", "Ship-to Country/Region Code", "Ship-to Phone No.", "Ship-to Contact", "Location Code", "Shipment Method Code", "Lead Time Calculation", "Expected Receipt Date"],
+                fields: &["Ship-to Name", "Ship-to Address", "Ship-to Address 2", "Ship-to City", "Ship-to Post Code", "Ship-to Country/Region Code", "Ship-to Phone No.", "Ship-to Contact", "Location Code", "Inbound Whse. Handling Time", "Shipment Method Code", "Lead Time Calculation", "Expected Receipt Date"],
                 promoted: &["Location Code", "Expected Receipt Date"],
                 breaks: &["Ship-to Name"],
                 captions: &[("Ship-to Name", "Name"), ("Ship-to Address", "Address"), ("Ship-to Address 2", "Address 2"), ("Ship-to City", "City"), ("Ship-to Post Code", "Post Code"), ("Ship-to Country/Region Code", "Country/Region"), ("Ship-to Phone No.", "Phone No."), ("Ship-to Contact", "Contact")],
@@ -5457,7 +5501,7 @@ pub fn extend(m: &mut Metadata) {
             },
             Tab {
                 caption: "Shipping",
-                fields: &["Ship-to Code", "Ship-to Name", "Ship-to Address", "Ship-to Address 2", "Ship-to City", "Ship-to Post Code", "Ship-to Country/Region Code", "Ship-to Phone No.", "Ship-to Contact", "Location Code", "Shipping Time", "Shipment Method Code", "Shipping Agent Code", "Shipping Agent Service Code", "Package Tracking No.", "Shipment Date"],
+                fields: &["Ship-to Code", "Ship-to Name", "Ship-to Address", "Ship-to Address 2", "Ship-to City", "Ship-to Post Code", "Ship-to Country/Region Code", "Ship-to Phone No.", "Ship-to Contact", "Location Code", "Outbound Whse. Handling Time", "Shipping Time", "Shipment Method Code", "Shipping Agent Code", "Shipping Agent Service Code", "Package Tracking No.", "Shipment Date"],
                 promoted: &["Ship-to Code", "Ship-to Post Code", "Location Code", "Shipment Date"],
                 additional: &["Shipping Agent Code", "Shipping Agent Service Code", "Package Tracking No."],
                 breaks: &["Shipment Method Code"],
@@ -5645,7 +5689,7 @@ pub fn extend(m: &mut Metadata) {
         ],
     );
     columns(m, "purchase-invoices", &["No.", "Buy-from Vendor No.", "Buy-from Vendor Name", "Vendor Invoice No.", "Location Code", "Assigned User ID", "Job Queue Status", "Amount"]);
-    columns(m, "purchase-lines", &["Type", "No.", "Item Reference No.", "Description", "Location Code", "Quantity", "Reserved Quantity", "Unit of Measure Code", "Direct Unit Cost", "Tax Area Code", "Tax Group Code", "Line Amount", "Non-Deductible VAT Base", "Non-Deductible VAT Amount", "Qty. to Receive", "Quantity Received", "Qty. to Invoice", "Quantity Invoiced", "Qty. to Assign", "Item Charge Qty. to Handle", "Qty. Assigned", "Selected Alloc. Account No.", "Promised Receipt Date", "Planned Receipt Date", "Expected Receipt Date", "Shortcut Dimension 1 Code", "Shortcut Dimension 2 Code", "Over-Receipt Quantity", "Over-Receipt Code"]);
+    columns(m, "purchase-lines", &["Type", "No.", "Item Reference No.", "Description", "Location Code", "Bin Code", "Quantity", "Reserved Quantity", "Unit of Measure Code", "Direct Unit Cost", "Tax Area Code", "Tax Group Code", "Line Amount", "Non-Deductible VAT Base", "Non-Deductible VAT Amount", "Qty. to Receive", "Quantity Received", "Qty. to Invoice", "Quantity Invoiced", "Qty. to Assign", "Item Charge Qty. to Handle", "Qty. Assigned", "Selected Alloc. Account No.", "Promised Receipt Date", "Planned Receipt Date", "Expected Receipt Date", "Shortcut Dimension 1 Code", "Shortcut Dimension 2 Code", "Over-Receipt Quantity", "Over-Receipt Code"]);
     layout(
         m,
         "purchase-order",
@@ -5662,9 +5706,9 @@ pub fn extend(m: &mut Metadata) {
             },
             Tab {
                 caption: "Invoice Details",
-                fields: &["Currency Code", "Expected Receipt Date", "Prices Including VAT", "VAT Bus. Posting Group", "Vendor Posting Group", "Payment Terms Code", "Payment Method Code", "Shortcut Dimension 1 Code", "Shortcut Dimension 2 Code", "Payment Discount %", "Pmt. Discount Date", "Tax Liable", "Tax Area Code", "Shipment Method Code", "Payment Reference", "Creditor No.", "On Hold", "Lead Time Calculation", "Requested Receipt Date", "Promised Receipt Date", "Receipt on Invoice"],
+                fields: &["Currency Code", "Expected Receipt Date", "Prices Including VAT", "VAT Bus. Posting Group", "Vendor Posting Group", "Payment Terms Code", "Payment Method Code", "Shortcut Dimension 1 Code", "Shortcut Dimension 2 Code", "Payment Discount %", "Pmt. Discount Date", "Tax Liable", "Tax Area Code", "Shipment Method Code", "Payment Reference", "Creditor No.", "On Hold", "Inbound Whse. Handling Time", "Lead Time Calculation", "Requested Receipt Date", "Promised Receipt Date", "Receipt on Invoice"],
                 promoted: &["Currency Code", "Expected Receipt Date", "Payment Terms Code"],
-                additional: &["Vendor Posting Group", "Payment Method Code", "Pmt. Discount Date", "Tax Liable", "Tax Area Code", "Lead Time Calculation"],
+                additional: &["Vendor Posting Group", "Payment Method Code", "Pmt. Discount Date", "Tax Liable", "Tax Area Code", "Inbound Whse. Handling Time", "Lead Time Calculation"],
                 ..Tab::default()
             },
             Tab {
@@ -5734,7 +5778,7 @@ pub fn extend(m: &mut Metadata) {
         &[
             Tab {
                 caption: "General",
-                fields: &["Discount Posting", "Receipt on Invoice", "Return Shipment on Credit Memo", "Invoice Rounding", "Default G/L Account Quantity", "Copy Vendor Name to Entries", "Ext. Doc. No. Mandatory", "Allow VAT Difference", "Calc. Inv. Discount", "Calc. Inv. Disc. per VAT ID", "Appln. between Currencies", "Copy Comments Blanket to Order", "Copy Comments Order to Invoice", "Copy Comments Order to Receipt", "Copy Cmts Ret.Ord. to Cr. Memo", "Copy Cmts Ret.Ord. to Ret.Shpt", "Exact Cost Reversing Mandatory", "Check Prepmt. when Posting", "Prepmt. Auto Update Frequency", "Default Posting Date", "Default Qty. to Receive", "Posting Date Check on Posting", "Allow Document Deletion Before", "Allow Multiple Posting Groups", "Ignore Updated Addresses", "Copy Line Descr. to G/L Entry", "Copy Inv. No. To Pmt. Ref.", "Document Default Line Type", "Disable Search by Name", "Link Doc. Date To Posting Date", "Check Doc. Total Amounts"],
+                fields: &["Discount Posting", "Receipt on Invoice", "Return Shipment on Credit Memo", "Invoice Rounding", "Default G/L Account Quantity", "Copy Vendor Name to Entries", "Ext. Doc. No. Mandatory", "Allow VAT Difference", "Calc. Inv. Discount", "Calc. Inv. Disc. per VAT ID", "Appln. between Currencies", "Copy Comments Blanket to Order", "Copy Comments Order to Invoice", "Copy Comments Order to Receipt", "Copy Cmts Ret.Ord. to Cr. Memo", "Copy Cmts Ret.Ord. to Ret.Shpt", "Exact Cost Reversing Mandatory", "Check Prepmt. when Posting", "Prepmt. Auto Update Frequency", "Default Posting Date", "Default Qty. to Receive", "Posting Date Check on Posting", "Auto Post Non-Invt. via Whse.", "Allow Document Deletion Before", "Allow Multiple Posting Groups", "Ignore Updated Addresses", "Copy Line Descr. to G/L Entry", "Copy Inv. No. To Pmt. Ref.", "Document Default Line Type", "Disable Search by Name", "Link Doc. Date To Posting Date", "Check Doc. Total Amounts"],
                 additional: &["Receipt on Invoice", "Return Shipment on Credit Memo", "Copy Comments Blanket to Order", "Copy Comments Order to Invoice", "Copy Comments Order to Receipt", "Copy Cmts Ret.Ord. to Cr. Memo", "Copy Cmts Ret.Ord. to Ret.Shpt", "Check Prepmt. when Posting", "Default Qty. to Receive", "Allow Document Deletion Before", "Allow Multiple Posting Groups", "Copy Line Descr. to G/L Entry", "Copy Inv. No. To Pmt. Ref.", "Disable Search by Name", "Link Doc. Date To Posting Date"],
                 ..Tab::default()
             },
@@ -5905,9 +5949,9 @@ pub fn extend(m: &mut Metadata) {
             },
             Tab {
                 caption: "Shipping and Billing",
-                fields: &["Ship-to Code", "Ship-to Name", "Ship-to Address", "Ship-to Address 2", "Ship-to City", "Ship-to Post Code", "Ship-to Country/Region Code", "Ship-to Phone No.", "Ship-to Contact", "Shipment Method Code", "Shipping Agent Code", "Shipping Agent Service Code", "Package Tracking No.", "Bill-to Name", "Bill-to Address", "Bill-to Address 2", "Bill-to City", "Bill-to Post Code", "Bill-to Country/Region Code", "Bill-to Contact No.", "Bill-to Contact", "Location Code", "Shipment Date", "Shipping Advice", "Shipping Time", "Late Order Shipping", "Combine Shipments"],
+                fields: &["Ship-to Code", "Ship-to Name", "Ship-to Address", "Ship-to Address 2", "Ship-to City", "Ship-to Post Code", "Ship-to Country/Region Code", "Ship-to Phone No.", "Ship-to Contact", "Shipment Method Code", "Shipping Agent Code", "Shipping Agent Service Code", "Package Tracking No.", "Bill-to Name", "Bill-to Address", "Bill-to Address 2", "Bill-to City", "Bill-to Post Code", "Bill-to Country/Region Code", "Bill-to Contact No.", "Bill-to Contact", "Location Code", "Shipment Date", "Shipping Advice", "Outbound Whse. Handling Time", "Shipping Time", "Late Order Shipping", "Combine Shipments"],
                 promoted: &["Ship-to Code", "Bill-to Name", "Shipment Date"],
-                additional: &["Ship-to Country/Region Code", "Shipment Method Code", "Shipping Agent Code", "Shipping Agent Service Code", "Package Tracking No.", "Bill-to Address", "Bill-to Address 2", "Bill-to City", "Bill-to Post Code", "Bill-to Country/Region Code", "Bill-to Contact No.", "Shipping Advice", "Shipping Time", "Late Order Shipping", "Combine Shipments"],
+                additional: &["Ship-to Country/Region Code", "Shipment Method Code", "Shipping Agent Code", "Shipping Agent Service Code", "Package Tracking No.", "Bill-to Address", "Bill-to Address 2", "Bill-to City", "Bill-to Post Code", "Bill-to Country/Region Code", "Bill-to Contact No.", "Shipping Advice", "Outbound Whse. Handling Time", "Shipping Time", "Late Order Shipping", "Combine Shipments"],
                 breaks: &["Ship-to Code", "Bill-to Name"],
                 captions: &[("Ship-to Code", "Code"), ("Ship-to Name", "Name"), ("Ship-to Address", "Address"), ("Ship-to Address 2", "Address 2"), ("Ship-to City", "City"), ("Ship-to Post Code", "Post Code"), ("Ship-to Country/Region Code", "Country/Region"), ("Ship-to Phone No.", "Phone No."), ("Ship-to Contact", "Contact"), ("Shipment Method Code", "Code"), ("Shipping Agent Code", "Agent"), ("Shipping Agent Service Code", "Agent Service"), ("Bill-to Name", "Name"), ("Bill-to Address", "Address"), ("Bill-to Address 2", "Address 2"), ("Bill-to City", "City"), ("Bill-to Post Code", "Post Code"), ("Bill-to Country/Region Code", "Country/Region Code"), ("Bill-to Contact No.", "Contact No."), ("Bill-to Contact", "Contact")],
                 headings: &[("Shipment Method Code", "Shipment Method")],
@@ -5972,7 +6016,7 @@ pub fn extend(m: &mut Metadata) {
         &[
             Tab {
                 caption: "General",
-                fields: &["Discount Posting", "Credit Warnings", "Stockout Warning", "Shipment on Invoice", "Return Receipt on Credit Memo", "Invoice Rounding", "Default Item Quantity", "Default G/L Account Quantity", "Create Item from Description", "Copy Customer Name to Entries", "Ext. Doc. No. Mandatory", "Appln. between Currencies", "Logo Position on Documents", "Default Posting Date", "Default Quantity to Ship", "Copy Comments Blanket to Order", "Copy Comments Order to Invoice", "Copy Comments Order to Shpt.", "Copy Cmts Ret.Ord. to Cr. Memo", "Copy Cmts Ret.Ord. to Ret.Rcpt", "Allow VAT Difference", "Calc. Inv. Discount", "VAT Bus. Posting Gr. (Price)", "Exact Cost Reversing Mandatory", "Check Prepmt. when Posting", "Prepmt. Auto Update Frequency", "Posting Date Check on Posting", "Allow Document Deletion Before", "Allow Multiple Posting Groups", "Ignore Updated Addresses", "Skip Manual Reservation", "Quote Validity Calculation", "Copy Line Descr. to G/L Entry", "Document Default Line Type", "Disable Search by Name", "Link Doc. Date To Posting Date"],
+                fields: &["Discount Posting", "Credit Warnings", "Stockout Warning", "Shipment on Invoice", "Return Receipt on Credit Memo", "Invoice Rounding", "Default Item Quantity", "Default G/L Account Quantity", "Create Item from Description", "Copy Customer Name to Entries", "Ext. Doc. No. Mandatory", "Appln. between Currencies", "Logo Position on Documents", "Default Posting Date", "Default Quantity to Ship", "Auto Post Non-Invt. via Whse.", "Copy Comments Blanket to Order", "Copy Comments Order to Invoice", "Copy Comments Order to Shpt.", "Copy Cmts Ret.Ord. to Cr. Memo", "Copy Cmts Ret.Ord. to Ret.Rcpt", "Allow VAT Difference", "Calc. Inv. Discount", "VAT Bus. Posting Gr. (Price)", "Exact Cost Reversing Mandatory", "Check Prepmt. when Posting", "Prepmt. Auto Update Frequency", "Posting Date Check on Posting", "Allow Document Deletion Before", "Allow Multiple Posting Groups", "Ignore Updated Addresses", "Skip Manual Reservation", "Quote Validity Calculation", "Copy Line Descr. to G/L Entry", "Document Default Line Type", "Disable Search by Name", "Link Doc. Date To Posting Date"],
                 additional: &["Shipment on Invoice", "Return Receipt on Credit Memo", "Ext. Doc. No. Mandatory", "Logo Position on Documents", "Default Quantity to Ship", "Copy Comments Blanket to Order", "Copy Comments Order to Invoice", "Copy Comments Order to Shpt.", "Copy Cmts Ret.Ord. to Cr. Memo", "Copy Cmts Ret.Ord. to Ret.Rcpt", "Exact Cost Reversing Mandatory", "Check Prepmt. when Posting", "Allow Document Deletion Before", "Allow Multiple Posting Groups", "Quote Validity Calculation", "Copy Line Descr. to G/L Entry", "Disable Search by Name", "Link Doc. Date To Posting Date"],
                 ..Tab::default()
             },
@@ -6034,7 +6078,7 @@ pub fn extend(m: &mut Metadata) {
         &[
             Tab {
                 caption: "General",
-                fields: &["Location Code"],
+                fields: &["Location Code", "Shelf No."],
                 promoted: &["Location Code"],
                 ..Tab::default()
             },
@@ -6048,6 +6092,12 @@ pub fn extend(m: &mut Metadata) {
                 fields: &["Assembly Policy"],
                 breaks: &["Assembly Policy"],
                 headings: &[("Assembly Policy", "Assembly")],
+                ..Tab::default()
+            },
+            Tab {
+                caption: "Warehouse",
+                fields: &["Put-away Template Code", "Put-away Unit of Measure Code", "Phys Invt Counting Period Code", "Next Counting Start Date", "Next Counting End Date", "Use Cross-Docking"],
+                promoted: &["Put-away Unit of Measure Code", "Phys Invt Counting Period Code"],
                 ..Tab::default()
             },
         ],
@@ -6066,7 +6116,7 @@ pub fn extend(m: &mut Metadata) {
             },
             Tab {
                 caption: "Shipment",
-                fields: &["Shipment Date", "Shipment Method Code", "Shipping Agent Code", "Shipping Agent Service Code", "Shipping Time", "Shipping Advice", "Receipt Date"],
+                fields: &["Shipment Date", "Outbound Whse. Handling Time", "Shipment Method Code", "Shipping Agent Code", "Shipping Agent Service Code", "Shipping Time", "Shipping Advice", "Receipt Date"],
                 additional: &["Shipping Agent Service Code", "Shipping Advice"],
                 ..Tab::default()
             },
@@ -6084,6 +6134,11 @@ pub fn extend(m: &mut Metadata) {
                 additional: &["Transfer-to Name 2", "Transfer-to Address", "Transfer-to Address 2", "Transfer-to City", "Transfer-to County", "Transfer-to Post Code", "Trsf.-to Country/Region Code", "Transfer-to Contact"],
                 breaks: &["Transfer-to County"],
                 captions: &[("Transfer-to Name", "Name"), ("Transfer-to Name 2", "Name 2"), ("Transfer-to Address", "Address"), ("Transfer-to Address 2", "Address 2"), ("Transfer-to City", "City"), ("Transfer-to Post Code", "Post Code"), ("Trsf.-to Country/Region Code", "Country/Region"), ("Transfer-to Contact", "Contact")],
+                ..Tab::default()
+            },
+            Tab {
+                caption: "Warehouse",
+                fields: &["Inbound Whse. Handling Time"],
                 ..Tab::default()
             },
             Tab {
@@ -6427,6 +6482,7 @@ pub fn extend(m: &mut Metadata) {
         "item-card",
         &[
             Nav { caption: "Item Journal", page: "item-journal", link: &[], shortcut: "" },
+            Nav { caption: "Item Reclassification Journal", page: "item-reclass-journal", link: &[], shortcut: "" },
             Nav { caption: "&Reservation Entries", page: "reservation-entries", link: &[("Item No.", "No.")], shortcut: "" },
         ],
     );
@@ -6453,6 +6509,7 @@ pub fn extend(m: &mut Metadata) {
             Nav { caption: "&Reservation Entries", page: "reservation-entries", link: &[("Item No.", "No.")], shortcut: "" },
             Nav { caption: "Physical Inventory Journal", page: "phys-inventory-journal", link: &[], shortcut: "" },
             Nav { caption: "Revaluation Journal", page: "revaluation-journal", link: &[], shortcut: "" },
+            Nav { caption: "Item Reclassification Journal", page: "item-reclass-journal", link: &[], shortcut: "" },
             Nav { caption: "Dimensions-Single", page: "default-dimensions", link: &[("No.", "No.")], shortcut: "Alt+D" },
             Nav { caption: "Co&mments", page: "comment-sheet", link: &[("No.", "No.")], shortcut: "" },
             Nav { caption: "Ca&talog Items", page: "catalog-item-list", link: &[], shortcut: "" },
@@ -6501,6 +6558,14 @@ pub fn extend(m: &mut Metadata) {
         "phys-invt-recording-lines",
         &[
             Nav { caption: "Show Document", page: "phys-inventory-recording", link: &[("Order No.", "Order No."), ("Recording No.", "Recording No.")], shortcut: "Shift+F7" },
+        ],
+    );
+    actions(
+        m,
+        "phys-invt-recording-subform",
+        &[
+            Nav { caption: "Serial No. Information Card", page: "serial-no-information-list", link: &[("Item No.", "Item No."), ("Variant Code", "Variant Code"), ("Serial No.", "Serial No.")], shortcut: "" },
+            Nav { caption: "Lot No. Information Card", page: "lot-no-information-list", link: &[("Item No.", "Item No."), ("Variant Code", "Variant Code"), ("Lot No.", "Lot No.")], shortcut: "" },
         ],
     );
     actions(
@@ -6802,7 +6867,7 @@ pub fn extend(m: &mut Metadata) {
         m,
         "bank-acc-reconciliation",
         &[
-            ("Process", &["Suggest Lines", "P&ost"]),
+            ("Process", &["Suggest Lines", "split » Posting » P&ost"]),
             ("Bank", &["&Bank Account Card"]),
             ("Matching", &["Match Automatically", "Remove Match"]),
         ],
@@ -6811,7 +6876,7 @@ pub fn extend(m: &mut Metadata) {
         m,
         "bank-acc-reconciliation-list",
         &[
-            ("Process", &["P&ost"]),
+            ("Process", &["split » Posting » P&ost"]),
         ],
     );
     categories(
@@ -6826,21 +6891,21 @@ pub fn extend(m: &mut Metadata) {
         m,
         "bank-account-ledger-entries",
         &[
-            ("Process", &["Find entries...", "Dimensions", "Set Dimension Filter"]),
+            ("Process", &["Find entries...", "menu » Entry » Dimensions", "menu » Entry » Set Dimension Filter"]),
         ],
     );
     categories(
         m,
         "bank-account-list",
         &[
-            ("Bank Account", &["Dimensions-&Multiple", "Dimensions-Single", "Co&mments", "Ledger E&ntries"]),
+            ("Bank Account", &["split » Dimensions » Dimensions-&Multiple", "split » Dimensions » Dimensions-Single", "Co&mments", "Ledger E&ntries"]),
         ],
     );
     categories(
         m,
         "cash-receipt-journal",
         &[
-            ("Process", &["P&ost", "Preview Posting", "Post and &Print", "Test Report", "Renumber Document Numbers"]),
+            ("Process", &["split » Post/Print » P&ost", "split » Post/Print » Preview Posting", "split » Post/Print » Post and &Print", "split » Post/Print » Test Report", "Renumber Document Numbers"]),
             ("Approve", &["Comments"]),
             ("Line", &["Dimensions", "Approvals"]),
         ],
@@ -6854,9 +6919,16 @@ pub fn extend(m: &mut Metadata) {
     );
     categories(
         m,
+        "catalog-item-list",
+        &[
+            ("Reports", &["Catalog Item Sales"]),
+        ],
+    );
+    categories(
+        m,
         "chart-of-accounts",
         &[
-            ("Account", &["Dimensions-&Multiple", "Dimensions-Single", "Co&mments", "Ledger E&ntries", "E&xtended Texts"]),
+            ("Account", &["split » Dimensions » Dimensions-&Multiple", "split » Dimensions » Dimensions-Single", "Co&mments", "Ledger E&ntries", "E&xtended Texts"]),
             ("Navigate", &["G/L Register", "General Journal"]),
             ("Report", &["G/L Register"]),
         ],
@@ -6895,7 +6967,7 @@ pub fn extend(m: &mut Metadata) {
         m,
         "customer-ledger-entries",
         &[
-            ("Process", &["Apply Entries", "Unapply Entries", "Find entries...", "Reverse Transaction"]),
+            ("Process", &["split » Apply Entries » Apply Entries", "split » Apply Entries » Unapply Entries", "Find entries...", "Reverse Transaction"]),
             ("Entry", &["Dimensions", "Set Dimension Filter", "Reminder/Fin. Charge Entries", "Detailed &Ledger Entries", "Customer"]),
         ],
     );
@@ -6904,7 +6976,7 @@ pub fn extend(m: &mut Metadata) {
         "customer-list",
         &[
             ("New Document", &["Sales Quote", "Sales Order", "Sales Invoice", "Sales Credit Memo", "Reminder"]),
-            ("Customer", &["Ledger E&ntries", "Statistics", "Dimensions-&Multiple", "Dimensions-Single", "Co&mments", "Quotes", "Orders"]),
+            ("Customer", &["Ledger E&ntries", "Statistics", "split » Dimensions » Dimensions-&Multiple", "split » Dimensions » Dimensions-Single", "Co&mments", "Quotes", "Orders"]),
             ("Report", &["Statement"]),
         ],
     );
@@ -6933,7 +7005,7 @@ pub fn extend(m: &mut Metadata) {
         m,
         "fa-gl-journal",
         &[
-            ("Process", &["P&ost"]),
+            ("Process", &["split » Posting » P&ost"]),
             ("Line", &["Dimensions"]),
         ],
     );
@@ -6988,7 +7060,7 @@ pub fn extend(m: &mut Metadata) {
         "fixed-assets",
         &[
             ("Process", &["Calculate Depreciation"]),
-            ("Fixed Asset", &["Dimensions-&Multiple", "Dimensions-Single", "Co&mments"]),
+            ("Fixed Asset", &["split » Dimensions » Dimensions-&Multiple", "split » Dimensions » Dimensions-Single", "Co&mments"]),
         ],
     );
     categories(
@@ -7009,7 +7081,7 @@ pub fn extend(m: &mut Metadata) {
         m,
         "general-journal",
         &[
-            ("Process", &["P&ost", "Preview Posting", "Post and &Print", "Test Report", "Renumber Document Numbers"]),
+            ("Process", &["split » Post/Print » P&ost", "split » Post/Print » Preview Posting", "split » Post/Print » Post and &Print", "split » Post/Print » Test Report", "Renumber Document Numbers"]),
             ("Approve", &["Comments"]),
             ("Line", &["Dimensions", "Approvals"]),
         ],
@@ -7025,7 +7097,7 @@ pub fn extend(m: &mut Metadata) {
         m,
         "general-ledger-entries",
         &[
-            ("Process", &["Find entries...", "Reverse Transaction", "Dimensions", "Set Dimension Filter"]),
+            ("Process", &["Find entries...", "Reverse Transaction", "menu » Entry » Dimensions", "menu » Entry » Set Dimension Filter"]),
         ],
     );
     categories(
@@ -7108,8 +7180,8 @@ pub fn extend(m: &mut Metadata) {
         m,
         "item-card",
         &[
-            ("Process", &["Copy Item", "Adjust Inventory"]),
-            ("Item", &["Attachments", "Co&mments", "Dimensions", "Event", "Period", "Location", "Attributes", "Items b&y Location"]),
+            ("Process", &["Copy Item", "Adjust Inventory", "&Create Stockkeeping Unit"]),
+            ("Item", &["Attachments", "Co&mments", "Dimensions", "menu » Item Availability by » Event", "menu » Item Availability by » Period", "menu » Item Availability by » Location", "Attributes", "Items b&y Location"]),
         ],
     );
     categories(
@@ -7137,7 +7209,7 @@ pub fn extend(m: &mut Metadata) {
         m,
         "item-journal",
         &[
-            ("Process", &["P&ost", "Preview Posting", "Post and &Print"]),
+            ("Process", &["split » Posting » P&ost", "split » Posting » Preview Posting", "split » Posting » Post and &Print"]),
             ("Approve", &["Comments"]),
             ("Line", &["Item &Tracking Lines", "Dimensions", "Approvals"]),
         ],
@@ -7146,7 +7218,7 @@ pub fn extend(m: &mut Metadata) {
         m,
         "item-ledger-entries",
         &[
-            ("Process", &["Find entries...", "Dimensions", "Set Dimension Filter", "&Value Entries"]),
+            ("Process", &["Find entries...", "menu » Entry » Dimensions", "menu » Entry » Set Dimension Filter", "menu » Entry » &Value Entries"]),
         ],
     );
     categories(
@@ -7154,7 +7226,7 @@ pub fn extend(m: &mut Metadata) {
         "item-list",
         &[
             ("Process", &["Adjust Inventory", "Copy Item"]),
-            ("Item", &["Dimensions-&Multiple", "Dimensions-Single", "Co&mments", "Items b&y Location", "Event", "Period", "Location", "Item References"]),
+            ("Item", &["split » Dimensions » Dimensions-&Multiple", "split » Dimensions » Dimensions-Single", "Co&mments", "Items b&y Location", "menu » Item Availability by » Event", "menu » Item Availability by » Period", "menu » Item Availability by » Location", "Item References"]),
             ("Attributes", &["Attributes"]),
         ],
     );
@@ -7162,7 +7234,7 @@ pub fn extend(m: &mut Metadata) {
         m,
         "item-reclass-journal",
         &[
-            ("Process", &["P&ost", "Preview Posting", "Post and &Print"]),
+            ("Process", &["split » Posting » P&ost", "split » Posting » Preview Posting", "split » Posting » Post and &Print"]),
             ("Line", &["Item &Tracking Lines", "Dimensions"]),
         ],
     );
@@ -7170,7 +7242,7 @@ pub fn extend(m: &mut Metadata) {
         m,
         "item-templ-card",
         &[
-            ("Process", &["Dimensions"]),
+            ("Process", &["Copy Template", "Dimensions"]),
         ],
     );
     categories(
@@ -7191,7 +7263,7 @@ pub fn extend(m: &mut Metadata) {
         m,
         "locations",
         &[
-            ("Location", &["Dimensions-Single"]),
+            ("Location", &["split » Dimensions » Dimensions-Single"]),
             ("Report", &["Transfer Order"]),
         ],
     );
@@ -7199,14 +7271,15 @@ pub fn extend(m: &mut Metadata) {
         m,
         "lot-no-information-card",
         &[
-            ("Lot No.", &["&Item Tracing"]),
+            ("Process", &["Copy &Info"]),
+            ("Lot No.", &["Item &Tracking Entries", "&Item Tracing"]),
         ],
     );
     categories(
         m,
         "payment-journal",
         &[
-            ("Process", &["P&ost", "Preview Posting", "Post and &Print", "Test Report", "Renumber Document Numbers"]),
+            ("Process", &["split » Post/Print » P&ost", "split » Post/Print » Preview Posting", "split » Post/Print » Post and &Print", "split » Post/Print » Test Report", "Renumber Document Numbers"]),
             ("Approve", &["Comments"]),
             ("Line", &["Dimensions", "Approvals"]),
         ],
@@ -7215,7 +7288,7 @@ pub fn extend(m: &mut Metadata) {
         m,
         "phys-inventory-journal",
         &[
-            ("Process", &["P&ost", "Preview Posting", "Post and &Print"]),
+            ("Process", &["split » Posting » P&ost", "split » Posting » Preview Posting", "split » Posting » Post and &Print"]),
             ("Approve", &["Comments"]),
             ("Prepare", &["Calculate &Inventory"]),
             ("Line", &["Item &Tracking Lines", "Dimensions", "Approvals"]),
@@ -7226,7 +7299,7 @@ pub fn extend(m: &mut Metadata) {
         m,
         "phys-inventory-recording",
         &[
-            ("Process", &["Fi&nish", "Reo&pen"]),
+            ("Process", &["&Print", "Fi&nish", "Reo&pen"]),
         ],
     );
     categories(
@@ -7238,9 +7311,25 @@ pub fn extend(m: &mut Metadata) {
     );
     categories(
         m,
+        "physical-inventory-order",
+        &[
+            ("Process", &["split » Posting » P&ost", "split » Posting » Preview Posting", "split » Posting » Post and &Print", "Make New &Recording", "&Print", "Fi&nish", "Reo&pen"]),
+            ("Prepare", &["Copy &Document", "menu » Calculate » &Calculate Lines", "menu » Calculate » Calculate Counting &Period"]),
+            ("Order", &["Statistics"]),
+        ],
+    );
+    categories(
+        m,
         "physical-inventory-order-lines",
         &[
             ("Process", &["Show Document"]),
+        ],
+    );
+    categories(
+        m,
+        "posted-phys-invt-order",
+        &[
+            ("Process", &["&Print", "Statistics"]),
         ],
     );
     categories(
@@ -7255,6 +7344,13 @@ pub fn extend(m: &mut Metadata) {
         "posted-phys-invt-rec-lines",
         &[
             ("Process", &["Show Document"]),
+        ],
+    );
+    categories(
+        m,
+        "posted-phys-invt-recording",
+        &[
+            ("Process", &["&Print"]),
         ],
     );
     categories(
@@ -7305,7 +7401,7 @@ pub fn extend(m: &mut Metadata) {
         m,
         "posted-purchase-receipts",
         &[
-            ("Process", &["&Print", "Find entries...", "Dimensions", "Co&mments"]),
+            ("Process", &["&Print", "Find entries...", "menu » Receipt » Dimensions", "menu » Receipt » Co&mments"]),
         ],
     );
     categories(
@@ -7357,7 +7453,7 @@ pub fn extend(m: &mut Metadata) {
         m,
         "posted-sales-shipments",
         &[
-            ("Process", &["&Print", "Find entries...", "Dimensions", "Co&mments"]),
+            ("Process", &["&Print", "Find entries...", "menu » Shipment » Dimensions", "menu » Shipment » Co&mments"]),
             ("Print/Send", &["&Print", "Attach as PDF"]),
         ],
     );
@@ -7365,7 +7461,7 @@ pub fn extend(m: &mut Metadata) {
         m,
         "purchase-credit-memo",
         &[
-            ("Process", &["P&ost", "Preview Posting", "Post and &Print", "Post and New", "Re&lease", "Re&open"]),
+            ("Process", &["split » Posting » P&ost", "split » Posting » Preview Posting", "split » Posting » Post and &Print", "split » Posting » Post and New", "split » Release » Re&lease", "split » Release » Re&open"]),
             ("Prepare", &["Copy Document"]),
             ("Request Approval", &["Send A&pproval Request", "Cancel Approval Re&quest"]),
             ("Credit Memo", &["Statistics", "Dimensions", "Attachments", "Approvals", "Co&mments", "Vendor"]),
@@ -7384,7 +7480,7 @@ pub fn extend(m: &mut Metadata) {
         m,
         "purchase-invoice",
         &[
-            ("Process", &["P&ost", "Preview Posting", "Post and New", "Post and &Print", "Re&lease", "Re&open"]),
+            ("Process", &["split » Posting » P&ost", "split » Posting » Preview Posting", "split » Posting » Post and New", "split » Posting » Post and &Print", "split » Release » Re&lease", "split » Release » Re&open"]),
             ("Prepare", &["Copy Document"]),
             ("Request Approval", &["Send A&pproval Request", "Cancel Approval Re&quest"]),
             ("Invoice", &["Dimensions", "Statistics", "Co&mments", "Attachments", "Approvals", "Vendor"]),
@@ -7403,7 +7499,7 @@ pub fn extend(m: &mut Metadata) {
         m,
         "purchase-order",
         &[
-            ("Process", &["P&ost", "Preview Posting", "Post and &Print", "Post and New", "Re&lease", "Re&open"]),
+            ("Process", &["split » Posting » P&ost", "split » Posting » Preview Posting", "split » Posting » Post and &Print", "split » Posting » Post and New", "split » Release » Re&lease", "split » Release » Re&open"]),
             ("Prepare", &["Copy Document"]),
             ("Print/Send", &["&Print", "Attach as PDF"]),
             ("Request Approval", &["Send A&pproval Request", "Cancel Approval Re&quest"]),
@@ -7424,7 +7520,7 @@ pub fn extend(m: &mut Metadata) {
         m,
         "purchase-quote",
         &[
-            ("Process", &["Make &Order", "Re&lease", "Re&open"]),
+            ("Process", &["Make &Order", "split » Release » Re&lease", "split » Release » Re&open"]),
             ("Prepare", &["Copy Document"]),
             ("Print/Send", &["&Print", "Attach as PDF"]),
             ("Request Approval", &["Send A&pproval Request", "Cancel Approval Re&quest"]),
@@ -7452,7 +7548,7 @@ pub fn extend(m: &mut Metadata) {
         m,
         "recurring-general-journal",
         &[
-            ("Process", &["P&ost", "Preview Posting", "Test Report", "Post and &Print", "Allocations"]),
+            ("Process", &["split » Post/Print » P&ost", "split » Post/Print » Preview Posting", "split » Post/Print » Test Report", "split » Post/Print » Post and &Print", "Allocations"]),
             ("Line", &["Dimensions"]),
         ],
     );
@@ -7503,7 +7599,7 @@ pub fn extend(m: &mut Metadata) {
         m,
         "revaluation-journal",
         &[
-            ("Process", &["Calculate Inventory Value", "P&ost", "Preview Posting", "Post and &Print"]),
+            ("Process", &["Calculate Inventory Value", "split » Post/Print » P&ost", "split » Post/Print » Preview Posting", "split » Post/Print » Post and &Print"]),
             ("Line", &["Dimensions"]),
             ("Item", &["Value Entries"]),
         ],
@@ -7512,7 +7608,7 @@ pub fn extend(m: &mut Metadata) {
         m,
         "sales-credit-memo",
         &[
-            ("Process", &["P&ost", "Preview Posting", "Re&lease", "Re&open"]),
+            ("Process", &["split » Posting » P&ost", "split » Posting » Preview Posting", "split » Release » Re&lease", "split » Release » Re&open"]),
             ("Prepare", &["Copy Document"]),
             ("Request Approval", &["Send A&pproval Request", "Cancel Approval Re&quest"]),
             ("Credit Memo", &["Statistics", "Dimensions", "Attachments", "Approvals", "Co&mments", "Customer"]),
@@ -7531,7 +7627,7 @@ pub fn extend(m: &mut Metadata) {
         m,
         "sales-invoice",
         &[
-            ("Process", &["P&ost", "Preview Posting", "Post and New", "Re&lease", "Re&open"]),
+            ("Process", &["split » Posting » P&ost", "split » Posting » Preview Posting", "split » Posting » Post and New", "split » Release » Re&lease", "split » Release » Re&open"]),
             ("Prepare", &["Copy Document"]),
             ("Print/Send", &["Pro Forma Invoice"]),
             ("Request Approval", &["Send A&pproval Request", "Cancel Approval Re&quest"]),
@@ -7551,7 +7647,7 @@ pub fn extend(m: &mut Metadata) {
         m,
         "sales-order",
         &[
-            ("Process", &["P&ost", "Preview Posting", "Post and New", "Re&lease", "Re&open"]),
+            ("Process", &["split » Posting » P&ost", "split » Posting » Preview Posting", "split » Posting » Post and New", "split » Release » Re&lease", "split » Release » Re&open"]),
             ("Prepare", &["Copy Document"]),
             ("Print/Send", &["Print Confirmation", "Attach as PDF", "Work Order", "Pro Forma Invoice"]),
             ("Request Approval", &["Send A&pproval Request", "Cancel Approval Re&quest"]),
@@ -7572,7 +7668,7 @@ pub fn extend(m: &mut Metadata) {
         m,
         "sales-quote",
         &[
-            ("Process", &["Make &Order", "Re&lease", "Re&open"]),
+            ("Process", &["Make &Order", "split » Release » Re&lease", "split » Release » Re&open"]),
             ("Prepare", &["Copy Document"]),
             ("Print/Send", &["&Print", "Attach as PDF"]),
             ("Request Approval", &["Send A&pproval Request", "Cancel Approval Re&quest"]),
@@ -7601,7 +7697,14 @@ pub fn extend(m: &mut Metadata) {
         m,
         "salespersons",
         &[
-            ("Salesperson", &["Dimensions-Single"]),
+            ("Salesperson", &["split » Dimensions » Dimensions-Single"]),
+        ],
+    );
+    categories(
+        m,
+        "standard-cost-worksheet-names",
+        &[
+            ("Process", &["Edit Worksheet"]),
         ],
     );
     categories(
@@ -7622,7 +7725,7 @@ pub fn extend(m: &mut Metadata) {
         m,
         "transfer-order",
         &[
-            ("Process", &["P&ost", "Re&lease", "Reo&pen"]),
+            ("Process", &["split » Posting » P&ost", "split » Release » Re&lease", "split » Release » Reo&pen"]),
             ("Order", &["S&hipments", "Re&ceipts"]),
         ],
     );
@@ -7676,7 +7779,7 @@ pub fn extend(m: &mut Metadata) {
         m,
         "vendor-ledger-entries",
         &[
-            ("Process", &["Apply Entries", "Unapply Entries", "Find entries...", "Reverse Transaction"]),
+            ("Process", &["split » Apply/Unapply » Apply Entries", "split » Apply/Unapply » Unapply Entries", "Find entries...", "Reverse Transaction"]),
             ("Entry", &["Dimensions", "Set Dimension Filter", "Detailed &Ledger Entries"]),
         ],
     );
@@ -7686,7 +7789,7 @@ pub fn extend(m: &mut Metadata) {
         &[
             ("Process", &["Pay Vendor"]),
             ("New Document", &["Purchase Invoice", "Purchase Order", "Purchase Credit Memo"]),
-            ("Vendor", &["Ledger E&ntries", "Statistics", "Dimensions-&Multiple", "Dimensions-Single", "Co&mments", "Orders", "Quotes"]),
+            ("Vendor", &["Ledger E&ntries", "Statistics", "split » Dimensions » Dimensions-&Multiple", "split » Dimensions » Dimensions-Single", "Co&mments", "Orders", "Quotes"]),
         ],
     );
     calcs(

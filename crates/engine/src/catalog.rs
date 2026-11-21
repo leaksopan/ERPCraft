@@ -110,16 +110,68 @@ fn create_item(ctx: &mut Ctx, p: &Json) -> Result<Json> {
     Ok(json!({"item_no": no, "open": {"page": "item-card", "key": no}, "message": format!("Item {no} was created.")}))
 }
 
+/// BC's Copy Template: every field of another template onto this one.
+fn copy_template(ctx: &mut Ctx, p: &Json) -> Result<Json> {
+    let code = match (opt_str(p, "table"), p.get("key")) {
+        (Some(ITEM_TEMPL), Some(k)) => k.as_str().map(str::to_string).or_else(|| k.as_array().and_then(|a| a.first()).and_then(Json::as_str).map(str::to_string)),
+        _ => opt_str(p, "code").map(str::to_string),
+    }
+    .ok_or_else(|| EngineError::invalid("missing parameter 'code'"))?;
+    let from = opt_str(p, "from_code").map(str::trim).filter(|s| !s.is_empty()).ok_or_else(|| EngineError::invalid("missing parameter 'from_code'"))?.to_uppercase();
+    let src = ctx.get_code(ITEM_TEMPL, &from)?;
+    let mut t = ctx.get_code(ITEM_TEMPL, &code)?;
+    let tt = ctx.table(ITEM_TEMPL)?;
+    for f in &tt.fields {
+        if f.name != "Code" && f.name != "Description" {
+            t.set(&f.name, src.get(&f.name).clone());
+        }
+    }
+    ctx.db.modify(tt, t)?;
+    Ok(json!({"message": format!("Template {from} was copied to {code}.")}))
+}
+
+/// BC's Catalog Item Sales (report 5701): what the items made from catalog items have sold.
+fn catalog_sales(ctx: &mut Ctx, _p: &Json) -> Result<Json> {
+    let mut rows = Vec::new();
+    let catalog: Vec<Record> = ctx.db.rows(NONSTOCK_ITEM).filter(|c| !c.str("Item No.").is_empty()).cloned().collect();
+    for c in catalog {
+        let item = c.str("Item No.");
+        let sales: Vec<&Record> = ctx.db.rows(crate::schema::tables::ITEM_LEDGER).filter(|e| e.str("Item No.") == item && e.str("Entry Type") == "Sale").collect();
+        let qty: rust_decimal::Decimal = sales.iter().map(|e| -e.get("Quantity").as_dec()).sum();
+        let amount: rust_decimal::Decimal = sales.iter().map(|e| e.get("Sales Amount (Actual)").as_dec()).sum();
+        rows.push(json!([c.str("Entry No."), item, c.str("Vendor No."), c.str("Vendor Item No."), c.str("Description"), qty.normalize().to_string(), format!("{amount:.2}")]));
+    }
+    Ok(json!({"report": {"title": "Catalog Item Sales", "columns": ["Entry No.", "Item No.", "Vendor No.", "Vendor Item No.", "Description", "Quantity Sold", "Sales Amount"], "rows": rows}}))
+}
+
+/// BC's Item Substitutions report (5702) for catalog items: the substitutes of the items made
+/// from them.
+fn catalog_substitutions(ctx: &mut Ctx, _p: &Json) -> Result<Json> {
+    let mut rows = Vec::new();
+    let catalog: Vec<Record> = ctx.db.rows(NONSTOCK_ITEM).cloned().collect();
+    for c in catalog {
+        for s in ctx.db.rows(crate::schema::item_setup::ITEM_SUBSTITUTION).filter(|s| (!c.str("Item No.").is_empty() && s.str("No.") == c.str("Item No.")) || s.str("No.") == c.str("Entry No.")) {
+            rows.push(json!([c.str("Entry No."), c.str("Description"), s.str("Substitute Type"), s.str("Substitute No."), s.str("Description"), s.get("Interchangeable").as_bool()]));
+        }
+    }
+    Ok(json!({"report": {"title": "Item Substitutions", "columns": ["Entry No.", "Description", "Substitute Type", "Substitute No.", "Substitute Description", "Interchangeable"], "rows": rows}}))
+}
+
+fn s_copy_template() -> Json {
+    json!({"type": "object", "properties": {"code": {"type": "string"}, "from_code": {"type": "string", "description": "the template to copy from"}, "table": {"type": "string"}, "key": {}}, "required": ["from_code"]})
+}
+
+fn s_none() -> Json {
+    json!({"type": "object", "properties": {}})
+}
+
 fn s_create() -> Json {
     json!({"type": "object", "properties": {"entry_no": {"type": "string"}, "table": {"type": "string"}, "key": {}}})
 }
 
-pub static COMMANDS: &[CommandDef] = &[CommandDef {
-    id: "catalog.create_item",
-    label: "Create Item",
-    group: "Inventory",
-    summary: "Turn a catalog item into an item, from its item template.",
-    mutates: true,
-    params: s_create,
-    run: create_item,
-}];
+pub static COMMANDS: &[CommandDef] = &[
+    CommandDef { id: "catalog.create_item", label: "Create Item", group: "Inventory", summary: "Turn a catalog item into an item, from its item template.", mutates: true, params: s_create, run: create_item },
+    CommandDef { id: "item_templ.copy", label: "Copy Template", group: "Inventory", summary: "Copy all fields of another item template onto this one.", mutates: true, params: s_copy_template, run: copy_template },
+    CommandDef { id: "catalog.sales", label: "Catalog Item Sales", group: "Inventory", summary: "Sales of the items made from catalog items.", mutates: false, params: s_none, run: catalog_sales },
+    CommandDef { id: "catalog.substitutions", label: "Item Substitutions", group: "Inventory", summary: "Substitutes of the catalog items.", mutates: false, params: s_none, run: catalog_substitutions },
+];

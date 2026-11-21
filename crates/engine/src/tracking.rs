@@ -421,16 +421,32 @@ fn lines(ctx: &mut Ctx, p: &Json) -> Result<Json> {
     ]}}))
 }
 
+/// BC's Copy Info: a new lot / serial number information card with this one's details.
+fn copy_info(ctx: &mut Ctx, p: &Json) -> Result<Json> {
+    let table = opt_str(p, "table").filter(|t| *t == LOT_INFO || *t == SERIAL_INFO).ok_or_else(|| EngineError::invalid("Copy Info runs from a lot or serial number information card."))?;
+    let t = ctx.table(table)?;
+    let key = Key::from_json(t, p.get("key").unwrap_or(&Json::Null)).map_err(EngineError::invalid)?;
+    let src = ctx.get(table, &key)?;
+    let field = if table == LOT_INFO { "Lot No." } else { "Serial No." };
+    let new_no = opt_str(p, "new_no").map(str::trim).filter(|s| !s.is_empty()).ok_or_else(|| EngineError::invalid("missing parameter 'new_no'"))?.to_uppercase();
+    let mut r = src.clone();
+    r.set(field, Value::text(&new_no));
+    if ctx.db.get(&t.name, &r.key(t)).is_some() {
+        refuse!("{table} already exists for {field} {new_no}.");
+    }
+    ctx.db.insert(t, r)?;
+    Ok(json!({"open": {"page": if table == LOT_INFO { "lot-no-information-card" } else { "serial-no-information-card" }, "key": [src.str("Item No."), src.str("Variant Code"), new_no]}, "message": format!("{field} {new_no} has the information of {}.", src.str(field))}))
+}
+
+fn s_copy_info() -> Json {
+    json!({"type": "object", "properties": {"table": {"type": "string"}, "key": {}, "new_no": {"type": "string", "description": "the new lot / serial number"}}, "required": ["key", "new_no"]})
+}
+
 fn s_line() -> Json {
     json!({"type": "object", "properties": {"table": {"type": "string"}, "key": {}}, "required": ["table", "key"]})
 }
 
-pub static COMMANDS: &[CommandDef] = &[CommandDef {
-    id: "tracking.lines",
-    label: "Item Tracking Lines",
-    group: "Inventory",
-    summary: "The lot and serial numbers of a document or journal line.",
-    mutates: false,
-    params: s_line,
-    run: lines,
-}];
+pub static COMMANDS: &[CommandDef] = &[
+    CommandDef { id: "tracking.lines", label: "Item Tracking Lines", group: "Inventory", summary: "The lot and serial numbers of a document or journal line.", mutates: false, params: s_line, run: lines },
+    CommandDef { id: "tracking.copy_info", label: "Copy Info", group: "Inventory", summary: "Copy a lot / serial number information card to a new number.", mutates: true, params: s_copy_info, run: copy_info },
+];

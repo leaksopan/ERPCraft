@@ -913,6 +913,28 @@ fn item_journal_calc_value(c: &mut Ctx, p: &Json) -> Result<Json> {
     let by_location = p.get("by_location").and_then(|v| v.as_bool().or_else(|| v.as_str().map(|s| s.eq_ignore_ascii_case("true")))).unwrap_or(false);
     crate::item_journal::calculate_inventory_value(c, &template, &batch, date, opt_str(p, "item_no"), by_location)
 }
+fn item_journal_calc_value_test(c: &mut Ctx, p: &Json) -> Result<Json> {
+    // Run it on the side, read what it made, and leave nothing behind.
+    let saved = c.db.clone();
+    let made = item_journal_calc_value(c, p);
+    let made = match made {
+        Ok(m) => m,
+        Err(e) => {
+            *c.db = saved;
+            return Err(e);
+        }
+    };
+    let template = opt_str(p, "template").unwrap_or("REVAL").to_uppercase();
+    let batch = opt_str(p, "batch").unwrap_or("DEFAULT").to_uppercase();
+    let rows: Vec<Json> = c
+        .db
+        .rows(crate::schema::inventory::ITEM_JNL_LINE)
+        .filter(|l| l.str("Journal Template Name") == template && l.str("Journal Batch Name") == batch && l.str("Value Entry Type") == "Revaluation")
+        .map(|l| json!([l.str("Item No."), l.str("Description"), l.str("Location Code"), l.get("Quantity").as_dec().normalize().to_string(), format!("{:.2}", l.get("Inventory Value (Calculated)").as_dec()), l.get("Unit Cost (Calculated)").as_dec().normalize().to_string()]))
+        .collect();
+    *c.db = saved;
+    Ok(json!({"lines": made.get("lines").cloned().unwrap_or(Json::Null), "report": {"title": "Calculate Inventory Value - Test", "columns": ["Item No.", "Description", "Location Code", "Quantity", "Inventory Value (Calculated)", "Unit Cost (Calculated)"], "rows": rows}}))
+}
 fn fa_depreciation(c: &mut Ctx, p: &Json) -> Result<Json> {
     let date = opt_date(p, "date")?.unwrap_or(c.work_date);
     let post = matches!(p.get("post"), Some(Json::Bool(true))) || opt_str(p, "post").is_some_and(|s| s.eq_ignore_ascii_case("yes") || s == "true");
@@ -1043,6 +1065,7 @@ static COMMANDS: &[CommandDef] = &[
     cmd!("item_journal.post", "Post Item Journal", "Inventory", true, s_item_journal, item_journal_post, "Post an item, reclassification or physical inventory journal batch."),
     cmd!("item_journal.calculate_inventory", "Calculate Inventory", "Inventory", true, s_item_journal, item_journal_calc, "Fill a physical inventory journal with the current stock per item and location."),
     cmd!("item_journal.calculate_inventory_value", "Calculate Inventory Value", "Inventory", true, s_inventory_value, item_journal_calc_value, "Fill a revaluation journal with each item's inventory quantity and value."),
+    cmd!("item_journal.calculate_inventory_value_test", "Calculate Inventory Value - Test", "Inventory", false, s_inventory_value, item_journal_calc_value_test, "The quantities and values Calculate Inventory Value would enter, per item."),
     cmd!("fa.calculate_depreciation", "Calculate Depreciation", "Fixed Assets", true, s_depreciation, fa_depreciation, "Straight-line depreciation up to a date, as FA G/L journal lines (optionally posted)."),
     cmd!("report.inventory_valuation", "Inventory Valuation", "Inventory", false, s_date, inventory_valuation, "Quantity and value per item, with the inventory G/L balance."),
     cmd!("report.fa_book_value", "Fixed Asset Book Value", "Fixed Assets", false, s_date, fa_book_value, "Acquisition cost, depreciation and book value per fixed asset."),

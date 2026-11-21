@@ -212,6 +212,12 @@ fn pages(m: &mut Metadata) {
                     .icon("stats")
                     .tooltip("Calculate the inventory value of the items, as the basis for revaluing them."),
             );
+            p = p.action(
+                Act::command("Calculate Inventory Value - Test", A::Report, "item_journal.calculate_inventory_value_test")
+                    .ask(&["posting_date", "by_location"])
+                    .icon("report")
+                    .tooltip("Preview the inventory value that Calculate Inventory Value would enter, per item."),
+            );
         }
         if *ty == "Phys. Inventory" {
             p = p.action(

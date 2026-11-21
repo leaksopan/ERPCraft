@@ -6,7 +6,7 @@ use std::collections::BTreeMap;
 use std::path::{Path, PathBuf};
 
 /// Application areas the Essential experience (what a new BC company runs) does not show.
-const HIDDEN_AREAS: &[&str] = &["manufacturing", "planning", "warehouse", "service", "adcs", "advanced"];
+const HIDDEN_AREAS: &[&str] = &["manufacturing", "planning", "service", "adcs", "advanced"];
 
 thread_local! {
     /// The application areas of the page being read: a page that BC shows (say a Warehouse page
@@ -424,9 +424,13 @@ fn collect_actions(n: &Node, area: &str, out: &mut Vec<AlAction>, promoted: &mut
                 let before = promoted.len();
                 collect_actions(k, area, out, promoted, categories);
                 let names = promoted.get(before..).map(<[String]>::to_vec).unwrap_or_default();
-                // Nested groups (split buttons) belong to the outer category.
+                // Nested groups (split buttons, sub-menus) belong to the outer category; they are
+                // also kept as a marker so the action bar can group their actions.
                 if n.kind().0 == "area" {
                     categories.push((k.caption_or(args), names));
+                } else {
+                    let kind = if k.prop("ShowAs").is_some_and(|v| v.trim().eq_ignore_ascii_case("SplitButton")) { "split" } else { "menu" };
+                    categories.push((format!("\u{a7}{kind}\u{a7}{}", k.caption_or(args)), names));
                 }
             }
             "area" => collect_actions(k, &args.trim().to_ascii_lowercase(), out, promoted, categories),

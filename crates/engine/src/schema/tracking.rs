@@ -92,7 +92,9 @@ pub fn register(m: &mut Metadata) {
                 .describe_by("Description")
                 .pages(list_id, Some(card_id)),
         );
+        let entries = Act::page("Item &Tracking Entries", A::Navigate, "item-tracking-entries").link("Item No.", "Item No.").link(no_field, no_field).icon("list").tooltip("View serial, lot or package numbers that are assigned to items.");
         let mut l = PageDef::new(list_id, list_obj, list_caption, PageKind::List, Some(table));
+        l.actions = vec![entries.clone()];
         l.columns = ["Item No.", "Variant Code", no_field, "Description", "Test Quality", "Certificate Number", "Blocked", "Inventory", "Expired Inventory"].iter().map(|c| (*c).to_string()).collect();
         l.card_page = Some(card_id.to_string());
         l.keywords = "lot serial batch tracking information".to_string();
@@ -101,7 +103,14 @@ pub fn register(m: &mut Metadata) {
             PageDef::new(card_id, card_obj, card_caption, PageKind::Card, Some(table))
                 .group(G::new("General", &["Item No.", "Variant Code", no_field, "Description", "Test Quality", "Certificate Number", "Blocked"]))
                 .group(G::new("Inventory", &["Inventory", "Expired Inventory"]))
-                .action(Act::page("&Item Tracing", A::Navigate, "item-tracking-entries").link("Item No.", "Item No.").link(no_field, no_field).icon("list").tooltip("Trace where a lot or serial number assigned to the item was used, for example, to find which lot a defective component came from or to find all the customers that have received items containing the defective component.")),
+                .action(Act::page("&Item Tracing", A::Navigate, "item-tracking-entries").link("Item No.", "Item No.").link(no_field, no_field).icon("list").tooltip("Trace where a lot or serial number assigned to the item was used, for example, to find which lot a defective component came from or to find all the customers that have received items containing the defective component."))
+                .action(entries)
+                .action(
+                    Act::command("Copy &Info", A::Process, "tracking.copy_info")
+                        .icon("copy")
+                        .ask(&["new_no"])
+                        .tooltip(if table == LOT_INFO { "Copy the information record from the old lot number." } else { "Copy the information record from the old serial number." }),
+                ),
         );
     }
     ensure(m, crate::schema::tables::ITEM_LEDGER, vec![F::text("Serial No.", 50), F::code("Lot No.", 50), F::date("Expiration Date"), F::option("Item Tracking", &["None", "Lot and Serial No.", "Lot No.", "Serial No."])]);

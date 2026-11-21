@@ -192,6 +192,10 @@ pub fn register(m: &mut Metadata) {
     // Orders.
     let mut orders = list("physical-inventory-orders", 5876, "Physical Inventory Orders", ORDER_HEADER, &["No.", "Description", "Status", "Order Date", "Posting Date", "No. Finished Recordings", "Location Code", "Person Responsible"], "physical-inventory-order");
     orders.keywords = "physical inventory count stocktake".to_string();
+    orders.actions = vec![
+        Act::command("Phys. Inventory Order Diff.", A::Report, "physinvt.diff_report").icon("report").tooltip("View or print the list of differences after counting."),
+        Act::command("Phys. Invt. Order - Test", A::Report, "physinvt.test_report").icon("report").tooltip("View the result of posting the counted inventory quantities before you actually post."),
+    ];
     m.add_page(orders);
     let line_cols = &[
         "Item No.",
@@ -212,7 +216,15 @@ pub fn register(m: &mut Metadata) {
         "Shelf No.",
         "Phys Invt Counting Period Code",
     ];
-    m.add_page(sub("physical-inventory-order-subf", 5877, "Lines", PageKind::ListPart, ORDER_LINE, line_cols, true));
+    let mut subf = sub("physical-inventory-order-subf", 5877, "Lines", PageKind::ListPart, ORDER_LINE, line_cols, true);
+    subf.actions = vec![
+        Act::page("Recording Lines", A::Navigate, "phys-invt-recording-lines").link("Order No.", "Document No.").link("Order Line No.", "Line No.").icon("list").tooltip("View one or more physical inventory recording lines where the selected item exists"),
+        Act::page("Ledger E&ntries", A::Navigate, "item-ledger-entries").link("Item No.", "Item No.").link("Location Code", "Location Code").icon("ledger").shortcut("Ctrl+F7").tooltip("View the item's item ledger entries."),
+        Act::command("Calculate Expected &Qty.", A::Process, "physinvt.calc_line_qty")
+            .icon("refresh")
+            .tooltip("Update the value in the Qty. Expected (Base) field on the line with any inventory changes made since you created the order. When you have used this function, the Qty. Exp. Calculated check box is selected."),
+    ];
+    m.add_page(subf);
     m.add_page(sub("physical-inventory-order-lines", 5878, "Physical Inventory Order Lines", PageKind::List, ORDER_LINE, line_cols, false));
     m.add_page(
         PageDef::new("physical-inventory-order", 5875, "Physical Inventory Order", PageKind::Document, Some(ORDER_HEADER))
@@ -221,29 +233,40 @@ pub fn register(m: &mut Metadata) {
             .group(G::new("Posting", &["Gen. Bus. Posting Group", "Reason Code", "Shortcut Dimension 1 Code", "Shortcut Dimension 2 Code", "Posting No. Series", "Posting No.", "Last Posting No."]).collapsed())
             .action(Act::command("Statistics", A::Navigate, "physinvt.statistics").icon("stats").shortcut("F7").tooltip("View statistical information about the physical inventory order."))
             .action(Act::page("&Recordings", A::Navigate, "phys-inventory-recording-list").link("Order No.", "No.").icon("list").tooltip("View all recordings for the physical inventory order."))
-            .action(Act::command("&Calculate Lines", A::Process, "physinvt.calculate_lines").icon("new").ask(&["location_code", "zero_qty"]).tooltip("Add physical inventory lines for items that are currently recorded in inventory."))
+            .action(Act::command("&Calculate Lines...", A::Process, "physinvt.calculate_lines").icon("new").ask(&["location_code", "zero_qty"]).tooltip("Add physical inventory lines for items that are currently recorded in inventory."))
             .action(
-                Act::command("Calculate Counting &Period", A::Process, "physinvt.calculate_counting_period")
+                Act::command("Calculate Counting &Period...", A::Process, "physinvt.calculate_counting_period")
                     .icon("new")
                     .tooltip("Add physical inventory order lines for items and SKUs that are set up with counting periods. See the Phys Invt Counting Period Code field on the item card or SKU card."),
             )
-            .action(Act::command("Copy &Document", A::Process, "physinvt.copy_document").icon("copy").ask(&["from_no"]).tooltip("Copy Document."))
+            .action(Act::command("Copy &Document...", A::Process, "physinvt.copy_document").icon("copy").ask(&["from_no"]).tooltip("Copy Document."))
             .action(
-                Act::command("Calc. &Qty. Expected", A::Process, "physinvt.calc_qty_expected")
+                Act::command("Calc. &Qty. Expected...", A::Process, "physinvt.calc_qty_expected")
                     .icon("refresh")
                     .tooltip("Update the value in the Qty. Expected (Base) field on the lines with any inventory changes made since you created the order. When you have used this function, the Qty. Exp. Calculated check box is selected."),
             )
             .action(
-                Act::command("Make New &Recording", A::Process, "physinvt.make_recording")
+                Act::command("Make New &Recording...", A::Process, "physinvt.make_recording")
                     .icon("new")
                     .ask(&["only_lines_not_in_recordings"])
                     .tooltip("Create a physical inventory recording document for the lines on the order. On the request page that appears, you can select to only create recording lines for items that are not already on other recordings for the order."),
             )
-            .action(Act::command("Fi&nish", A::Process, "physinvt.finish").icon("release").shortcut("Ctrl+F9").tooltip("Indicate that the counting is completed. This is only possible if all related recordings are set to Finished."))
-            .action(Act::command("Reo&pen", A::Process, "physinvt.reopen").icon("reopen").tooltip("Change the status of the physical inventory order from Finished to Open."))
-            .action(Act::command("Test Report", A::Report, "physinvt.test_report").icon("report").tooltip("Preview the inventory counting that will be recorded when you choose the Post action."))
+            .action(Act::command("Fi&nish...", A::Process, "physinvt.finish").icon("release").shortcut("Ctrl+F9").tooltip("Indicate that the counting is completed. This is only possible if all related recordings are set to Finished."))
+            .action(Act::command("Reo&pen...", A::Process, "physinvt.reopen").icon("reopen").tooltip("Change the status of the physical inventory order from Finished to Open."))
+            .action(Act::command("Test Report...", A::Report, "physinvt.test_report").icon("report").tooltip("Preview the inventory counting that will be recorded when you choose the Post action."))
+            .action(Act::command("Show &Duplicate Lines", A::Navigate, "physinvt.show_duplicates").icon("list").tooltip("Show lines that have the same value in the Item No., Variant Code, Location Code, and Bin Code fields."))
+            .action(Act::command("Preview Posting", A::Process, "physinvt.preview_post").icon("preview").tooltip("Review the different types of entries that will be created when you post the document or journal."))
             .action(
-                Act::command("P&ost", A::Home, "physinvt.post")
+                Act::command("Post and &Print...", A::Process, "physinvt.post_and_print")
+                    .icon("print")
+                    .shortcut("Shift+F9")
+                    .confirm("Do you want to post the order?")
+                    .tooltip("Update the involved item ledger entries with the counted inventory and print the Phys. Inventory Order Difference List report, which shows counted quantities compared to expected as negative or positive differences."),
+            )
+            .action(Act::command("&Print...", A::Report, "physinvt.diff_report").icon("print").tooltip("Print the Phys. Inventory Order Difference List report, which shows counted quantities compared to expected as negative or positive differences."))
+            .action(Act::command("Physical Inventory Recording", A::Report, "physinvt.recording_report").icon("print").tooltip("Print the counting sheets of the order's recordings."))
+            .action(
+                Act::command("P&ost...", A::Home, "physinvt.post")
                     .icon("post")
                     .shortcut("F9")
                     .confirm("Do you want to post the order?")
@@ -253,7 +276,9 @@ pub fn register(m: &mut Metadata) {
 
     // Recordings.
     let rec_cols = &["Order No.", "Recording No.", "Description", "Status", "Person Responsible", "Date Recorded", "Person Recorded", "Location Code"];
-    m.add_page(list("phys-inventory-recording-list", 5880, "Phys. Inventory Recording List", RECORD_HEADER, rec_cols, "phys-inventory-recording"));
+    let mut rec_list = list("phys-inventory-recording-list", 5880, "Phys. Inventory Recording List", RECORD_HEADER, rec_cols, "phys-inventory-recording");
+    rec_list.actions = vec![Act::command("Physical Inventory Recording", A::Report, "physinvt.recording_report").icon("print").tooltip("Print the counting sheet of the selected recording.")];
+    m.add_page(rec_list);
     let rec_line_cols = &["Item No.", "Variant Code", "Location Code", "Bin Code", "Description", "Serial No.", "Lot No.", "Quantity", "Unit of Measure Code", "Recorded", "Shelf No.", "Date Recorded", "Person Recorded", "Recorded Without Order"];
     m.add_page(sub("phys-invt-recording-subform", 5881, "Lines", PageKind::ListPart, RECORD_LINE, rec_line_cols, true));
     m.add_page(sub("phys-invt-recording-lines", 5882, "Phys. Invt. Recording Lines", PageKind::List, RECORD_LINE, rec_line_cols, false));
@@ -266,11 +291,14 @@ pub fn register(m: &mut Metadata) {
                     .icon("release")
                     .tooltip("Indicate that counting is finished. After this, you can no longer change the physical inventory order. When finishing the physical inventory order, the expected quantity and the recorded quantities are compared and the differences calculated."),
             )
-            .action(Act::command("Reo&pen", A::Process, "physinvt.reopen_recording").icon("reopen").tooltip("Reopen the recording. This also reopens the related physical inventory order.")),
+            .action(Act::command("Reo&pen", A::Process, "physinvt.reopen_recording").icon("reopen").tooltip("Reopen the recording. This also reopens the related physical inventory order."))
+            .action(Act::command("&Print", A::Report, "physinvt.recording_report").icon("print").tooltip("Prepare to print the document. A report request window for the document opens where you can specify what to include on the print-out.")),
     );
 
     // Posted orders and recordings.
-    m.add_page(list("posted-phys-invt-order-list", 5884, "Posted Phys. Invt. Order List", PSTD_ORDER_HEADER, &["No.", "Description", "Order Date", "Posting Date", "Pre-Assigned No.", "No. Finished Recordings", "Location Code"], "posted-phys-invt-order"));
+    let mut posted_list = list("posted-phys-invt-order-list", 5884, "Posted Phys. Invt. Order List", PSTD_ORDER_HEADER, &["No.", "Description", "Order Date", "Posting Date", "Pre-Assigned No.", "No. Finished Recordings", "Location Code"], "posted-phys-invt-order");
+    posted_list.actions = vec![Act::command("Phys. Inventory Order Diff.", A::Report, "physinvt.diff_report").icon("report").tooltip("View or print the list of differences after counting.")];
+    m.add_page(posted_list);
     m.add_page(sub("posted-phys-invt-order-subf", 5885, "Lines", PageKind::ListPart, PSTD_ORDER_LINE, line_cols, false));
     m.add_page(sub("posted-phys-invt-order-lines", 5886, "Posted Phys. Invt. Order Lines", PageKind::List, PSTD_ORDER_LINE, line_cols, false));
     m.add_page(
@@ -278,15 +306,22 @@ pub fn register(m: &mut Metadata) {
             .read_only()
             .group(G::new("General", &["No.", "Description", "Order Date", "Posting Date", "Pre-Assigned No.", "Person Responsible", "Location Code", "No. Finished Recordings", "User ID"]))
             .part("Lines", "posted-phys-invt-order-subf", &[("Document No.", "No.")])
-            .action(Act::page("&Recordings", A::Navigate, "posted-phys-invt-rec-list").link("Order No.", "No.").icon("list").tooltip("View all recordings for the physical inventory order.")),
+            .action(Act::page("&Recordings", A::Navigate, "posted-phys-invt-rec-list").link("Order No.", "No.").icon("list").tooltip("View all recordings for the physical inventory order."))
+            .action(Act::command("Statistics", A::Navigate, "physinvt.statistics").icon("stats").shortcut("F7").tooltip("View statistical information about the physical inventory order."))
+            .action(Act::command("&Print", A::Report, "physinvt.diff_report").icon("print").tooltip("Prepare to print the document. A report request window for the document opens where you can specify what to include on the print-out."))
+            .action(Act::command("Posted Phys. Invt. Order Diff.", A::Report, "physinvt.diff_report").icon("report").tooltip("View or print the list of differences after counting.")),
     );
-    m.add_page(list("posted-phys-invt-rec-list", 5888, "Posted Phys. Invt. Rec. List", PSTD_RECORD_HEADER, rec_cols, "posted-phys-invt-recording"));
+    let mut prec_list = list("posted-phys-invt-rec-list", 5888, "Posted Phys. Invt. Rec. List", PSTD_RECORD_HEADER, rec_cols, "posted-phys-invt-recording");
+    prec_list.actions = vec![Act::command("&Print", A::Report, "physinvt.recording_report").icon("print").tooltip("Prepare to print the document. A report request window for the document opens where you can specify what to include on the print-out.")];
+    m.add_page(prec_list);
     m.add_page(sub("posted-phys-invt-rec-subf", 5889, "Lines", PageKind::ListPart, PSTD_RECORD_LINE, rec_line_cols, false));
     m.add_page(sub("posted-phys-invt-rec-lines", 5890, "Posted Phys. Invt. Rec. Lines", PageKind::List, PSTD_RECORD_LINE, rec_line_cols, false));
     m.add_page(
         PageDef::new("posted-phys-invt-recording", 5887, "Posted Phys. Invt. Recording", PageKind::Document, Some(PSTD_RECORD_HEADER))
             .read_only()
             .group(G::new("General", &["Order No.", "Recording No.", "Description", "Person Responsible", "Date Recorded", "Person Recorded", "Location Code"]))
-            .part("Lines", "posted-phys-invt-rec-subf", &[("Order No.", "Order No."), ("Recording No.", "Recording No.")]),
+            .part("Lines", "posted-phys-invt-rec-subf", &[("Order No.", "Order No."), ("Recording No.", "Recording No.")])
+            .action(Act::command("&Print", A::Report, "physinvt.recording_report").icon("print").tooltip("Prepare to print the document. A report request window for the document opens where you can specify what to include on the print-out."))
+            .action(Act::command("Posted Phys. Invt. Recording", A::Report, "physinvt.recording_report").icon("report").tooltip("Print the posted counting sheet.")),
     );
 }

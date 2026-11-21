@@ -41,6 +41,7 @@ pub fn register(m: &mut Metadata) {
     let mut names = PageDef::new("standard-cost-worksheet-names", 5840, "Standard Cost Worksheet Names", PageKind::List, Some(WORKSHEET_NAME));
     names.columns = ["Name", "Description"].iter().map(|c| (*c).to_string()).collect();
     names.editable = true;
+    names.actions = vec![Act::page("Edit Worksheet", A::Process, "standard-cost-worksheet").link("Standard Cost Worksheet Name", "Name").icon("edit").tooltip("Open the related worksheet.")];
     m.add_page(names);
     let mut ws = PageDef::new("standard-cost-worksheet", 5841, "Standard Cost Worksheet", PageKind::List, Some(WORKSHEET)).view("Standard Cost Worksheet Name", "DEFAULT");
     ws.columns = ["Type", "No.", "Description", "Standard Cost", "New Standard Cost", "Indirect Cost %", "New Indirect Cost %", "Overhead Rate", "New Overhead Rate", "Implemented", "Replenishment System"].iter().map(|c| (*c).to_string()).collect();

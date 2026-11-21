@@ -178,3 +178,14 @@ fn lot_information_and_expiration_dates_rule_posting() {
     s.run("record.new", &json!({"table": "Lot No. Information", "values": {"Item No.": "1000L", "Lot No.": "NEW"}})).unwrap();
     buy_lot(&mut s, "NEW", 1, None).unwrap();
 }
+
+#[test]
+fn lot_information_is_copied_to_a_new_lot() {
+    let mut s = demo();
+    s.run("record.new", &json!({"table": "Lot No. Information", "values": {"Item No.": "1000L", "Lot No.": "A1", "Description": "Batch A", "Certificate Number": "C-77"}})).unwrap();
+    let r = s.run("tracking.copy_info", &json!({"table": "Lot No. Information", "key": ["1000L", "", "A1"], "new_no": "A2"})).unwrap();
+    assert_eq!(r["open"]["page"], "lot-no-information-card");
+    let c = s.run("record.get", &json!({"table": "Lot No. Information", "key": ["1000L", "", "A2"]})).unwrap();
+    assert_eq!((c["Description"].as_str().unwrap(), c["Certificate Number"].as_str().unwrap()), ("Batch A", "C-77"));
+    assert!(s.run("tracking.copy_info", &json!({"table": "Lot No. Information", "key": ["1000L", "", "A1"], "new_no": "A2"})).is_err());
+}

@@ -350,6 +350,10 @@ impl ErpApp {
     }
 
     pub fn handle_result(&mut self, r: &Json) {
+        // An attachment written out for viewing opens in its own application.
+        if let Some(path) = r.get("open_file").and_then(Json::as_str) {
+            open_file(path);
+        }
         // A printed document opens in the system's PDF viewer.
         if let (Some(path), Some(_)) = (r.get("path").and_then(Json::as_str), r.get("pages")) {
             open_file(path);

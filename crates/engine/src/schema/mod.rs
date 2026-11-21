@@ -2,6 +2,7 @@
 
 mod bc_gen;
 pub mod approvals;
+pub mod attachments;
 pub mod comments;
 pub mod dimensions;
 pub mod finance;
@@ -38,6 +39,7 @@ pub fn hand_written() -> Metadata {
     dimensions::register(&mut m);
     comments::register(&mut m);
     approvals::register(&mut m);
+    attachments::register(&mut m);
     crate::bc::register(&mut m);
     m
 }

@@ -43,6 +43,7 @@ pub fn glyph(icon: &str) -> &'static str {
         "dimensions" => "▦",
         "comment" => "💬",
         "navigate" => "⌕",
+        "attach" => "📎",
         "approve" => "✔",
         "reject" => "✖",
         "delegate" => "➜",

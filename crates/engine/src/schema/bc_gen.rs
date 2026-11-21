@@ -540,6 +540,26 @@ pub fn extend(m: &mut Metadata) {
     );
     relabel(
         m,
+        "Document Attachment",
+        &[
+            ("Attached Date", "Attached Date", "Specifies the date when the document was attached.", 0),
+            ("File Name", "Attachment", "Specifies the filename of the attachment.", 0),
+            ("File Type", "File Type", "Specifies the type of document that the attachment is.", 0),
+            ("File Extension", "File Extension", "Specifies the file extension of the attachment.", 0),
+            ("User", "User", "Specifies the user who attached the document.", 0),
+            ("Document Flow Purchase", "Flow to Purch. Trx", "Specifies if the attachment must flow to transactions.", 0),
+            ("Document Flow Sales", "Flow to Sales Trx", "Specifies if the attachment must flow to transactions.", 0),
+        ],
+    );
+    fields(
+        m,
+        "Document Attachment",
+        vec![
+            F::boolean("Document Flow Production").caption("Flow to Production Trx").tooltip("Specifies if the attachment must flow to transactions."),
+        ],
+    );
+    relabel(
+        m,
         "FA Class",
         &[
             ("Code", "Code", "Specifies a code for the class that the fixed asset belongs to.", 0),
@@ -2791,6 +2811,7 @@ pub fn extend(m: &mut Metadata) {
         ],
     );
     columns(m, "approval-entries", &["Limit Type", "Approval Type", "Sequence No.", "Status", "Sender ID", "Salespers./Purch. Code", "Approver ID", "Currency Code", "Amount (LCY)", "Available Credit Limit (LCY)", "Date-Time Sent for Approval", "Last Date-Time Modified", "Last Modified By User ID", "Due Date"]);
+    columns(m, "attached-documents", &["File Name", "File Extension", "File Type", "User", "Attached Date", "Document Flow Purchase", "Document Flow Sales", "Document Flow Production"]);
     layout(
         m,
         "bank-account-card",
@@ -3960,7 +3981,7 @@ pub fn extend(m: &mut Metadata) {
         "customer-card",
         &[
             ("New Document", &["Sales Quote", "Sales Order", "Sales Invoice", "Sales Credit Memo"]),
-            ("Customer", &["Ledger E&ntries", "Dimensions", "Statistics", "Co&mments"]),
+            ("Customer", &["Ledger E&ntries", "Dimensions", "Statistics", "Attachments", "Co&mments"]),
         ],
     );
     actions(
@@ -4071,7 +4092,7 @@ pub fn extend(m: &mut Metadata) {
         m,
         "fixed-asset-card",
         &[
-            ("Fixed Asset", &["Dimensions", "Co&mments", "Depreciation &Books"]),
+            ("Fixed Asset", &["Dimensions", "Co&mments", "Attachments", "Depreciation &Books"]),
         ],
     );
     actions(
@@ -4252,7 +4273,7 @@ pub fn extend(m: &mut Metadata) {
         "item-card",
         &[
             ("Process", &["Copy Item", "Adjust Inventory"]),
-            ("Item", &["Co&mments", "Dimensions"]),
+            ("Item", &["Attachments", "Co&mments", "Dimensions"]),
         ],
     );
     actions(
@@ -4356,8 +4377,8 @@ pub fn extend(m: &mut Metadata) {
         "posted-purchase-credit-memo",
         &[
             ("Process", &["Find entries..."]),
-            ("Print/Send", &["&Print"]),
-            ("Credit Memo", &["Dimensions", "Co&mments", "Vendor"]),
+            ("Print/Send", &["&Print", "Attach as PDF"]),
+            ("Credit Memo", &["Dimensions", "Co&mments", "Attachments", "Vendor"]),
         ],
     );
     actions(
@@ -4382,8 +4403,8 @@ pub fn extend(m: &mut Metadata) {
         "posted-purchase-invoice",
         &[
             ("Process", &["Find entries..."]),
-            ("Print/Send", &["&Print"]),
-            ("Invoice", &["Dimensions", "Co&mments", "Vendor"]),
+            ("Print/Send", &["&Print", "Attach as PDF"]),
+            ("Invoice", &["Dimensions", "Attachments", "Co&mments", "Vendor"]),
         ],
     );
     actions(
@@ -4430,8 +4451,8 @@ pub fn extend(m: &mut Metadata) {
         "posted-sales-credit-memo",
         &[
             ("Process", &["Find entries..."]),
-            ("Print/Send", &["&Print"]),
-            ("Credit Memo", &["Dimensions", "Co&mments", "Customer"]),
+            ("Print/Send", &["&Print", "Attach as PDF"]),
+            ("Credit Memo", &["Dimensions", "Attachments", "Co&mments", "Customer"]),
         ],
     );
     actions(
@@ -4456,8 +4477,8 @@ pub fn extend(m: &mut Metadata) {
         "posted-sales-invoice",
         &[
             ("Process", &["Find entries..."]),
-            ("Print/Send", &["&Print"]),
-            ("Invoice", &["Dimensions", "Co&mments", "Customer"]),
+            ("Print/Send", &["&Print", "Attach as PDF"]),
+            ("Invoice", &["Dimensions", "Co&mments", "Attachments", "Customer"]),
         ],
     );
     actions(
@@ -4507,7 +4528,7 @@ pub fn extend(m: &mut Metadata) {
             ("Process", &["P&ost", "Preview Posting", "Post and &Print", "Post and New", "Re&lease", "Re&open"]),
             ("Prepare", &["Copy Document"]),
             ("Request Approval", &["Send A&pproval Request", "Cancel Approval Re&quest"]),
-            ("Credit Memo", &["Statistics", "Dimensions", "Approvals", "Co&mments", "Vendor"]),
+            ("Credit Memo", &["Statistics", "Dimensions", "Attachments", "Approvals", "Co&mments", "Vendor"]),
         ],
     );
     actions(
@@ -4533,7 +4554,7 @@ pub fn extend(m: &mut Metadata) {
             ("Process", &["P&ost", "Preview Posting", "Post and New", "Post and &Print", "Re&lease", "Re&open"]),
             ("Prepare", &["Copy Document"]),
             ("Request Approval", &["Send A&pproval Request", "Cancel Approval Re&quest"]),
-            ("Invoice", &["Dimensions", "Statistics", "Co&mments", "Approvals", "Vendor"]),
+            ("Invoice", &["Dimensions", "Statistics", "Co&mments", "Attachments", "Approvals", "Vendor"]),
         ],
     );
     actions(
@@ -4565,9 +4586,9 @@ pub fn extend(m: &mut Metadata) {
         &[
             ("Process", &["P&ost", "Preview Posting", "Post and &Print", "Post and New", "Re&lease", "Re&open"]),
             ("Prepare", &["Copy Document"]),
-            ("Print/Send", &["&Print"]),
+            ("Print/Send", &["&Print", "Attach as PDF"]),
             ("Request Approval", &["Send A&pproval Request", "Cancel Approval Re&quest"]),
-            ("Order", &["Dimensions", "Statistics", "Co&mments", "Approvals", "Vendor", "Receipts"]),
+            ("Order", &["Dimensions", "Statistics", "Co&mments", "Attachments", "Approvals", "Vendor", "Receipts"]),
         ],
     );
     actions(
@@ -4594,9 +4615,9 @@ pub fn extend(m: &mut Metadata) {
         &[
             ("Process", &["Make &Order", "Re&lease", "Re&open"]),
             ("Prepare", &["Copy Document"]),
-            ("Print/Send", &["&Print"]),
+            ("Print/Send", &["&Print", "Attach as PDF"]),
             ("Request Approval", &["Send A&pproval Request", "Cancel Approval Re&quest"]),
-            ("Quote", &["Dimensions", "Statistics", "Co&mments", "Approvals", "Vendor"]),
+            ("Quote", &["Dimensions", "Statistics", "Attachments", "Co&mments", "Approvals", "Vendor"]),
         ],
     );
     actions(
@@ -4644,7 +4665,7 @@ pub fn extend(m: &mut Metadata) {
             ("Process", &["P&ost", "Preview Posting", "Re&lease", "Re&open"]),
             ("Prepare", &["Copy Document"]),
             ("Request Approval", &["Send A&pproval Request", "Cancel Approval Re&quest"]),
-            ("Credit Memo", &["Statistics", "Dimensions", "Approvals", "Co&mments", "Customer"]),
+            ("Credit Memo", &["Statistics", "Dimensions", "Attachments", "Approvals", "Co&mments", "Customer"]),
         ],
     );
     actions(
@@ -4671,7 +4692,7 @@ pub fn extend(m: &mut Metadata) {
             ("Prepare", &["Copy Document"]),
             ("Print/Send", &["Pro Forma Invoice"]),
             ("Request Approval", &["Send A&pproval Request", "Cancel Approval Re&quest"]),
-            ("Invoice", &["Dimensions", "Statistics", "Co&mments", "Approvals", "Customer"]),
+            ("Invoice", &["Dimensions", "Statistics", "Co&mments", "Attachments", "Approvals", "Customer"]),
         ],
     );
     actions(
@@ -4704,9 +4725,9 @@ pub fn extend(m: &mut Metadata) {
         &[
             ("Process", &["P&ost", "Preview Posting", "Post and New", "Re&lease", "Re&open"]),
             ("Prepare", &["Copy Document"]),
-            ("Print/Send", &["Print Confirmation", "Work Order", "Pro Forma Invoice"]),
+            ("Print/Send", &["Print Confirmation", "Attach as PDF", "Work Order", "Pro Forma Invoice"]),
             ("Request Approval", &["Send A&pproval Request", "Cancel Approval Re&quest"]),
-            ("Order", &["Dimensions", "Statistics", "Co&mments", "Approvals", "Customer", "S&hipments"]),
+            ("Order", &["Dimensions", "Statistics", "Co&mments", "Attachments", "Approvals", "Customer", "S&hipments"]),
         ],
     );
     actions(
@@ -4733,9 +4754,9 @@ pub fn extend(m: &mut Metadata) {
         &[
             ("Process", &["Make &Order", "Re&lease", "Re&open"]),
             ("Prepare", &["Copy Document"]),
-            ("Print/Send", &["&Print"]),
+            ("Print/Send", &["&Print", "Attach as PDF"]),
             ("Request Approval", &["Send A&pproval Request", "Cancel Approval Re&quest"]),
-            ("Quote", &["Dimensions", "Statistics", "Co&mments", "Approvals", "Customer"]),
+            ("Quote", &["Dimensions", "Statistics", "Co&mments", "Attachments", "Approvals", "Customer"]),
         ],
     );
     actions(
@@ -4829,7 +4850,7 @@ pub fn extend(m: &mut Metadata) {
         &[
             ("Process", &["Pay Vendor"]),
             ("New Document", &["Purchase Invoice", "Purchase Order", "Purchase Credit Memo"]),
-            ("Vendor", &["Ledger E&ntries", "Dimensions", "Statistics", "Co&mments"]),
+            ("Vendor", &["Ledger E&ntries", "Dimensions", "Statistics", "Attachments", "Co&mments"]),
         ],
     );
     categories(

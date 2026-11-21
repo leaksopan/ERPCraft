@@ -30,7 +30,7 @@ impl Value {
     /// The empty value of a field type (AL's `Init` values).
     pub fn default_for(ty: &FieldType) -> Self {
         match ty {
-            FieldType::Code(_) | FieldType::Text(_) => Value::Text(String::new()),
+            FieldType::Code(_) | FieldType::Text(_) | FieldType::Blob => Value::Text(String::new()),
             FieldType::Option(opts) => Value::Text(opts.first().cloned().unwrap_or_default()),
             FieldType::Decimal => Value::Dec(Decimal::ZERO),
             FieldType::Integer => Value::Int(0),
@@ -113,6 +113,11 @@ impl Value {
                 check_len(&s, *len)?;
                 Ok(Value::Text(s))
             }
+            FieldType::Blob => match v {
+                Json::Null => Ok(Value::Text(String::new())),
+                Json::String(s) => Ok(Value::Text(s.clone())),
+                other => Err(format!("{other} is not file content (base64 text)")),
+            },
             FieldType::Decimal => match v {
                 Json::Null => Ok(Value::Dec(Decimal::ZERO)),
                 Json::Number(n) => {

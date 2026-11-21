@@ -655,7 +655,7 @@ fn columns_menu(app: &mut ErpApp, ui: &mut Ui, page: &PageDef, table: &TableDef)
         ui.set_min_width(240.0);
         ui.label(RichText::new("Columns").font(theme::bold(theme::BODY)));
         egui::ScrollArea::vertical().max_height(380.0).show(ui, |ui| {
-            for f in &table.fields {
+            for f in table.fields.iter().filter(|f| f.ty != erpcraft_engine::meta::FieldType::Blob) {
                 let mut on = next.contains(&f.name);
                 if ui.checkbox(&mut on, &f.caption).changed() {
                     if on {

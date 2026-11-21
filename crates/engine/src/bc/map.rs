@@ -153,6 +153,8 @@ pub fn to_field(f: &FieldDef, v: &Json) -> Option<Json> {
             };
             found.map(|o| Json::String(o.clone()))
         }
+        // File content isn't part of the API entities ERPCraft syncs.
+        FieldType::Blob => None,
         FieldType::Decimal => match v {
             Json::Number(_) => Some(v.clone()),
             Json::String(s) if s.trim().parse::<f64>().is_ok() => Some(v.clone()),
@@ -202,7 +204,7 @@ pub fn to_api(entity: Entity, t: &TableDef, r: &Record) -> Map<String, Json> {
             FieldType::Decimal => v.as_dec().to_f64().and_then(serde_json::Number::from_f64).map_or(Json::from(0), Json::Number),
             FieldType::Boolean => Json::Bool(v.as_bool()),
             FieldType::Code(_) | FieldType::Text(_) => Json::String(v.as_str().to_string()),
-            FieldType::Integer | FieldType::Date => continue,
+            FieldType::Integer | FieldType::Date | FieldType::Blob => continue,
         };
         out.insert((*api).to_string(), j);
     }

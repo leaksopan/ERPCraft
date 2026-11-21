@@ -506,8 +506,6 @@ pub struct AlTableField {
 
 #[derive(Debug, Default)]
 pub struct AlTable {
-    pub id: u32,
-    pub name: String,
     pub fields: Vec<AlTableField>,
     /// `DrillDownPageId` (or `LookupPageId`): the page a FlowField over this table drills into.
     pub drilldown_page: Option<String>,
@@ -565,9 +563,9 @@ pub fn calc_formula(v: &str) -> Option<CalcFormula> {
 pub fn al_table(src: &str) -> Option<AlTable> {
     let root = parse(src);
     let table = object(&root, "table")?;
-    let (id, name) = object_id(&table.head)?;
+    object_id(&table.head)?;
     let page = |k: &str| table.prop(k).map(|v| unquote(v.trim().trim_start_matches("Page").trim_start_matches("page")));
-    let mut t = AlTable { id, name, fields: Vec::new(), drilldown_page: page("DrillDownPageId").or_else(|| page("LookupPageId")) };
+    let mut t = AlTable { fields: Vec::new(), drilldown_page: page("DrillDownPageId").or_else(|| page("LookupPageId")) };
     for f in table.kids.iter().filter(|k| k.kind().0 == "fields").flat_map(|k| k.kids.iter()) {
         let (kind, args) = f.kind();
         if kind != "field" {
@@ -761,7 +759,7 @@ page 21 "Customer Card"
             }"#,
         )
         .unwrap();
-        assert_eq!((t.id, t.name.as_str(), t.fields.len()), (18, "Customer", 6));
+        assert_eq!(t.fields.len(), 6);
         assert_eq!(t.fields[1].ty, r#"Enum "Customer Blocked""#);
         assert_eq!(t.fields[1].tooltip, "Specifies it's blocked.");
         assert_eq!(t.fields[2].class, FieldClass::FlowField);

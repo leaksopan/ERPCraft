@@ -19,6 +19,7 @@ mod demo;
 mod documents;
 pub mod bc;
 pub mod approvals;
+pub mod attachments;
 pub mod dimensions;
 pub mod doc_tools;
 pub mod item_tools;

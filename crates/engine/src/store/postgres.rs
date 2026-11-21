@@ -55,7 +55,7 @@ fn conflict(t: &TableDef) -> EngineError {
 
 fn sql_type(ty: &FieldType) -> &'static str {
     match ty {
-        FieldType::Code(_) | FieldType::Text(_) | FieldType::Option(_) => "text NOT NULL DEFAULT ''",
+        FieldType::Code(_) | FieldType::Text(_) | FieldType::Option(_) | FieldType::Blob => "text NOT NULL DEFAULT ''",
         FieldType::Decimal => "numeric NOT NULL DEFAULT 0",
         FieldType::Integer => "bigint NOT NULL DEFAULT 0",
         FieldType::Boolean => "boolean NOT NULL DEFAULT false",
@@ -66,7 +66,7 @@ fn sql_type(ty: &FieldType) -> &'static str {
 /// Parameters are bound as text and cast in SQL, so one code path serves every type.
 fn cast(ty: &FieldType) -> &'static str {
     match ty {
-        FieldType::Code(_) | FieldType::Text(_) | FieldType::Option(_) => "::text",
+        FieldType::Code(_) | FieldType::Text(_) | FieldType::Option(_) | FieldType::Blob => "::text",
         FieldType::Decimal => "::text::numeric",
         FieldType::Integer => "::text::bigint",
         FieldType::Boolean => "::text::boolean",

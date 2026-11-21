@@ -14,6 +14,8 @@ pub enum FieldType {
     Boolean,
     /// AL `Option` / `Enum`: the captions, the first being the default.
     Option(Vec<String>),
+    /// AL `Blob` / `Media`: file content, kept as base64 text; never shown or edited as a value.
+    Blob,
 }
 
 impl FieldType {
@@ -34,6 +36,7 @@ impl FieldType {
             FieldType::Date => "Date".into(),
             FieldType::Boolean => "Boolean".into(),
             FieldType::Option(_) => "Option".into(),
+            FieldType::Blob => "Blob".into(),
         }
     }
 }

@@ -27,7 +27,7 @@ Each target is checked by a script or a screenshot, not by eye.
 | 3 | Every W1 app's pages and reports exist (or are decided out) | inventory, W1 apps section | 0 / ~1,700 pages |
 | 4 | Every page we have matches BC's structure | `cargo run -p bc-parity -- --summary --check` exits 0 | ✅ blocking 0 |
 | 5 | Every field BC shows on our pages exists | "needs table field" = 0 | 67 |
-| 6 | Every action BC offers on our pages exists and works | "actions missing" = 0 | 1,230 |
+| 6 | Every action BC offers on our pages exists and works | "actions missing" = 0 | 1,238 |
 | 7 | Every page looks and behaves like BC | [visual checklist](#visual-parity-checklist) | 7 pages |
 | 8 | Every function has tests | `cargo test --workspace` | ✅ 27 suites |
 
@@ -83,7 +83,7 @@ The order follows impact for Auto Craft (a workshop and auto-parts business): mo
 - [x] **Financial reports** (account schedules): row and column definitions, Balance Sheet / Income Statement as BC builds them (budgets, analysis views, dimension filters, Excel export to do)
 - [ ] G/L budgets, analysis views, accounting periods, Close Income Statement and year end (accounting periods, Create / Close Year, Close Income Statement, G/L budgets and budget columns done; analysis views, budget matrix to do)
 - [ ] **Currencies**: exchange rates, currency on documents and journals, adjust exchange rates, realized and unrealized gains (done for customers and vendors; bank accounts in a currency, additional reporting currency, re-pricing lines when the currency changes to do)
-- [ ] VAT: statements, VAT returns, VAT entries, VAT rate change, VAT registration numbers
+- [ ] VAT: statements, VAT returns, VAT entries, VAT rate change, VAT registration numbers (VAT entries, statements with preview, Calc. and Post VAT Settlement done; VAT returns, rate change, unrealized VAT, reversing VAT entries to do)
 - [ ] **Recurring journals**, allocations, allocation accounts, deferrals with Deferral Schedule
 - [ ] **Bank account reconciliation**, payment reconciliation journal, bank statement import, check printing
 - [ ] **Reminders and finance charge memos**, customer statements

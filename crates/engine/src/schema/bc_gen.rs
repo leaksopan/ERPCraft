@@ -1036,8 +1036,8 @@ pub fn extend(m: &mut Metadata) {
         m,
         "G/L Register",
         vec![
-            F::integer("From VAT Entry No.").tooltip("Specifies the first VAT entry number in the register."),
-            F::integer("To VAT Entry No.").tooltip("Specifies the last entry number in the register."),
+            F::integer("From VAT Entry No.").relation("VAT Entry").tooltip("Specifies the first VAT entry number in the register."),
+            F::integer("To VAT Entry No.").relation("VAT Entry").tooltip("Specifies the last entry number in the register."),
         ],
     );
     relabel(
@@ -2783,6 +2783,50 @@ pub fn extend(m: &mut Metadata) {
     );
     relabel(
         m,
+        "VAT Entry",
+        &[
+            ("Entry No.", "Entry No.", "Specifies the number of the entry, as assigned from the specified number series when the entry was created.", 0),
+            ("Gen. Bus. Posting Group", "Gen. Bus. Posting Group", "Specifies the vendor's or customer's trade type to link transactions made for this business partner with the appropriate general ledger account according to the general posting setup.", 0),
+            ("Gen. Prod. Posting Group", "Gen. Prod. Posting Group", "Specifies the item's product type to link transactions made for this item with the appropriate general ledger account according to the general posting setup.", 0),
+            ("Posting Date", "Posting Date", "Specifies the VAT entry's posting date.", 0),
+            ("Document No.", "Document No.", "Specifies the document number on the VAT entry.", 0),
+            ("Document Type", "Document Type", "Specifies the document type that the VAT entry belongs to.", 0),
+            ("Type", "Type", "Specifies the type of the VAT entry.", 0),
+            ("Base", "Base", "Specifies the amount that the VAT amount (the amount shown in the Amount field) is calculated from.", 1),
+            ("Amount", "Amount", "Specifies the amount of the VAT entry in LCY.", 1),
+            ("VAT Calculation Type", "VAT Calculation Type", "Specifies how VAT will be calculated for purchases or sales of items with this particular combination of VAT business posting group and VAT product posting group.", 0),
+            ("Bill-to/Pay-to No.", "Bill-to/Pay-to No.", "Specifies the number of the bill-to customer or pay-to vendor that the entry is linked to.", 0),
+            ("Closed by Entry No.", "Closed by Entry No.", "Specifies the number of the VAT entry that has closed the entry, if the VAT entry was closed with the Calc. and Post VAT Settlement batch job.", 0),
+            ("Closed", "Closed", "Specifies whether the VAT entry has been closed by the Calc. and Post VAT Settlement batch job.", 0),
+            ("Country/Region Code", "Country/Region Code", "Specifies the country/region of the address.", 0),
+            ("Transaction No.", "Transaction No.", "Specifies the transaction number that groups related G/L entries from the same posting.", 0),
+            ("VAT Bus. Posting Group", "VAT Bus. Posting Group", "Specifies the VAT specification of the involved customer or vendor to link transactions made for this record with the appropriate general ledger account according to the VAT posting setup.", 0),
+            ("VAT Prod. Posting Group", "VAT Prod. Posting Group", "Specifies the VAT specification of the involved item or resource to link transactions made for this record with the appropriate general ledger account according to the VAT posting setup.", 0),
+            ("Document Date", "Document Date", "Specifies the date when the related document was created.", 0),
+            ("VAT Registration No.", "VAT Registration No.", "Specifies the VAT registration number of the customer or vendor that the entry is linked to.", 0),
+            ("VAT Reporting Date", "VAT Date", "Specifies the VAT date on the VAT entry. This is either the date that the document was created or posted, depending on your setting on the General Ledger Setup page.", 0),
+        ],
+    );
+    fields(
+        m,
+        "VAT Entry",
+        vec![
+            F::boolean("EU 3-Party Trade").tooltip("Specifies if the transaction is related to trade with a third party within the EU."),
+            F::text("Internal Ref. No.", 30).read_only().tooltip("Specifies the internal reference number for the line."),
+            F::decimal("Unrealized Amount").read_only().auto_format(1).tooltip("Specifies the unrealized VAT amount for this line if you use unrealized VAT."),
+            F::decimal("Unrealized Base").read_only().auto_format(1).tooltip("Specifies the unrealized base amount if you use unrealized VAT."),
+            F::decimal("Remaining Unrealized Amount").read_only().auto_format(1).tooltip("Specifies the amount that remains unrealized in the VAT entry."),
+            F::decimal("Remaining Unrealized Base").read_only().auto_format(1).tooltip("Specifies the amount of base that remains unrealized in the VAT entry."),
+            F::integer("G/L Register No.").relation("G/L Register").read_only().tooltip("Specifies the G/L register number that groups related G/L entries from the same posting."),
+            F::decimal("Non-Deductible VAT Base").read_only().auto_format(1).tooltip("Specifies the amount of VAT that is not deducted due to the type of goods or services purchased."),
+            F::decimal("Non-Deductible VAT Amount").read_only().auto_format(1).tooltip("Specifies the amount of the transaction for which VAT is not applied, due to the type of goods or services purchased."),
+            F::decimal("Non-Deductible VAT Base ACY").read_only().auto_format(1).tooltip("Specifies the amount of VAT that is not deducted due to the type of goods or services purchased. The amount is in the additional reporting currency."),
+            F::decimal("Non-Deductible VAT Amount ACY").read_only().auto_format(1).tooltip("Specifies the amount of the transaction for which VAT is not applied, due to the type of goods or services purchased. The amount is in the additional reporting currency."),
+            F::decimal("Non-Deductible VAT Diff.").caption("Non-Deductible VAT Difference").read_only().auto_format(1).tooltip("Specifies the difference between the calculated Non-Deductible VAT amount and a Non-Deductible VAT amount that you have entered manually."),
+        ],
+    );
+    relabel(
+        m,
         "VAT Posting Setup",
         &[
             ("VAT Bus. Posting Group", "VAT Bus. Posting Group", "Specifies the VAT specification of the involved customer or vendor to link transactions made for this record with the appropriate general ledger account according to the VAT posting setup.", 0),
@@ -2820,6 +2864,42 @@ pub fn extend(m: &mut Metadata) {
         &[
             ("Code", "Code", "Specifies a code for the posting group the determines how to calculate VAT for items or resources that you purchase or sell.", 0),
             ("Description", "Description", "Specifies a description of the posting group the determines how to calculate VAT for items or resources that you purchase or sell.", 0),
+        ],
+    );
+    relabel(
+        m,
+        "VAT Statement Line",
+        &[
+            ("Row No.", "Row No.", "Specifies a number that identifies the line.", 0),
+            ("Description", "Description", "Specifies a description of the VAT statement line.", 0),
+            ("Type", "Type", "Specifies what the VAT statement line will include.", 0),
+            ("Account Totaling", "Account Totaling", "Specifies an account interval or a series of account numbers.", 0),
+            ("Gen. Posting Type", "Gen. Posting Type", "Specifies the type of transaction.", 0),
+            ("VAT Bus. Posting Group", "VAT Bus. Posting Group", "Specifies the VAT specification of the involved customer or vendor to link transactions made for this record with the appropriate general ledger account according to the VAT posting setup.", 0),
+            ("VAT Prod. Posting Group", "VAT Prod. Posting Group", "Specifies the VAT specification of the involved item or resource to link transactions made for this record with the appropriate general ledger account according to the VAT posting setup.", 0),
+            ("Row Totaling", "Row Totaling", "Specifies a row-number interval or a series of row numbers.", 0),
+            ("Amount Type", "Amount Type", "Specifies if the VAT statement line shows the VAT amounts, or the base amounts on which the VAT is calculated.", 0),
+            ("Calculate with", "Calculate with", "Specifies whether amounts on the VAT statement will be calculated with their original sign or with the sign reversed.", 0),
+            ("Print", "Print", "Specifies whether the VAT statement line will be printed on the report that contains the finished VAT statement.", 0),
+            ("Print with", "Print with", "Specifies whether amounts on the VAT statement will be printed with their original sign or with the sign reversed.", 0),
+            ("New Page", "New Page", "Specifies whether a new page should begin immediately after this line when the VAT statement is printed. To start a new page after this line, place a check mark in the field.", 0),
+            ("Box No.", "Box No.", "Specifies the number on the box that the VAT statement applies to.", 0),
+        ],
+    );
+    relabel(
+        m,
+        "VAT Statement Name",
+        &[
+            ("Name", "Name", "Specifies the VAT statement name.", 0),
+            ("Description", "Description", "Specifies a description of the VAT statement name.", 0),
+        ],
+    );
+    relabel(
+        m,
+        "VAT Statement Template",
+        &[
+            ("Name", "Name", "Specifies the name of the VAT statement template you are about to create.", 0),
+            ("Description", "Description", "Specifies a description of the VAT statement template.", 0),
         ],
     );
     relabel(
@@ -4064,8 +4144,12 @@ pub fn extend(m: &mut Metadata) {
     columns(m, "user-setup", &["User ID", "Allow Posting From", "Allow Posting To", "Allow VAT Date From", "Allow VAT Date To", "Allow Deferral Posting From", "Allow Deferral Posting To", "Sales Invoice Posting Policy", "Purch. Invoice Posting Policy", "Register Time", "Salespers./Purch. Code", "Sales Resp. Ctr. Filter", "Purchase Resp. Ctr. Filter", "Time Sheet Admin.", "E-Mail", "Phone No."]);
     columns(m, "users", &["User Name", "Full Name", "State"]);
     columns(m, "vat-bus-posting-groups", &["Code", "Description"]);
+    columns(m, "vat-entries", &["Entry No.", "G/L Register No.", "Transaction No.", "VAT Bus. Posting Group", "VAT Prod. Posting Group", "VAT Reporting Date", "Posting Date", "Document No.", "Document Type", "Type", "Base", "Amount", "Non-Deductible VAT Base", "Non-Deductible VAT Amount", "Unrealized Amount", "Unrealized Base", "Remaining Unrealized Amount", "Remaining Unrealized Base", "Non-Deductible VAT Base ACY", "Non-Deductible VAT Amount ACY", "Non-Deductible VAT Diff.", "VAT Calculation Type", "Bill-to/Pay-to No.", "Country/Region Code", "EU 3-Party Trade", "Closed", "Closed by Entry No.", "Internal Ref. No."]);
     columns(m, "vat-posting-setup", &["VAT Bus. Posting Group", "VAT Prod. Posting Group", "Description", "Blocked", "VAT Identifier", "VAT %", "Allow Non-Deductible VAT", "Non-Deductible VAT %", "VAT Calculation Type", "Unrealized VAT Type", "Adjust for Payment Discount", "Sales VAT Account", "Sales VAT Unreal. Account", "Purchase VAT Account", "Purch. VAT Unreal. Account", "Non-Ded. Purchase VAT Account", "Reverse Chrg. VAT Acc.", "Reverse Chrg. VAT Unreal. Acc.", "VAT Clause Code", "EU Service", "Tax Category"]);
     columns(m, "vat-prod-posting-groups", &["Code", "Description"]);
+    columns(m, "vat-statement", &["Row No.", "Description", "Box No.", "Type", "Account Totaling", "Gen. Posting Type", "VAT Bus. Posting Group", "VAT Prod. Posting Group", "Amount Type", "Row Totaling", "Calculate with", "Print", "Print with", "New Page"]);
+    columns(m, "vat-statement-names", &["Name", "Description"]);
+    columns(m, "vat-statement-templates", &["Name", "Description"]);
     layout(
         m,
         "vendor-card",
@@ -4257,6 +4341,7 @@ pub fn extend(m: &mut Metadata) {
             Nav { caption: "VAT Product Posting Groups", page: "vat-prod-posting-groups", link: &[], shortcut: "" },
             Nav { caption: "Bank Account Posting Groups", page: "bank-posting-groups", link: &[], shortcut: "" },
             Nav { caption: "General Journal Templates", page: "general-journal-templates", link: &[], shortcut: "" },
+            Nav { caption: "VAT Statement Templates", page: "vat-statement-templates", link: &[], shortcut: "" },
         ],
     );
     actions(
@@ -4486,6 +4571,13 @@ pub fn extend(m: &mut Metadata) {
         "vat-prod-posting-groups",
         &[
             Nav { caption: "&Setup", page: "vat-posting-setup", link: &[("VAT Prod. Posting Group", "Code")], shortcut: "" },
+        ],
+    );
+    actions(
+        m,
+        "vat-statement-templates",
+        &[
+            Nav { caption: "Statement Names", page: "vat-statement-names", link: &[("Statement Template Name", "Name")], shortcut: "" },
         ],
     );
     actions(
@@ -4734,7 +4826,7 @@ pub fn extend(m: &mut Metadata) {
         &[
             ("Posting", &["General Posting Setup", "Gen. Business Posting Groups", "Gen. Product Posting Groups"]),
             ("General", &["Accounting Periods", "Dimensions", "User Setup"]),
-            ("VAT", &["VAT Posting Setup", "VAT Business Posting Groups", "VAT Product Posting Groups"]),
+            ("VAT", &["VAT Statement Templates", "VAT Posting Setup", "VAT Business Posting Groups", "VAT Product Posting Groups"]),
             ("Bank", &["Bank Account Posting Groups"]),
             ("Journal Templates", &["General Journal Templates"]),
         ],
@@ -5142,6 +5234,20 @@ pub fn extend(m: &mut Metadata) {
         "vat-prod-posting-groups",
         &[
             ("Process", &["&Setup"]),
+        ],
+    );
+    categories(
+        m,
+        "vat-statement",
+        &[
+            ("Process", &["P&review"]),
+        ],
+    );
+    categories(
+        m,
+        "vat-statement-names",
+        &[
+            ("Process", &["Edit VAT Statement"]),
         ],
     );
     categories(

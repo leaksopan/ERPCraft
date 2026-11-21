@@ -136,6 +136,7 @@ pub fn setup(ctx: &mut Ctx) -> Result<()> {
         ("20200", "Accounts Payable", "Posting", "Balance Sheet", "Liabilities", ""),
         ("20300", "Sales VAT (PPN Keluaran)", "Posting", "Balance Sheet", "Liabilities", ""),
         ("20400", "Deferred Grant Income (Hibah)", "Posting", "Balance Sheet", "Liabilities", ""),
+        ("20500", "VAT Settlement", "Posting", "Balance Sheet", "Liabilities", ""),
         ("20999", "Total Liabilities", "End-Total", "Balance Sheet", "Liabilities", "20100..20999"),
         ("30100", "Equity", "Begin-Total", "Balance Sheet", "Equity", ""),
         ("30200", "Owner's Capital", "Posting", "Balance Sheet", "Equity", ""),
@@ -419,7 +420,7 @@ fn demo_financial_reports(ctx: &mut Ctx) -> Result<()> {
         ("19", "Total Assets", "Formula", "11..15", false, true, 0, ""),
         ("20", "Liabilities", "Posting Accounts", "", false, true, 0, ""),
         ("21", "Accounts Payable", "Posting Accounts", "20200", true, false, 1, ""),
-        ("22", "VAT Payable", "Posting Accounts", "20300", true, false, 1, ""),
+        ("22", "VAT Payable", "Posting Accounts", "20300|20500", true, false, 1, ""),
         ("23", "Deferred Income", "Posting Accounts", "20400", true, false, 1, ""),
         ("29", "Total Liabilities", "Formula", "21..23", false, true, 0, ""),
         ("30", "Equity", "Posting Accounts", "", false, true, 0, ""),
@@ -499,6 +500,28 @@ fn demo_financial_reports(ctx: &mut Ctx) -> Result<()> {
                 raw(ctx, "G/L Budget Entry", json!({"Entry No.": entry, "Budget Name": "2026", "G/L Account No.": account, "Date": d.to_string(), "Amount": monthly, "Description": "Budget 2026"}))?;
             }
         }
+    }
+    // A VAT statement: sales and purchase VAT and their bases, and the VAT to pay.
+    raw(ctx, "VAT Statement Template", json!({"Name": "VAT", "Description": "VAT Statement"}))?;
+    raw(ctx, "VAT Statement Name", json!({"Statement Template Name": "VAT", "Name": "DEFAULT", "Description": "Monthly VAT return (PPN)"}))?;
+    // (row, description, type, posting type, amount type, row totaling, calculate opposite, print opposite, box)
+    let vat_rows: [(&str, &str, &str, &str, &str, &str, bool, bool, &str); 6] = [
+        ("10", "Output VAT (PPN Keluaran)", "VAT Entry Totaling", "Sale", "Amount", "", true, false, "1"),
+        ("20", "Input VAT (PPN Masukan)", "VAT Entry Totaling", "Purchase", "Amount", "", true, true, "2"),
+        ("30", "VAT to Pay", "Row Totaling", "", "", "10..20", false, false, "3"),
+        ("40", "Taxable Sales", "VAT Entry Totaling", "Sale", "Base", "", true, false, "4"),
+        ("50", "Taxable Purchases", "VAT Entry Totaling", "Purchase", "Base", "", false, false, "5"),
+        ("60", "Settled VAT", "VAT Entry Totaling", "Settlement", "Amount", "", false, false, ""),
+    ];
+    for (i, (row, desc, ty, posting, amount_type, totaling, calc_opp, print_opp, boxno)) in vat_rows.iter().enumerate() {
+        raw(
+            ctx,
+            "VAT Statement Line",
+            json!({"Statement Template Name": "VAT", "Statement Name": "DEFAULT", "Line No.": (i as i64 + 1) * 10000, "Row No.": row, "Description": desc,
+                   "Type": ty, "Gen. Posting Type": posting, "Amount Type": amount_type, "Row Totaling": totaling,
+                   "Calculate with": if *calc_opp { "Opposite Sign" } else { "Sign" }, "Print": true,
+                   "Print with": if *print_opp { "Opposite Sign" } else { "Sign" }, "Box No.": boxno}),
+        )?;
     }
     raw(ctx, FINANCIAL_REPORT, json!({"Name": "BALANCE", "Description": "Balance Sheet", "Financial Report Row Group": "BALANCE", "Financial Report Column Group": "BALANCE"}))?;
     raw(ctx, FINANCIAL_REPORT, json!({"Name": "INCOME", "Description": "Income Statement", "Financial Report Row Group": "INCOME", "Financial Report Column Group": "PERIOD"}))?;

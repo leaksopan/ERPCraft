@@ -59,6 +59,8 @@ pub fn register(m: &mut Metadata) {
                     L::new("Vendor Ledger Entries", "vendor-ledger-entries"),
                     L::new("Currencies", "currencies"),
                     L::new("VAT Posting Setup", "vat-posting-setup"),
+                    L::new("VAT Entries", "vat-entries"),
+                    L::new("VAT Statements", "vat-statement-names"),
                     L::new("General Posting Setup", "general-posting-setup"),
                 ],
             ),

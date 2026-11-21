@@ -425,6 +425,7 @@ pub fn post_document(ctx: &mut Ctx, side: &Side, doc_type: &str, no: &str, mode:
         let mut fa_specs: Vec<crate::fa::FaEntrySpec> = Vec::new();
         let (mut total_amount, mut total_incl) = (Decimal::ZERO, Decimal::ZERO);
         let (mut total_amount_lcy, mut total_incl_lcy) = (Decimal::ZERO, Decimal::ZERO);
+        let mut vat_specs: Vec<crate::vat::VatSpec> = Vec::new();
 
         for l in lines.iter().filter(|l| !to_invoice(l).is_zero()) {
             let qty = to_invoice(l);
@@ -472,6 +473,18 @@ pub fn post_document(ctx: &mut Ctx, side: &Side, doc_type: &str, no: &str, mode:
                 let vt = ctx.table(VAT_POSTING_SETUP)?;
                 refuse!("The VAT Posting Setup does not exist. Identification fields and values: {}", crate::db::key_text(vt, &vat_key));
             }
+            crate::vat::add(
+                &mut vat_specs,
+                crate::vat::VatSpec {
+                    gen_bus: l.str("Gen. Bus. Posting Group").to_string(),
+                    gen_prod: l.str("Gen. Prod. Posting Group").to_string(),
+                    vat_bus: header.str("VAT Bus. Posting Group").to_string(),
+                    vat_prod: l.str("VAT Prod. Posting Group").to_string(),
+                    vat_type: if side.sales { "Sale" } else { "Purchase" },
+                    base: -g * amount,
+                    amount: -g * vat,
+                },
+            );
             if let Some(it) = &inventory_item {
                 // Invoices and credit memos move stock now; orders moved it when shipping.
                 if !is_order {
@@ -522,6 +535,21 @@ pub fn post_document(ctx: &mut Ctx, side: &Side, doc_type: &str, no: &str, mode:
         for spec in &fa_specs {
             crate::fa::post_entry(ctx, &txn, spec, posting_date, ledger_doc_type, &posted_no, &ext_doc_no)?;
         }
+        crate::vat::post(
+            ctx,
+            &txn,
+            &crate::vat::VatDoc {
+                posting_date,
+                document_date: header.get("Document Date").as_date(),
+                doc_type: ledger_doc_type,
+                doc_no: &posted_no,
+                ext_doc_no: &ext_doc_no,
+                bill_to: &bill_no,
+                vat_reg_no: header.str("VAT Registration No."),
+                country: header.str(&format!("{}Country/Region Code", side.addr)),
+            },
+            &vat_specs,
+        )?;
         let due = header.get("Due Date").as_date();
         let currency = header.str("Currency Code").to_string();
         let person = header.str(side.person).to_string();

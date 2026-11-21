@@ -314,16 +314,21 @@ pub fn toggle(ui: &mut Ui, on: &mut bool) -> egui::Response {
     r
 }
 
-/// A FactBox: bold caption and label / value rows (amounts in teal, as BC drill-downs).
 /// A FactBox: caption, then (label, value, numeric, drills down) rows. Returns the row whose value
 /// was clicked when it drills down.
 pub fn factbox(ui: &mut Ui, caption: &str, rows: &[(String, String, bool, bool)]) -> Option<usize> {
     ui.label(RichText::new(caption).font(theme::bold(15.0)).color(TOKENS.text));
     ui.add_space(6.0);
     let mut clicked = None;
-    egui::Grid::new(("factbox", caption)).num_columns(2).spacing(vec2(12.0, 7.0)).min_col_width(110.0).show(ui, |ui| {
-        for (i, (label, value, numeric, drill)) in rows.iter().enumerate() {
-            ui.label(RichText::new(label).color(TOKENS.text_dim));
+    // Each row spans the pane: the caption on the left (cut short if it must), the value right-
+    // aligned at the pane's edge, so long captions never push the value out of view.
+    let width = ui.available_width();
+    for (i, (label, value, numeric, drill)) in rows.iter().enumerate() {
+        ui.allocate_ui_with_layout(vec2(width, 26.0), Layout::left_to_right(Align::Center), |ui| {
+            let value_w = (crate::widgets::text_width(ui, value) + 8.0).min(width * 0.55);
+            ui.allocate_ui_with_layout(vec2((width - value_w - 8.0).max(40.0), 22.0), Layout::left_to_right(Align::Center), |ui| {
+                ui.add(egui::Label::new(RichText::new(label).color(TOKENS.text_dim)).truncate());
+            });
             ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
                 let t = RichText::new(value);
                 if *drill {
@@ -338,11 +343,16 @@ pub fn factbox(ui: &mut Ui, caption: &str, rows: &[(String, String, bool, bool)]
                     ui.label(if *numeric { t.color(TOKENS.accent) } else { t.color(TOKENS.text) });
                 }
             });
-            ui.end_row();
-        }
-    });
+        });
+        ui.add_space(4.0);
+    }
     ui.add_space(14.0);
     clicked
+}
+
+/// Width of `text` in the body font.
+pub fn text_width(ui: &Ui, text: &str) -> f32 {
+    ui.painter().layout_no_wrap(text.to_string(), egui::FontId::proportional(theme::BODY), TOKENS.text).size().x
 }
 
 /// Parses BC-style shortcut text ("F9", "Ctrl+F7") and reports whether it was pressed this frame.

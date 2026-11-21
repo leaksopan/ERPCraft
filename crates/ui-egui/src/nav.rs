@@ -40,6 +40,9 @@ pub struct CardState {
     pub selected_line: Option<Key>,
     /// The line cell being edited (column index), like BC's current cell in an editable part.
     pub line_cell: Option<usize>,
+    /// The cell of the first empty row being typed in: the line is created only when a value is
+    /// entered there (BC doesn't insert a line for a click).
+    pub new_line_cell: Option<usize>,
     /// Cards open in view mode; ✏, a click on a field or on a FastTab header switches to edit.
     pub editing: bool,
     /// Expanded: the page dialog fills the content area (40 px inset) instead of 1328 px.
@@ -61,6 +64,7 @@ impl View {
             key,
             selected_line: None,
             line_cell: None,
+            new_line_cell: None,
             editing: false,
             expanded: false,
             nav: None,

@@ -623,6 +623,8 @@ fn lines_part(app: &mut ErpApp, ui: &mut Ui, host: &PageDef, header: &Record, pa
     let mut commit: Option<(Key, String, Json)> = None;
     let mut select: Option<(Key, Option<usize>)> = None;
     let mut start_new: Option<usize> = None;
+    let mut new_value: Option<(String, Json)> = None;
+    let blank = lt.init_record();
     let mut delete: Option<Key> = None;
     let blank_rows = if editable { 3 } else { 0 };
     let total_rows = lines.len() + blank_rows;
@@ -701,7 +703,19 @@ fn lines_part(app: &mut ErpApp, ui: &mut Ui, host: &PageDef, header: &Record, pa
                         track(ui, false);
                         // Clicks per cell: BC's editable grid doesn't highlight the hovered row.
                         clicked = ui.interact(ui.max_rect(), ui.scope_id().with(("line_cell", idx, i)), Sense::click()).clicked();
-                        let Some(l) = line else { return };
+                        let Some(l) = line else {
+                            // The first empty row: an editor in the clicked cell; the line appears
+                            // once a value is entered.
+                            if editable && idx == lines.len() && state.new_line_cell == Some(i) && f.editable {
+                                let wid = format!("newline|{}|{}", lt.name, f.name);
+                                let lookup = if f.name == "No." { Some(&items) } else { None };
+                                let w = ui.available_width() - 4.0;
+                                if let Some(v) = widgets::field_editor(&mut app.bufs, ui, &wid, f, blank.get(&f.name), true, lookup, w) {
+                                    new_value = Some((f.name.clone(), v));
+                                }
+                            }
+                            return;
+                        };
                         let can_edit = editable && f.editable && !lt.primary_key.contains(&f.name);
                         let numeric = f.ty.is_numeric();
                         if can_edit && current && state.line_cell == Some(i) {
@@ -782,12 +796,27 @@ fn lines_part(app: &mut ErpApp, ui: &mut Ui, host: &PageDef, header: &Record, pa
         ui.label(RichText::new("No lines yet. Choose Edit, then New Line.").italics().color(TOKENS.text_dim));
     }
     if let Some((k, cell)) = select {
+        state.new_line_cell = None;
         state.selected_line = Some(k);
         state.line_cell = cell;
     }
     if let Some(cell) = start_new {
-        new_line(app, state, Some(cell));
+        state.selected_line = None;
+        state.new_line_cell = Some(cell);
     }
+    if let Some((field, value)) = new_value {
+        let mut values = link_values();
+        values.insert("Type".into(), json!("Item"));
+        values.insert(field, value);
+        match app.session.run("record.new", &json!({"table": lt.name, "values": values})) {
+            Ok(r) => {
+                state.selected_line = Key::from_json(lt, r.get("key").unwrap_or(&Json::Null)).ok();
+                state.new_line_cell = None;
+            }
+            Err(e) => app.error(e.message),
+        }
+    }
+
     if let Some(k) = delete {
         app.run("record.delete", json!({"table": lt.name, "key": k.to_json()}));
         state.selected_line = None;

@@ -135,6 +135,22 @@ mod gen_support {
         }
     }
 
+    /// A list page takes its card's actions with these captions (BC offers them on the list too,
+    /// acting on the selected row).
+    pub fn mirror(m: &mut Metadata, list: &str, card: &str, captions: &[&str]) {
+        let norm = |s: &str| s.replace('&', "").trim_end_matches("...").trim().to_ascii_lowercase();
+        let Some(source) = m.pages.get(card).map(|c| c.actions.clone()) else { return };
+        let Some(p) = m.pages.get_mut(list) else { return };
+        for c in captions {
+            if p.actions.iter().any(|a| norm(&a.caption) == norm(c)) {
+                continue;
+            }
+            if let Some(a) = source.iter().find(|a| norm(&a.caption) == norm(c)) {
+                p.actions.push(a.clone());
+            }
+        }
+    }
+
     /// The action bar's categories, as BC's page promotes them.
     pub fn categories(m: &mut Metadata, page: &str, cats: &[(&str, &[&str])]) {
         if let Some(p) = m.pages.get_mut(page) {

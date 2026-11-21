@@ -3,7 +3,7 @@
 
 use erpcraft_meta::{CalcFormula, CalcFunc, FieldDef as F, Metadata};
 
-use super::gen_support::{Nav, Tab, actions, calcs, categories, columns, drilldowns, fields, layout, relabel};
+use super::gen_support::{Nav, Tab, actions, calcs, categories, columns, drilldowns, fields, layout, mirror, relabel};
 
 pub fn extend(m: &mut Metadata) {
     relabel(
@@ -3908,6 +3908,397 @@ pub fn extend(m: &mut Metadata) {
             Nav { caption: "Payment Journals", page: "payment-journal", link: &[], shortcut: "" },
         ],
     );
+    actions(
+        m,
+        "bank-account-list",
+        &[
+            Nav { caption: "Co&mments", page: "comment-sheet", link: &[("No.", "No.")], shortcut: "" },
+            Nav { caption: "Dimensions-Single", page: "default-dimensions", link: &[("No.", "No.")], shortcut: "Alt+D" },
+        ],
+    );
+    actions(
+        m,
+        "chart-of-accounts",
+        &[
+            Nav { caption: "Ledger E&ntries", page: "general-ledger-entries", link: &[("G/L Account No.", "No.")], shortcut: "Ctrl+F7" },
+            Nav { caption: "Co&mments", page: "comment-sheet", link: &[("No.", "No.")], shortcut: "" },
+            Nav { caption: "Dimensions-Single", page: "default-dimensions", link: &[("No.", "No.")], shortcut: "Alt+D" },
+            Nav { caption: "G/L Register", page: "gl-registers", link: &[], shortcut: "" },
+            Nav { caption: "General Journal", page: "general-journal", link: &[], shortcut: "" },
+        ],
+    );
+    actions(
+        m,
+        "customer-card",
+        &[
+            Nav { caption: "Quotes", page: "sales-quotes", link: &[("Sell-to Customer No.", "No.")], shortcut: "" },
+            Nav { caption: "Invoices", page: "sales-invoice-list", link: &[("Sell-to Customer No.", "No.")], shortcut: "" },
+            Nav { caption: "Orders", page: "sales-order-list", link: &[("Sell-to Customer No.", "No.")], shortcut: "" },
+            Nav { caption: "Post Cash Receipts", page: "cash-receipt-journal", link: &[], shortcut: "" },
+        ],
+    );
+    actions(
+        m,
+        "customer-ledger-entries",
+        &[
+            Nav { caption: "Customer", page: "customer-card", link: &[("No.", "Customer No.")], shortcut: "Shift+F7" },
+        ],
+    );
+    actions(
+        m,
+        "customer-list",
+        &[
+            Nav { caption: "Co&mments", page: "comment-sheet", link: &[("No.", "No.")], shortcut: "" },
+            Nav { caption: "Dimensions-Single", page: "default-dimensions", link: &[("No.", "No.")], shortcut: "Alt+D" },
+            Nav { caption: "Quotes", page: "sales-quotes", link: &[("Sell-to Customer No.", "No.")], shortcut: "" },
+            Nav { caption: "Orders", page: "sales-order-list", link: &[("Sell-to Customer No.", "No.")], shortcut: "" },
+            Nav { caption: "Cash Receipt Journal", page: "cash-receipt-journal", link: &[], shortcut: "" },
+        ],
+    );
+    actions(
+        m,
+        "fa-depreciation-books",
+        &[
+            Nav { caption: "Ledger E&ntries", page: "fa-ledger-entries", link: &[("FA No.", "FA No."), ("Depreciation Book Code", "Depreciation Book Code")], shortcut: "Ctrl+F7" },
+        ],
+    );
+    actions(
+        m,
+        "fa-setup",
+        &[
+            Nav { caption: "Depreciation Books", page: "depreciation-books", link: &[], shortcut: "" },
+            Nav { caption: "FA Classes", page: "fa-classes", link: &[], shortcut: "" },
+            Nav { caption: "FA Subclasses", page: "fa-subclasses", link: &[], shortcut: "" },
+            Nav { caption: "FA Locations", page: "fa-locations", link: &[], shortcut: "" },
+            Nav { caption: "FA Posting Groups", page: "fa-posting-groups", link: &[], shortcut: "" },
+        ],
+    );
+    actions(
+        m,
+        "fixed-asset-card",
+        &[
+            Nav { caption: "Depreciation &Books", page: "fa-depreciation-books", link: &[("FA No.", "No.")], shortcut: "" },
+        ],
+    );
+    actions(
+        m,
+        "fixed-assets",
+        &[
+            Nav { caption: "Depreciation &Books", page: "fa-depreciation-books", link: &[("FA No.", "No.")], shortcut: "" },
+            Nav { caption: "Dimensions-Single", page: "default-dimensions", link: &[("No.", "No.")], shortcut: "Alt+D" },
+            Nav { caption: "Co&mments", page: "comment-sheet", link: &[("No.", "No.")], shortcut: "" },
+            Nav { caption: "Fixed Asset G/L Journal", page: "fa-gl-journal", link: &[], shortcut: "" },
+        ],
+    );
+    actions(
+        m,
+        "gen-bus-posting-groups",
+        &[
+            Nav { caption: "&Setup", page: "general-posting-setup", link: &[("Gen. Bus. Posting Group", "Code")], shortcut: "" },
+        ],
+    );
+    actions(
+        m,
+        "gen-prod-posting-groups",
+        &[
+            Nav { caption: "&Setup", page: "general-posting-setup", link: &[("Gen. Prod. Posting Group", "Code")], shortcut: "" },
+        ],
+    );
+    actions(
+        m,
+        "general-journal-batches",
+        &[
+            Nav { caption: "G/L Register", page: "gl-registers", link: &[], shortcut: "" },
+        ],
+    );
+    actions(
+        m,
+        "general-journal-templates",
+        &[
+            Nav { caption: "Batches", page: "general-journal-batches", link: &[("Journal Template Name", "Name")], shortcut: "" },
+        ],
+    );
+    actions(
+        m,
+        "general-ledger-setup",
+        &[
+            Nav { caption: "Dimensions", page: "dimensions", link: &[], shortcut: "" },
+            Nav { caption: "User Setup", page: "user-setup", link: &[], shortcut: "" },
+            Nav { caption: "General Posting Setup", page: "general-posting-setup", link: &[], shortcut: "" },
+            Nav { caption: "Gen. Business Posting Groups", page: "gen-bus-posting-groups", link: &[], shortcut: "" },
+            Nav { caption: "Gen. Product Posting Groups", page: "gen-prod-posting-groups", link: &[], shortcut: "" },
+            Nav { caption: "VAT Posting Setup", page: "vat-posting-setup", link: &[], shortcut: "" },
+            Nav { caption: "VAT Business Posting Groups", page: "vat-bus-posting-groups", link: &[], shortcut: "" },
+            Nav { caption: "VAT Product Posting Groups", page: "vat-prod-posting-groups", link: &[], shortcut: "" },
+            Nav { caption: "Bank Account Posting Groups", page: "bank-posting-groups", link: &[], shortcut: "" },
+            Nav { caption: "General Journal Templates", page: "general-journal-templates", link: &[], shortcut: "" },
+        ],
+    );
+    actions(
+        m,
+        "gl-account-card",
+        &[
+            Nav { caption: "Ledger E&ntries", page: "general-ledger-entries", link: &[("G/L Account No.", "No.")], shortcut: "Ctrl+F7" },
+            Nav { caption: "General Posting Setup", page: "general-posting-setup", link: &[], shortcut: "" },
+            Nav { caption: "VAT Posting Setup", page: "vat-posting-setup", link: &[], shortcut: "" },
+            Nav { caption: "G/L Register", page: "gl-registers", link: &[], shortcut: "" },
+        ],
+    );
+    actions(
+        m,
+        "inventory-posting-groups",
+        &[
+            Nav { caption: "&Setup", page: "inventory-posting-setup", link: &[("Invt. Posting Group Code", "Code")], shortcut: "" },
+        ],
+    );
+    actions(
+        m,
+        "inventory-setup",
+        &[
+            Nav { caption: "Units of Measure", page: "units-of-measure", link: &[], shortcut: "" },
+            Nav { caption: "Inventory Posting Setup", page: "inventory-posting-setup", link: &[], shortcut: "" },
+            Nav { caption: "Inventory Posting Groups", page: "inventory-posting-groups", link: &[], shortcut: "" },
+            Nav { caption: "Item Journal Templates", page: "item-journal-templates", link: &[], shortcut: "" },
+        ],
+    );
+    actions(
+        m,
+        "item-card",
+        &[
+            Nav { caption: "Item Journal", page: "item-journal", link: &[], shortcut: "" },
+        ],
+    );
+    actions(
+        m,
+        "item-journal",
+        &[
+            Nav { caption: "Card", page: "item-card", link: &[("No.", "Item No.")], shortcut: "Shift+F7" },
+            Nav { caption: "Ledger E&ntries", page: "item-ledger-entries", link: &[("Item No.", "Item No.")], shortcut: "Ctrl+F7" },
+        ],
+    );
+    actions(
+        m,
+        "item-list",
+        &[
+            Nav { caption: "Physical Inventory Journal", page: "phys-inventory-journal", link: &[], shortcut: "" },
+            Nav { caption: "Dimensions-Single", page: "default-dimensions", link: &[("No.", "No.")], shortcut: "Alt+D" },
+            Nav { caption: "Co&mments", page: "comment-sheet", link: &[("No.", "No.")], shortcut: "" },
+        ],
+    );
+    actions(
+        m,
+        "item-reclass-journal",
+        &[
+            Nav { caption: "Card", page: "item-card", link: &[("No.", "Item No.")], shortcut: "Shift+F7" },
+            Nav { caption: "Ledger E&ntries", page: "item-ledger-entries", link: &[("Item No.", "Item No.")], shortcut: "Ctrl+F7" },
+        ],
+    );
+    actions(
+        m,
+        "locations",
+        &[
+            Nav { caption: "Dimensions-Single", page: "default-dimensions", link: &[("No.", "Code")], shortcut: "Alt+D" },
+        ],
+    );
+    actions(
+        m,
+        "phys-inventory-journal",
+        &[
+            Nav { caption: "Card", page: "item-card", link: &[("No.", "Item No.")], shortcut: "Shift+F7" },
+            Nav { caption: "Ledger E&ntries", page: "item-ledger-entries", link: &[("Item No.", "Item No.")], shortcut: "Ctrl+F7" },
+        ],
+    );
+    actions(
+        m,
+        "posted-purchase-credit-memos",
+        &[
+            Nav { caption: "Co&mments", page: "purch-comment-sheet", link: &[("No.", "No.")], shortcut: "" },
+            Nav { caption: "Vendor", page: "vendor-card", link: &[("No.", "Buy-from Vendor No.")], shortcut: "Shift+F7" },
+        ],
+    );
+    actions(
+        m,
+        "posted-purchase-invoices",
+        &[
+            Nav { caption: "Co&mments", page: "purch-comment-sheet", link: &[("No.", "No.")], shortcut: "" },
+            Nav { caption: "Vendor", page: "vendor-card", link: &[("No.", "Buy-from Vendor No.")], shortcut: "Shift+F7" },
+        ],
+    );
+    actions(
+        m,
+        "posted-purchase-receipts",
+        &[
+            Nav { caption: "Co&mments", page: "purch-comment-sheet", link: &[("No.", "No.")], shortcut: "" },
+        ],
+    );
+    actions(
+        m,
+        "posted-sales-credit-memos",
+        &[
+            Nav { caption: "Co&mments", page: "sales-comment-sheet", link: &[("No.", "No.")], shortcut: "" },
+            Nav { caption: "Customer", page: "customer-card", link: &[("No.", "Sell-to Customer No.")], shortcut: "Shift+F7" },
+        ],
+    );
+    actions(
+        m,
+        "posted-sales-invoices",
+        &[
+            Nav { caption: "Co&mments", page: "sales-comment-sheet", link: &[("No.", "No.")], shortcut: "" },
+            Nav { caption: "Customer", page: "customer-card", link: &[("No.", "Sell-to Customer No.")], shortcut: "Shift+F7" },
+        ],
+    );
+    actions(
+        m,
+        "posted-sales-shipments",
+        &[
+            Nav { caption: "Co&mments", page: "sales-comment-sheet", link: &[("No.", "No.")], shortcut: "" },
+        ],
+    );
+    actions(
+        m,
+        "purchase-credit-memos",
+        &[
+            Nav { caption: "Co&mments", page: "purch-comment-sheet", link: &[("Document Type", "Document Type"), ("No.", "No.")], shortcut: "" },
+        ],
+    );
+    actions(
+        m,
+        "purchase-invoices",
+        &[
+            Nav { caption: "Co&mments", page: "purch-comment-sheet", link: &[("Document Type", "Document Type"), ("No.", "No.")], shortcut: "" },
+        ],
+    );
+    actions(
+        m,
+        "purchase-order",
+        &[
+            Nav { caption: "Receipts", page: "posted-purchase-receipts", link: &[("Order No.", "No.")], shortcut: "" },
+        ],
+    );
+    actions(
+        m,
+        "purchase-order-list",
+        &[
+            Nav { caption: "Co&mments", page: "purch-comment-sheet", link: &[("Document Type", "Document Type"), ("No.", "No.")], shortcut: "" },
+            Nav { caption: "Receipts", page: "posted-purchase-receipts", link: &[("Order No.", "No.")], shortcut: "" },
+        ],
+    );
+    actions(
+        m,
+        "purchase-quotes",
+        &[
+            Nav { caption: "Co&mments", page: "purch-comment-sheet", link: &[("Document Type", "Document Type"), ("No.", "No.")], shortcut: "" },
+        ],
+    );
+    actions(
+        m,
+        "purchases-payables-setup",
+        &[
+            Nav { caption: "Vendor Posting Groups", page: "vendor-posting-groups", link: &[], shortcut: "" },
+        ],
+    );
+    actions(
+        m,
+        "sales-credit-memos",
+        &[
+            Nav { caption: "Co&mments", page: "sales-comment-sheet", link: &[("Document Type", "Document Type"), ("No.", "No.")], shortcut: "" },
+        ],
+    );
+    actions(
+        m,
+        "sales-invoice-list",
+        &[
+            Nav { caption: "Co&mments", page: "sales-comment-sheet", link: &[("Document Type", "Document Type"), ("No.", "No.")], shortcut: "" },
+            Nav { caption: "Posted Sales Invoices", page: "posted-sales-invoices", link: &[], shortcut: "" },
+        ],
+    );
+    actions(
+        m,
+        "sales-order",
+        &[
+            Nav { caption: "S&hipments", page: "posted-sales-shipments", link: &[("Order No.", "No.")], shortcut: "" },
+        ],
+    );
+    actions(
+        m,
+        "sales-order-list",
+        &[
+            Nav { caption: "Co&mments", page: "sales-comment-sheet", link: &[("Document Type", "Document Type"), ("No.", "No.")], shortcut: "" },
+            Nav { caption: "S&hipments", page: "posted-sales-shipments", link: &[("Order No.", "No.")], shortcut: "" },
+        ],
+    );
+    actions(
+        m,
+        "sales-quotes",
+        &[
+            Nav { caption: "Co&mments", page: "sales-comment-sheet", link: &[("Document Type", "Document Type"), ("No.", "No.")], shortcut: "" },
+        ],
+    );
+    actions(
+        m,
+        "sales-receivables-setup",
+        &[
+            Nav { caption: "Customer Posting Groups", page: "customer-posting-groups", link: &[], shortcut: "" },
+            Nav { caption: "Payment Terms", page: "payment-terms", link: &[], shortcut: "" },
+        ],
+    );
+    actions(
+        m,
+        "salespersons",
+        &[
+            Nav { caption: "Dimensions-Single", page: "default-dimensions", link: &[("No.", "Code")], shortcut: "Alt+D" },
+        ],
+    );
+    actions(
+        m,
+        "vat-bus-posting-groups",
+        &[
+            Nav { caption: "&Setup", page: "vat-posting-setup", link: &[("VAT Bus. Posting Group", "Code")], shortcut: "" },
+        ],
+    );
+    actions(
+        m,
+        "vat-prod-posting-groups",
+        &[
+            Nav { caption: "&Setup", page: "vat-posting-setup", link: &[("VAT Prod. Posting Group", "Code")], shortcut: "" },
+        ],
+    );
+    actions(
+        m,
+        "vendor-card",
+        &[
+            Nav { caption: "Quotes", page: "purchase-quotes", link: &[("Buy-from Vendor No.", "No.")], shortcut: "" },
+            Nav { caption: "Orders", page: "purchase-order-list", link: &[("Buy-from Vendor No.", "No.")], shortcut: "" },
+            Nav { caption: "Create Payments", page: "payment-journal", link: &[], shortcut: "" },
+            Nav { caption: "Pay Vendor", page: "vendor-ledger-entries", link: &[("Vendor No.", "No.")], shortcut: "" },
+        ],
+    );
+    actions(
+        m,
+        "vendor-list",
+        &[
+            Nav { caption: "Dimensions-Single", page: "default-dimensions", link: &[("No.", "No.")], shortcut: "Alt+D" },
+            Nav { caption: "Co&mments", page: "comment-sheet", link: &[("No.", "No.")], shortcut: "" },
+            Nav { caption: "Quotes", page: "purchase-quotes", link: &[("Buy-from Vendor No.", "No.")], shortcut: "" },
+            Nav { caption: "Orders", page: "purchase-order-list", link: &[("Buy-from Vendor No.", "No.")], shortcut: "" },
+            Nav { caption: "Payment Journal", page: "payment-journal", link: &[], shortcut: "" },
+            Nav { caption: "Pay Vendor", page: "vendor-ledger-entries", link: &[("Vendor No.", "No.")], shortcut: "" },
+        ],
+    );
+    mirror(m, "posted-purchase-credit-memos", "posted-purchase-credit-memo", &["Attach as PDF"]);
+    mirror(m, "posted-purchase-invoices", "posted-purchase-invoice", &["Attach as PDF"]);
+    mirror(m, "posted-purchase-receipts", "posted-purchase-receipt", &["&Print"]);
+    mirror(m, "posted-sales-credit-memos", "posted-sales-credit-memo", &["Attach as PDF"]);
+    mirror(m, "posted-sales-invoices", "posted-sales-invoice", &["Attach as PDF"]);
+    mirror(m, "posted-sales-shipments", "posted-sales-shipment", &["&Print"]);
+    mirror(m, "purchase-credit-memos", "purchase-credit-memo", &["Approvals", "Send A&pproval Request", "Cancel Approval Re&quest"]);
+    mirror(m, "purchase-invoices", "purchase-invoice", &["Approvals", "Send A&pproval Request", "Cancel Approval Re&quest"]);
+    mirror(m, "purchase-order-list", "purchase-order", &["Approvals", "Attach as PDF", "Send A&pproval Request", "Cancel Approval Re&quest"]);
+    mirror(m, "purchase-quotes", "purchase-quote", &["Approvals", "Attach as PDF", "Send A&pproval Request", "Cancel Approval Re&quest"]);
+    mirror(m, "sales-credit-memos", "sales-credit-memo", &["Approvals", "Send A&pproval Request", "Cancel Approval Re&quest"]);
+    mirror(m, "sales-invoice-list", "sales-invoice", &["Approvals", "Send A&pproval Request", "Cancel Approval Re&quest"]);
+    mirror(m, "sales-order-list", "sales-order", &["Approvals", "Send A&pproval Request", "Cancel Approval Re&quest", "Attach as PDF"]);
+    mirror(m, "sales-quotes", "sales-quote", &["Approvals", "Attach as PDF", "Send A&pproval Request", "Cancel Approval Re&quest"]);
     categories(
         m,
         "bank-account-card",
@@ -3923,14 +4314,6 @@ pub fn extend(m: &mut Metadata) {
             ("Process", &["Find entries...", "Dimensions"]),
         ],
     );
-    actions(
-        m,
-        "bank-account-list",
-        &[
-            Nav { caption: "Co&mments", page: "comment-sheet", link: &[("No.", "No.")], shortcut: "" },
-            Nav { caption: "Dimensions-Single", page: "default-dimensions", link: &[("No.", "No.")], shortcut: "Alt+D" },
-        ],
-    );
     categories(
         m,
         "bank-account-list",
@@ -3942,19 +4325,8 @@ pub fn extend(m: &mut Metadata) {
         m,
         "cash-receipt-journal",
         &[
-            ("Process", &["P&ost"]),
+            ("Process", &["P&ost", "Preview Posting", "Test Report", "Renumber Document Numbers"]),
             ("Line", &["Dimensions"]),
-        ],
-    );
-    actions(
-        m,
-        "chart-of-accounts",
-        &[
-            Nav { caption: "Ledger E&ntries", page: "general-ledger-entries", link: &[("G/L Account No.", "No.")], shortcut: "Ctrl+F7" },
-            Nav { caption: "Co&mments", page: "comment-sheet", link: &[("No.", "No.")], shortcut: "" },
-            Nav { caption: "Dimensions-Single", page: "default-dimensions", link: &[("No.", "No.")], shortcut: "Alt+D" },
-            Nav { caption: "G/L Register", page: "gl-registers", link: &[], shortcut: "" },
-            Nav { caption: "General Journal", page: "general-journal", link: &[], shortcut: "" },
         ],
     );
     categories(
@@ -3966,16 +4338,6 @@ pub fn extend(m: &mut Metadata) {
             ("Report", &["G/L Register"]),
         ],
     );
-    actions(
-        m,
-        "customer-card",
-        &[
-            Nav { caption: "Quotes", page: "sales-quotes", link: &[("Sell-to Customer No.", "No.")], shortcut: "" },
-            Nav { caption: "Invoices", page: "sales-invoice-list", link: &[("Sell-to Customer No.", "No.")], shortcut: "" },
-            Nav { caption: "Orders", page: "sales-order-list", link: &[("Sell-to Customer No.", "No.")], shortcut: "" },
-            Nav { caption: "Post Cash Receipts", page: "cash-receipt-journal", link: &[], shortcut: "" },
-        ],
-    );
     categories(
         m,
         "customer-card",
@@ -3984,30 +4346,12 @@ pub fn extend(m: &mut Metadata) {
             ("Customer", &["Ledger E&ntries", "Dimensions", "Statistics", "Attachments", "Co&mments"]),
         ],
     );
-    actions(
-        m,
-        "customer-ledger-entries",
-        &[
-            Nav { caption: "Customer", page: "customer-card", link: &[("No.", "Customer No.")], shortcut: "Shift+F7" },
-        ],
-    );
     categories(
         m,
         "customer-ledger-entries",
         &[
             ("Process", &["Apply Entries", "Unapply Entries", "Find entries...", "Reverse Transaction"]),
             ("Entry", &["Dimensions", "Detailed &Ledger Entries", "Customer"]),
-        ],
-    );
-    actions(
-        m,
-        "customer-list",
-        &[
-            Nav { caption: "Co&mments", page: "comment-sheet", link: &[("No.", "No.")], shortcut: "" },
-            Nav { caption: "Dimensions-Single", page: "default-dimensions", link: &[("No.", "No.")], shortcut: "Alt+D" },
-            Nav { caption: "Quotes", page: "sales-quotes", link: &[("Sell-to Customer No.", "No.")], shortcut: "" },
-            Nav { caption: "Orders", page: "sales-order-list", link: &[("Sell-to Customer No.", "No.")], shortcut: "" },
-            Nav { caption: "Cash Receipt Journal", page: "cash-receipt-journal", link: &[], shortcut: "" },
         ],
     );
     categories(
@@ -4039,13 +4383,6 @@ pub fn extend(m: &mut Metadata) {
             ("Dimension", &["Dimension &Values"]),
         ],
     );
-    actions(
-        m,
-        "fa-depreciation-books",
-        &[
-            Nav { caption: "Ledger E&ntries", page: "fa-ledger-entries", link: &[("FA No.", "FA No."), ("Depreciation Book Code", "Depreciation Book Code")], shortcut: "Ctrl+F7" },
-        ],
-    );
     categories(
         m,
         "fa-gl-journal",
@@ -4061,17 +4398,6 @@ pub fn extend(m: &mut Metadata) {
             ("Process", &["Find entries..."]),
         ],
     );
-    actions(
-        m,
-        "fa-setup",
-        &[
-            Nav { caption: "Depreciation Books", page: "depreciation-books", link: &[], shortcut: "" },
-            Nav { caption: "FA Classes", page: "fa-classes", link: &[], shortcut: "" },
-            Nav { caption: "FA Subclasses", page: "fa-subclasses", link: &[], shortcut: "" },
-            Nav { caption: "FA Locations", page: "fa-locations", link: &[], shortcut: "" },
-            Nav { caption: "FA Posting Groups", page: "fa-posting-groups", link: &[], shortcut: "" },
-        ],
-    );
     categories(
         m,
         "fa-setup",
@@ -4081,28 +4407,11 @@ pub fn extend(m: &mut Metadata) {
             ("Posting", &["FA Posting Groups"]),
         ],
     );
-    actions(
-        m,
-        "fixed-asset-card",
-        &[
-            Nav { caption: "Depreciation &Books", page: "fa-depreciation-books", link: &[("FA No.", "No.")], shortcut: "" },
-        ],
-    );
     categories(
         m,
         "fixed-asset-card",
         &[
             ("Fixed Asset", &["Dimensions", "Co&mments", "Attachments", "Depreciation &Books"]),
-        ],
-    );
-    actions(
-        m,
-        "fixed-assets",
-        &[
-            Nav { caption: "Depreciation &Books", page: "fa-depreciation-books", link: &[("FA No.", "No.")], shortcut: "" },
-            Nav { caption: "Dimensions-Single", page: "default-dimensions", link: &[("No.", "No.")], shortcut: "Alt+D" },
-            Nav { caption: "Co&mments", page: "comment-sheet", link: &[("No.", "No.")], shortcut: "" },
-            Nav { caption: "Fixed Asset G/L Journal", page: "fa-gl-journal", link: &[], shortcut: "" },
         ],
     );
     categories(
@@ -4113,25 +4422,11 @@ pub fn extend(m: &mut Metadata) {
             ("Fixed Asset", &["Dimensions-Single", "Co&mments"]),
         ],
     );
-    actions(
-        m,
-        "gen-bus-posting-groups",
-        &[
-            Nav { caption: "&Setup", page: "general-posting-setup", link: &[("Gen. Bus. Posting Group", "Code")], shortcut: "" },
-        ],
-    );
     categories(
         m,
         "gen-bus-posting-groups",
         &[
             ("Process", &["&Setup"]),
-        ],
-    );
-    actions(
-        m,
-        "gen-prod-posting-groups",
-        &[
-            Nav { caption: "&Setup", page: "general-posting-setup", link: &[("Gen. Prod. Posting Group", "Code")], shortcut: "" },
         ],
     );
     categories(
@@ -4145,15 +4440,8 @@ pub fn extend(m: &mut Metadata) {
         m,
         "general-journal",
         &[
-            ("Process", &["P&ost"]),
+            ("Process", &["P&ost", "Preview Posting", "Test Report", "Renumber Document Numbers"]),
             ("Line", &["Dimensions"]),
-        ],
-    );
-    actions(
-        m,
-        "general-journal-batches",
-        &[
-            Nav { caption: "G/L Register", page: "gl-registers", link: &[], shortcut: "" },
         ],
     );
     categories(
@@ -4163,34 +4451,11 @@ pub fn extend(m: &mut Metadata) {
             ("General Journal", &["G/L Register"]),
         ],
     );
-    actions(
-        m,
-        "general-journal-templates",
-        &[
-            Nav { caption: "Batches", page: "general-journal-batches", link: &[("Journal Template Name", "Name")], shortcut: "" },
-        ],
-    );
     categories(
         m,
         "general-ledger-entries",
         &[
             ("Process", &["Find entries...", "Reverse Transaction", "Dimensions"]),
-        ],
-    );
-    actions(
-        m,
-        "general-ledger-setup",
-        &[
-            Nav { caption: "Dimensions", page: "dimensions", link: &[], shortcut: "" },
-            Nav { caption: "User Setup", page: "user-setup", link: &[], shortcut: "" },
-            Nav { caption: "General Posting Setup", page: "general-posting-setup", link: &[], shortcut: "" },
-            Nav { caption: "Gen. Business Posting Groups", page: "gen-bus-posting-groups", link: &[], shortcut: "" },
-            Nav { caption: "Gen. Product Posting Groups", page: "gen-prod-posting-groups", link: &[], shortcut: "" },
-            Nav { caption: "VAT Posting Setup", page: "vat-posting-setup", link: &[], shortcut: "" },
-            Nav { caption: "VAT Business Posting Groups", page: "vat-bus-posting-groups", link: &[], shortcut: "" },
-            Nav { caption: "VAT Product Posting Groups", page: "vat-prod-posting-groups", link: &[], shortcut: "" },
-            Nav { caption: "Bank Account Posting Groups", page: "bank-posting-groups", link: &[], shortcut: "" },
-            Nav { caption: "General Journal Templates", page: "general-journal-templates", link: &[], shortcut: "" },
         ],
     );
     categories(
@@ -4202,16 +4467,6 @@ pub fn extend(m: &mut Metadata) {
             ("VAT", &["VAT Posting Setup", "VAT Business Posting Groups", "VAT Product Posting Groups"]),
             ("Bank", &["Bank Account Posting Groups"]),
             ("Journal Templates", &["General Journal Templates"]),
-        ],
-    );
-    actions(
-        m,
-        "gl-account-card",
-        &[
-            Nav { caption: "Ledger E&ntries", page: "general-ledger-entries", link: &[("G/L Account No.", "No.")], shortcut: "Ctrl+F7" },
-            Nav { caption: "General Posting Setup", page: "general-posting-setup", link: &[], shortcut: "" },
-            Nav { caption: "VAT Posting Setup", page: "vat-posting-setup", link: &[], shortcut: "" },
-            Nav { caption: "G/L Register", page: "gl-registers", link: &[], shortcut: "" },
         ],
     );
     categories(
@@ -4228,28 +4483,11 @@ pub fn extend(m: &mut Metadata) {
             ("Process", &["General Ledger"]),
         ],
     );
-    actions(
-        m,
-        "inventory-posting-groups",
-        &[
-            Nav { caption: "&Setup", page: "inventory-posting-setup", link: &[("Invt. Posting Group Code", "Code")], shortcut: "" },
-        ],
-    );
     categories(
         m,
         "inventory-posting-groups",
         &[
             ("Process", &["&Setup"]),
-        ],
-    );
-    actions(
-        m,
-        "inventory-setup",
-        &[
-            Nav { caption: "Units of Measure", page: "units-of-measure", link: &[], shortcut: "" },
-            Nav { caption: "Inventory Posting Setup", page: "inventory-posting-setup", link: &[], shortcut: "" },
-            Nav { caption: "Inventory Posting Groups", page: "inventory-posting-groups", link: &[], shortcut: "" },
-            Nav { caption: "Item Journal Templates", page: "item-journal-templates", link: &[], shortcut: "" },
         ],
     );
     categories(
@@ -4261,13 +4499,6 @@ pub fn extend(m: &mut Metadata) {
             ("Journal Templates", &["Item Journal Templates"]),
         ],
     );
-    actions(
-        m,
-        "item-card",
-        &[
-            Nav { caption: "Item Journal", page: "item-journal", link: &[], shortcut: "" },
-        ],
-    );
     categories(
         m,
         "item-card",
@@ -4276,19 +4507,11 @@ pub fn extend(m: &mut Metadata) {
             ("Item", &["Attachments", "Co&mments", "Dimensions"]),
         ],
     );
-    actions(
-        m,
-        "item-journal",
-        &[
-            Nav { caption: "Card", page: "item-card", link: &[("No.", "Item No.")], shortcut: "Shift+F7" },
-            Nav { caption: "Ledger E&ntries", page: "item-ledger-entries", link: &[("Item No.", "Item No.")], shortcut: "Ctrl+F7" },
-        ],
-    );
     categories(
         m,
         "item-journal",
         &[
-            ("Process", &["P&ost"]),
+            ("Process", &["P&ost", "Preview Posting"]),
             ("Line", &["Dimensions"]),
         ],
     );
@@ -4299,15 +4522,6 @@ pub fn extend(m: &mut Metadata) {
             ("Process", &["Find entries...", "Dimensions"]),
         ],
     );
-    actions(
-        m,
-        "item-list",
-        &[
-            Nav { caption: "Physical Inventory Journal", page: "phys-inventory-journal", link: &[], shortcut: "" },
-            Nav { caption: "Dimensions-Single", page: "default-dimensions", link: &[("No.", "No.")], shortcut: "Alt+D" },
-            Nav { caption: "Co&mments", page: "comment-sheet", link: &[("No.", "No.")], shortcut: "" },
-        ],
-    );
     categories(
         m,
         "item-list",
@@ -4316,27 +4530,12 @@ pub fn extend(m: &mut Metadata) {
             ("Item", &["Dimensions-Single", "Co&mments"]),
         ],
     );
-    actions(
-        m,
-        "item-reclass-journal",
-        &[
-            Nav { caption: "Card", page: "item-card", link: &[("No.", "Item No.")], shortcut: "Shift+F7" },
-            Nav { caption: "Ledger E&ntries", page: "item-ledger-entries", link: &[("Item No.", "Item No.")], shortcut: "Ctrl+F7" },
-        ],
-    );
     categories(
         m,
         "item-reclass-journal",
         &[
-            ("Process", &["P&ost"]),
+            ("Process", &["P&ost", "Preview Posting"]),
             ("Line", &["Dimensions"]),
-        ],
-    );
-    actions(
-        m,
-        "locations",
-        &[
-            Nav { caption: "Dimensions-Single", page: "default-dimensions", link: &[("No.", "Code")], shortcut: "Alt+D" },
         ],
     );
     categories(
@@ -4350,23 +4549,15 @@ pub fn extend(m: &mut Metadata) {
         m,
         "payment-journal",
         &[
-            ("Process", &["P&ost"]),
+            ("Process", &["P&ost", "Preview Posting", "Test Report", "Renumber Document Numbers"]),
             ("Line", &["Dimensions"]),
-        ],
-    );
-    actions(
-        m,
-        "phys-inventory-journal",
-        &[
-            Nav { caption: "Card", page: "item-card", link: &[("No.", "Item No.")], shortcut: "Shift+F7" },
-            Nav { caption: "Ledger E&ntries", page: "item-ledger-entries", link: &[("Item No.", "Item No.")], shortcut: "Ctrl+F7" },
         ],
     );
     categories(
         m,
         "phys-inventory-journal",
         &[
-            ("Process", &["P&ost"]),
+            ("Process", &["P&ost", "Preview Posting"]),
             ("Prepare", &["Calculate &Inventory"]),
             ("Line", &["Dimensions"]),
             ("Item", &["Card", "Ledger E&ntries"]),
@@ -4381,20 +4572,12 @@ pub fn extend(m: &mut Metadata) {
             ("Credit Memo", &["Dimensions", "Co&mments", "Attachments", "Vendor"]),
         ],
     );
-    actions(
-        m,
-        "posted-purchase-credit-memos",
-        &[
-            Nav { caption: "Co&mments", page: "purch-comment-sheet", link: &[("No.", "No.")], shortcut: "" },
-            Nav { caption: "Vendor", page: "vendor-card", link: &[("No.", "Buy-from Vendor No.")], shortcut: "Shift+F7" },
-        ],
-    );
     categories(
         m,
         "posted-purchase-credit-memos",
         &[
             ("Process", &["Find entries..."]),
-            ("Print/Send", &["&Print"]),
+            ("Print/Send", &["&Print", "Attach as PDF"]),
             ("Credit Memo", &["Dimensions", "Statistics", "Co&mments", "Vendor"]),
         ],
     );
@@ -4407,20 +4590,12 @@ pub fn extend(m: &mut Metadata) {
             ("Invoice", &["Dimensions", "Attachments", "Co&mments", "Vendor"]),
         ],
     );
-    actions(
-        m,
-        "posted-purchase-invoices",
-        &[
-            Nav { caption: "Co&mments", page: "purch-comment-sheet", link: &[("No.", "No.")], shortcut: "" },
-            Nav { caption: "Vendor", page: "vendor-card", link: &[("No.", "Buy-from Vendor No.")], shortcut: "Shift+F7" },
-        ],
-    );
     categories(
         m,
         "posted-purchase-invoices",
         &[
             ("Process", &["Find entries..."]),
-            ("Print/Send", &["&Print"]),
+            ("Print/Send", &["&Print", "Attach as PDF"]),
             ("Invoice", &["Dimensions", "Statistics", "Co&mments", "Vendor"]),
         ],
     );
@@ -4432,18 +4607,11 @@ pub fn extend(m: &mut Metadata) {
             ("Receipt", &["Dimensions", "Co&mments"]),
         ],
     );
-    actions(
-        m,
-        "posted-purchase-receipts",
-        &[
-            Nav { caption: "Co&mments", page: "purch-comment-sheet", link: &[("No.", "No.")], shortcut: "" },
-        ],
-    );
     categories(
         m,
         "posted-purchase-receipts",
         &[
-            ("Process", &["Find entries...", "Dimensions", "Co&mments"]),
+            ("Process", &["&Print", "Find entries...", "Dimensions", "Co&mments"]),
         ],
     );
     categories(
@@ -4455,20 +4623,12 @@ pub fn extend(m: &mut Metadata) {
             ("Credit Memo", &["Dimensions", "Attachments", "Co&mments", "Customer"]),
         ],
     );
-    actions(
-        m,
-        "posted-sales-credit-memos",
-        &[
-            Nav { caption: "Co&mments", page: "sales-comment-sheet", link: &[("No.", "No.")], shortcut: "" },
-            Nav { caption: "Customer", page: "customer-card", link: &[("No.", "Sell-to Customer No.")], shortcut: "Shift+F7" },
-        ],
-    );
     categories(
         m,
         "posted-sales-credit-memos",
         &[
             ("Process", &["Find entries..."]),
-            ("Print/Send", &["&Print"]),
+            ("Print/Send", &["&Print", "Attach as PDF"]),
             ("Credit Memo", &["Dimensions", "Statistics", "Co&mments", "Customer"]),
         ],
     );
@@ -4481,20 +4641,12 @@ pub fn extend(m: &mut Metadata) {
             ("Invoice", &["Dimensions", "Co&mments", "Attachments", "Customer"]),
         ],
     );
-    actions(
-        m,
-        "posted-sales-invoices",
-        &[
-            Nav { caption: "Co&mments", page: "sales-comment-sheet", link: &[("No.", "No.")], shortcut: "" },
-            Nav { caption: "Customer", page: "customer-card", link: &[("No.", "Sell-to Customer No.")], shortcut: "Shift+F7" },
-        ],
-    );
     categories(
         m,
         "posted-sales-invoices",
         &[
             ("Process", &["Find entries..."]),
-            ("Print/Send", &["&Print"]),
+            ("Print/Send", &["&Print", "Attach as PDF"]),
             ("Invoice", &["Dimensions", "Statistics", "Co&mments", "Customer"]),
         ],
     );
@@ -4507,18 +4659,12 @@ pub fn extend(m: &mut Metadata) {
             ("Shipment", &["Dimensions", "Co&mments"]),
         ],
     );
-    actions(
-        m,
-        "posted-sales-shipments",
-        &[
-            Nav { caption: "Co&mments", page: "sales-comment-sheet", link: &[("No.", "No.")], shortcut: "" },
-        ],
-    );
     categories(
         m,
         "posted-sales-shipments",
         &[
-            ("Process", &["Find entries...", "Dimensions", "Co&mments"]),
+            ("Process", &["&Print", "Find entries...", "Dimensions", "Co&mments"]),
+            ("Print/Send", &["&Print"]),
         ],
     );
     categories(
@@ -4531,20 +4677,13 @@ pub fn extend(m: &mut Metadata) {
             ("Credit Memo", &["Statistics", "Dimensions", "Attachments", "Approvals", "Co&mments", "Vendor"]),
         ],
     );
-    actions(
-        m,
-        "purchase-credit-memos",
-        &[
-            Nav { caption: "Co&mments", page: "purch-comment-sheet", link: &[("Document Type", "Document Type"), ("No.", "No.")], shortcut: "" },
-        ],
-    );
     categories(
         m,
         "purchase-credit-memos",
         &[
             ("Release", &["Re&lease", "Re&open"]),
             ("Posting", &["P&ost", "Post and &Print", "Preview Posting"]),
-            ("Credit Memo", &["Dimensions", "Statistics", "Co&mments", "Vendor"]),
+            ("Credit Memo", &["Dimensions", "Statistics", "Co&mments", "Approvals", "Vendor"]),
         ],
     );
     categories(
@@ -4557,27 +4696,13 @@ pub fn extend(m: &mut Metadata) {
             ("Invoice", &["Dimensions", "Statistics", "Co&mments", "Attachments", "Approvals", "Vendor"]),
         ],
     );
-    actions(
-        m,
-        "purchase-invoices",
-        &[
-            Nav { caption: "Co&mments", page: "purch-comment-sheet", link: &[("Document Type", "Document Type"), ("No.", "No.")], shortcut: "" },
-        ],
-    );
     categories(
         m,
         "purchase-invoices",
         &[
             ("Release", &["Re&lease", "Re&open"]),
             ("Posting", &["P&ost", "Preview Posting", "Post and &Print"]),
-            ("Invoice", &["Dimensions", "Statistics", "Co&mments", "Vendor"]),
-        ],
-    );
-    actions(
-        m,
-        "purchase-order",
-        &[
-            Nav { caption: "Receipts", page: "posted-purchase-receipts", link: &[("Order No.", "No.")], shortcut: "" },
+            ("Invoice", &["Dimensions", "Statistics", "Co&mments", "Approvals", "Vendor"]),
         ],
     );
     categories(
@@ -4591,22 +4716,14 @@ pub fn extend(m: &mut Metadata) {
             ("Order", &["Dimensions", "Statistics", "Co&mments", "Attachments", "Approvals", "Vendor", "Receipts"]),
         ],
     );
-    actions(
-        m,
-        "purchase-order-list",
-        &[
-            Nav { caption: "Co&mments", page: "purch-comment-sheet", link: &[("Document Type", "Document Type"), ("No.", "No.")], shortcut: "" },
-            Nav { caption: "Receipts", page: "posted-purchase-receipts", link: &[("Order No.", "No.")], shortcut: "" },
-        ],
-    );
     categories(
         m,
         "purchase-order-list",
         &[
             ("Release", &["Re&lease", "Re&open"]),
             ("Posting", &["P&ost", "Preview Posting", "Post and &Print"]),
-            ("Print/Send", &["&Print"]),
-            ("Order", &["Dimensions", "Statistics", "Co&mments", "Receipts"]),
+            ("Print/Send", &["&Print", "Attach as PDF"]),
+            ("Order", &["Dimensions", "Statistics", "Co&mments", "Approvals", "Receipts"]),
         ],
     );
     categories(
@@ -4620,28 +4737,14 @@ pub fn extend(m: &mut Metadata) {
             ("Quote", &["Dimensions", "Statistics", "Attachments", "Co&mments", "Approvals", "Vendor"]),
         ],
     );
-    actions(
-        m,
-        "purchase-quotes",
-        &[
-            Nav { caption: "Co&mments", page: "purch-comment-sheet", link: &[("Document Type", "Document Type"), ("No.", "No.")], shortcut: "" },
-        ],
-    );
     categories(
         m,
         "purchase-quotes",
         &[
             ("Process", &["Make &Order"]),
             ("Release", &["Re&lease", "Re&open"]),
-            ("Print/Send", &["&Print"]),
-            ("Quote", &["Dimensions", "Statistics", "Co&mments"]),
-        ],
-    );
-    actions(
-        m,
-        "purchases-payables-setup",
-        &[
-            Nav { caption: "Vendor Posting Groups", page: "vendor-posting-groups", link: &[], shortcut: "" },
+            ("Print/Send", &["&Print", "Attach as PDF"]),
+            ("Quote", &["Dimensions", "Statistics", "Co&mments", "Approvals"]),
         ],
     );
     categories(
@@ -4668,20 +4771,13 @@ pub fn extend(m: &mut Metadata) {
             ("Credit Memo", &["Statistics", "Dimensions", "Attachments", "Approvals", "Co&mments", "Customer"]),
         ],
     );
-    actions(
-        m,
-        "sales-credit-memos",
-        &[
-            Nav { caption: "Co&mments", page: "sales-comment-sheet", link: &[("Document Type", "Document Type"), ("No.", "No.")], shortcut: "" },
-        ],
-    );
     categories(
         m,
         "sales-credit-memos",
         &[
             ("Release", &["Re&lease", "Re&open"]),
             ("Posting", &["P&ost", "Preview Posting"]),
-            ("Credit Memo", &["Dimensions", "Statistics", "Co&mments", "Customer"]),
+            ("Credit Memo", &["Dimensions", "Statistics", "Co&mments", "Approvals", "Customer"]),
         ],
     );
     categories(
@@ -4695,28 +4791,13 @@ pub fn extend(m: &mut Metadata) {
             ("Invoice", &["Dimensions", "Statistics", "Co&mments", "Attachments", "Approvals", "Customer"]),
         ],
     );
-    actions(
-        m,
-        "sales-invoice-list",
-        &[
-            Nav { caption: "Co&mments", page: "sales-comment-sheet", link: &[("Document Type", "Document Type"), ("No.", "No.")], shortcut: "" },
-            Nav { caption: "Posted Sales Invoices", page: "posted-sales-invoices", link: &[], shortcut: "" },
-        ],
-    );
     categories(
         m,
         "sales-invoice-list",
         &[
             ("Release", &["Re&lease", "Re&open"]),
             ("Posting", &["P&ost", "Preview Posting"]),
-            ("Invoice", &["Dimensions", "Statistics", "Co&mments", "Customer", "Posted Sales Invoices"]),
-        ],
-    );
-    actions(
-        m,
-        "sales-order",
-        &[
-            Nav { caption: "S&hipments", page: "posted-sales-shipments", link: &[("Order No.", "No.")], shortcut: "" },
+            ("Invoice", &["Dimensions", "Statistics", "Co&mments", "Approvals", "Customer", "Posted Sales Invoices"]),
         ],
     );
     categories(
@@ -4730,22 +4811,14 @@ pub fn extend(m: &mut Metadata) {
             ("Order", &["Dimensions", "Statistics", "Co&mments", "Attachments", "Approvals", "Customer", "S&hipments"]),
         ],
     );
-    actions(
-        m,
-        "sales-order-list",
-        &[
-            Nav { caption: "Co&mments", page: "sales-comment-sheet", link: &[("Document Type", "Document Type"), ("No.", "No.")], shortcut: "" },
-            Nav { caption: "S&hipments", page: "posted-sales-shipments", link: &[("Order No.", "No.")], shortcut: "" },
-        ],
-    );
     categories(
         m,
         "sales-order-list",
         &[
             ("Release", &["Re&lease", "Re&open"]),
             ("Posting", &["P&ost", "Preview Posting"]),
-            ("Print/Send", &["Print Confirmation", "Work Order"]),
-            ("Order", &["Dimensions", "Statistics", "Co&mments", "S&hipments"]),
+            ("Print/Send", &["Print Confirmation", "Work Order", "Attach as PDF"]),
+            ("Order", &["Dimensions", "Statistics", "Co&mments", "Approvals", "S&hipments"]),
         ],
     );
     categories(
@@ -4759,29 +4832,14 @@ pub fn extend(m: &mut Metadata) {
             ("Quote", &["Dimensions", "Statistics", "Co&mments", "Attachments", "Approvals", "Customer"]),
         ],
     );
-    actions(
-        m,
-        "sales-quotes",
-        &[
-            Nav { caption: "Co&mments", page: "sales-comment-sheet", link: &[("Document Type", "Document Type"), ("No.", "No.")], shortcut: "" },
-        ],
-    );
     categories(
         m,
         "sales-quotes",
         &[
             ("Process", &["Make &Order"]),
             ("Release", &["Re&lease", "Re&open"]),
-            ("Print/Send", &["&Print"]),
-            ("Quote", &["Dimensions", "Statistics", "Co&mments", "Customer"]),
-        ],
-    );
-    actions(
-        m,
-        "sales-receivables-setup",
-        &[
-            Nav { caption: "Customer Posting Groups", page: "customer-posting-groups", link: &[], shortcut: "" },
-            Nav { caption: "Payment Terms", page: "payment-terms", link: &[], shortcut: "" },
+            ("Print/Send", &["&Print", "Attach as PDF"]),
+            ("Quote", &["Dimensions", "Statistics", "Co&mments", "Approvals", "Customer"]),
         ],
     );
     categories(
@@ -4792,13 +4850,6 @@ pub fn extend(m: &mut Metadata) {
             ("Payments", &["Payment Terms"]),
         ],
     );
-    actions(
-        m,
-        "salespersons",
-        &[
-            Nav { caption: "Dimensions-Single", page: "default-dimensions", link: &[("No.", "Code")], shortcut: "Alt+D" },
-        ],
-    );
     categories(
         m,
         "salespersons",
@@ -4806,13 +4857,6 @@ pub fn extend(m: &mut Metadata) {
             ("Salesperson", &["Dimensions-Single"]),
         ],
     );
-    actions(
-        m,
-        "vat-bus-posting-groups",
-        &[
-            Nav { caption: "&Setup", page: "vat-posting-setup", link: &[("VAT Bus. Posting Group", "Code")], shortcut: "" },
-        ],
-    );
     categories(
         m,
         "vat-bus-posting-groups",
@@ -4820,28 +4864,11 @@ pub fn extend(m: &mut Metadata) {
             ("Process", &["&Setup"]),
         ],
     );
-    actions(
-        m,
-        "vat-prod-posting-groups",
-        &[
-            Nav { caption: "&Setup", page: "vat-posting-setup", link: &[("VAT Prod. Posting Group", "Code")], shortcut: "" },
-        ],
-    );
     categories(
         m,
         "vat-prod-posting-groups",
         &[
             ("Process", &["&Setup"]),
-        ],
-    );
-    actions(
-        m,
-        "vendor-card",
-        &[
-            Nav { caption: "Quotes", page: "purchase-quotes", link: &[("Buy-from Vendor No.", "No.")], shortcut: "" },
-            Nav { caption: "Orders", page: "purchase-order-list", link: &[("Buy-from Vendor No.", "No.")], shortcut: "" },
-            Nav { caption: "Create Payments", page: "payment-journal", link: &[], shortcut: "" },
-            Nav { caption: "Pay Vendor", page: "vendor-ledger-entries", link: &[("Vendor No.", "No.")], shortcut: "" },
         ],
     );
     categories(
@@ -4859,18 +4886,6 @@ pub fn extend(m: &mut Metadata) {
         &[
             ("Process", &["Apply Entries", "Unapply Entries", "Find entries...", "Reverse Transaction"]),
             ("Entry", &["Dimensions", "Detailed &Ledger Entries"]),
-        ],
-    );
-    actions(
-        m,
-        "vendor-list",
-        &[
-            Nav { caption: "Dimensions-Single", page: "default-dimensions", link: &[("No.", "No.")], shortcut: "Alt+D" },
-            Nav { caption: "Co&mments", page: "comment-sheet", link: &[("No.", "No.")], shortcut: "" },
-            Nav { caption: "Quotes", page: "purchase-quotes", link: &[("Buy-from Vendor No.", "No.")], shortcut: "" },
-            Nav { caption: "Orders", page: "purchase-order-list", link: &[("Buy-from Vendor No.", "No.")], shortcut: "" },
-            Nav { caption: "Payment Journal", page: "payment-journal", link: &[], shortcut: "" },
-            Nav { caption: "Pay Vendor", page: "vendor-ledger-entries", link: &[("Vendor No.", "No.")], shortcut: "" },
         ],
     );
     categories(

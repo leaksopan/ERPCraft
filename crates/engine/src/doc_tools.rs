@@ -29,19 +29,29 @@ const ENTRY_TABLES: &[&str] = &[
     "FA Ledger Entry",
 ];
 
+/// Runs `post` on a copy of the company and returns the copy, so nothing is kept.
+fn run_on_copy(ctx: &Ctx, post: impl FnOnce(&mut Ctx) -> Result<Json>) -> Result<(crate::db::Database, Json)> {
+    let mut copy = ctx.db.clone();
+    let mut scratch = Ctx { meta: ctx.meta, db: &mut copy, work_date: ctx.work_date, user: ctx.user };
+    let posted = post(&mut scratch)?;
+    Ok((copy, posted))
+}
+
 /// Posts the document on a copy of the company and returns the copy, so nothing is kept.
 fn post_on_copy(ctx: &Ctx, side: &Side, p: &Json) -> Result<(crate::db::Database, Json)> {
     let (doc_type, no) = doc_ref(p, side)?;
     let mode = PostMode::parse(opt_str(p, "mode"))?;
-    let mut copy = ctx.db.clone();
-    let mut scratch = Ctx { meta: ctx.meta, db: &mut copy, work_date: ctx.work_date, user: ctx.user };
-    let posted = posting::post_document(&mut scratch, side, &doc_type, &no, mode)?;
-    Ok((copy, posted))
+    run_on_copy(ctx, |c| posting::post_document(c, side, &doc_type, &no, mode))
 }
 
 /// BC's Preview Posting: the entries posting would make, then nothing is written.
 fn preview(ctx: &mut Ctx, side: &Side, p: &Json) -> Result<Json> {
     let (copy, _) = post_on_copy(ctx, side, p)?;
+    preview_report(ctx, &copy)
+}
+
+/// The Posting Preview of the entries `copy` has that the company doesn't.
+fn preview_report(ctx: &Ctx, copy: &crate::db::Database) -> Result<Json> {
     let mut rows = Vec::new();
     let mut entries = Map::new();
     for table in ENTRY_TABLES {
@@ -326,6 +336,97 @@ fn s_post_print() -> Json {
         "required": ["no"]})
 }
 
+fn journal_ref(p: &Json, default_template: &str) -> (String, String) {
+    (
+        opt_str(p, "template").unwrap_or(default_template).to_uppercase(),
+        opt_str(p, "batch").unwrap_or("DEFAULT").to_uppercase(),
+    )
+}
+
+/// Preview Posting on a general journal batch.
+fn journal_preview(ctx: &mut Ctx, p: &Json) -> Result<Json> {
+    let (t, b) = journal_ref(p, "GENERAL");
+    let (copy, _) = run_on_copy(ctx, |c| crate::journal::post(c, &t, &b))?;
+    preview_report(ctx, &copy)
+}
+
+/// Preview Posting on an item journal batch.
+fn item_journal_preview(ctx: &mut Ctx, p: &Json) -> Result<Json> {
+    let (t, b) = journal_ref(p, "ITEM");
+    let (copy, _) = run_on_copy(ctx, |c| crate::item_journal::post(c, &t, &b))?;
+    preview_report(ctx, &copy)
+}
+
+/// BC's journal Test Report: every line checked as posting would, without posting.
+fn journal_test(ctx: &mut Ctx, p: &Json, item: bool) -> Result<Json> {
+    let (t, b) = journal_ref(p, if item { "ITEM" } else { "GENERAL" });
+    let mut problems = if item { Vec::new() } else { crate::journal::check(ctx, &t, &b)? };
+    if problems.is_empty() {
+        let posted = run_on_copy(ctx, |c| if item { crate::item_journal::post(c, &t, &b) } else { crate::journal::post(c, &t, &b) });
+        if let Err(e) = posted {
+            problems.push(e.message);
+        }
+    }
+    let rows: Vec<Json> = if problems.is_empty() { vec![json!(["There are no errors. The journal can be posted."])] } else { problems.iter().map(|m| json!([m])).collect() };
+    Ok(json!({"ok": problems.is_empty(), "report": {"title": format!("{t} / {b} - Test Report"), "columns": ["Result"], "rows": rows}}))
+}
+
+fn journal_test_report(ctx: &mut Ctx, p: &Json) -> Result<Json> {
+    journal_test(ctx, p, false)
+}
+
+fn item_journal_test_report(ctx: &mut Ctx, p: &Json) -> Result<Json> {
+    journal_test(ctx, p, true)
+}
+
+/// BC's Renumber Document Numbers: the batch's documents numbered again from its number series,
+/// in line order, lines of one document staying together.
+fn renumber(ctx: &mut Ctx, p: &Json, table: &str, batch_table: &str, default_template: &str) -> Result<Json> {
+    let (t, b) = journal_ref(p, default_template);
+    let batch = ctx.get(batch_table, &Key(vec![Value::text(&t), Value::text(&b)]))?;
+    let series = batch.str("No. Series").to_string();
+    if series.is_empty() {
+        refuse!("No. Series must have a value in the journal batch {t} {b}.");
+    }
+    let mut next = crate::noseries::peek(ctx, &series)?;
+    let lt = ctx.table(table)?;
+    let mut lines: Vec<Record> =
+        ctx.db.rows(table).filter(|l| l.str("Journal Template Name") == t && l.str("Journal Batch Name") == b).cloned().collect();
+    lines.sort_by_key(|l| l.get("Line No.").as_int());
+    let mut map: Vec<(String, String)> = Vec::new();
+    let mut changed = 0;
+    for mut l in lines {
+        let old = l.str("Document No.").to_string();
+        let new = match map.iter().find(|(o, _)| *o == old) {
+            Some((_, n)) => n.clone(),
+            None => {
+                let n = next.clone();
+                next = crate::noseries::increment(&next, 1).ok_or_else(|| EngineError::invalid(format!("The number {n} can't be increased.")))?;
+                map.push((old.clone(), n.clone()));
+                n
+            }
+        };
+        if new != old {
+            l.set("Document No.", Value::text(&new));
+            ctx.db.modify(lt, l)?;
+            changed += 1;
+        }
+    }
+    Ok(json!({"lines": changed, "message": format!("{changed} line(s) were renumbered.")}))
+}
+
+fn journal_renumber(ctx: &mut Ctx, p: &Json) -> Result<Json> {
+    renumber(ctx, p, "Gen. Journal Line", "Gen. Journal Batch", "GENERAL")
+}
+
+fn item_journal_renumber(ctx: &mut Ctx, p: &Json) -> Result<Json> {
+    renumber(ctx, p, "Item Journal Line", "Item Journal Batch", "ITEM")
+}
+
+fn s_journal() -> Json {
+    json!({"type": "object", "properties": {"template": {"type": "string"}, "batch": {"type": "string", "default": "DEFAULT"}}})
+}
+
 macro_rules! per_side {
     ($sales:ident, $purch:ident, $f:ident) => {
         fn $sales(c: &mut Ctx, p: &Json) -> Result<Json> {
@@ -359,6 +460,12 @@ pub static COMMANDS: &[CommandDef] = &[
     cmd!("sales.document.post_and_print", "Post and Print", "Sales", true, s_post_print, sales_post_print, "Post a sales document and print the posted invoice or credit memo."),
     cmd!("purchase.document.post_and_print", "Post and Print", "Purchasing", true, s_post_print, purch_post_print, "Post a purchase document and print the posted invoice or credit memo."),
     cmd!("document.posted_statistics", "Statistics", "Documents", false, s_posted_stats, posted_statistics, "Amounts, VAT, cost and profit of a posted invoice or credit memo."),
+    cmd!("journal.preview_post", "Preview Posting", "Finance", false, s_journal, journal_preview, "The entries posting a general journal batch would make, without posting it."),
+    cmd!("journal.test_report", "Test Report", "Finance", false, s_journal, journal_test_report, "What would stop a general journal batch from posting."),
+    cmd!("journal.renumber", "Renumber Document Numbers", "Finance", true, s_journal, journal_renumber, "Number a journal batch's documents again from its number series."),
+    cmd!("item_journal.preview_post", "Preview Posting", "Inventory", false, s_journal, item_journal_preview, "The entries posting an item journal batch would make, without posting it."),
+    cmd!("item_journal.test_report", "Test Report", "Inventory", false, s_journal, item_journal_test_report, "What would stop an item journal batch from posting."),
+    cmd!("item_journal.renumber", "Renumber Document Numbers", "Inventory", true, s_journal, item_journal_renumber, "Number an item journal batch's documents again from its number series."),
     cmd!("purchase.document.preview_post", "Preview Posting", "Purchasing", false, s_doc_mode, purch_preview, "The entries posting a purchase document would make, without posting it."),
     cmd!("purchase.document.test_report", "Test Report", "Purchasing", false, s_doc_mode, purch_test, "What would stop a purchase document from posting."),
     cmd!("purchase.document.post_and_new", "Post and New", "Purchasing", true, s_doc_mode, purch_post_new, "Post a purchase document and open a new one of the same type."),

@@ -203,3 +203,32 @@ fn financial_reports() {
     let ap = s.run("report.aged_payables", &json!({})).unwrap();
     assert!(dec(&ap["total"]) > 0.0);
 }
+
+#[test]
+fn journal_preview_test_report_and_renumber() {
+    let mut s = demo();
+    jnl_line(&mut s, "general-journal", json!({"Account No.": "60200", "Debit Amount": 500000}));
+    let bad = s.run("journal.test_report", &json!({"template": "GENERAL"})).unwrap();
+    assert_eq!(bad["ok"], false);
+    jnl_line(&mut s, "general-journal", json!({"Account No.": "10110", "Credit Amount": 500000}));
+    let ok = s.run("journal.test_report", &json!({"template": "GENERAL"})).unwrap();
+    assert_eq!(ok["ok"], true, "{ok}");
+    let gl_before = count(&mut s, "G/L Entry");
+    let preview = s.run("journal.preview_post", &json!({"template": "GENERAL"})).unwrap();
+    assert_eq!(preview["report"]["rows"][0], json!(["G/L Entry", 2]));
+    assert_eq!(count(&mut s, "G/L Entry"), gl_before, "preview posts nothing");
+    // Renumber: give the second line its own number, then renumber puts them in sequence.
+    let lines = s.run("record.list", &json!({"page": "general-journal"})).unwrap();
+    let second = &lines["records"][1];
+    s.run(
+        "record.validate",
+        &json!({"table": "Gen. Journal Line", "key": [second["Journal Template Name"], second["Journal Batch Name"], second["Line No."]], "field": "Document No.", "value": "ZZ999"}),
+    )
+    .unwrap();
+    s.run("journal.renumber", &json!({"template": "GENERAL"})).unwrap();
+    let after = s.run("record.list", &json!({"page": "general-journal"})).unwrap();
+    let nos: Vec<&str> = after["records"].as_array().unwrap().iter().map(|l| l["Document No."].as_str().unwrap()).collect();
+    assert_eq!(nos.len(), 2);
+    assert_ne!(nos[0], nos[1], "two documents stay two documents");
+    assert!(!nos.contains(&"ZZ999"));
+}

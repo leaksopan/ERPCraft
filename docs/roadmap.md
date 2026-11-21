@@ -27,7 +27,7 @@ Each target is checked by a script or a screenshot, not by eye.
 | 3 | Every W1 app's pages and reports exist (or are decided out) | inventory, W1 apps section | 0 / ~1,700 pages |
 | 4 | Every page we have matches BC's structure | `cargo run -p bc-parity -- --summary --check` exits 0 | ✅ blocking 0 |
 | 5 | Every field BC shows on our pages exists | "needs table field" = 0 | 67 |
-| 6 | Every action BC offers on our pages exists and works | "actions missing" = 0 | 1,323 |
+| 6 | Every action BC offers on our pages exists and works | "actions missing" = 0 | 1,273 |
 | 7 | Every page looks and behaves like BC | [visual checklist](#visual-parity-checklist) | 7 pages |
 | 8 | Every function has tests | `cargo test --workspace` | ✅ 27 suites |
 
@@ -73,7 +73,8 @@ The order follows impact for Auto Craft (a workshop and auto-parts business): mo
 - [ ] Approvals, Send/Cancel Approval Request on document **lists**, acting on the selected row
 - [ ] Co&mments on lists and journals
 - [ ] Statistics, Customer Statistics, Vendor Statistics on lists and documents
-- [ ] Post and Print, Test Report, Preview Posting, Post Batch on **journals**
+- [ ] Post and Print, Test Report, Preview Posting, Post Batch on **journals** (Preview Posting, Test Report and Renumber Document Numbers done; Post and Print, Post Batch to do)
+- [x] Card actions mirrored on their list pages (generator `mirror` pass)
 - [ ] Attachments and Attach as PDF on posted document lists
 - [ ] Dimensions-Multiple and Set Dimension Filter on lists
 

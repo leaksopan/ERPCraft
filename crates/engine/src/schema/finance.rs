@@ -259,6 +259,27 @@ fn pages(m: &mut Metadata) {
                         .confirm("Do you want to post the journal lines?"),
                 )
                 .action(
+                    Act::command("Preview Posting", A::Process, "journal.preview_post")
+                        .param("template", template)
+                        .param("batch", "DEFAULT")
+                        .icon("preview")
+                        .tooltip("Review the different types of entries that will be created when you post the document or journal."),
+                )
+                .action(
+                    Act::command("Test Report", A::Report, "journal.test_report")
+                        .param("template", template)
+                        .param("batch", "DEFAULT")
+                        .icon("report")
+                        .tooltip("View a test report so that you can find and correct any errors before you perform the actual posting of the journal or document."),
+                )
+                .action(
+                    Act::command("Renumber Document Numbers", A::Process, "journal.renumber")
+                        .param("template", template)
+                        .param("batch", "DEFAULT")
+                        .icon("adjust")
+                        .tooltip("Resort the numbers in the Document No. column to avoid posting errors because the document numbers are not in sequence."),
+                )
+                .action(
                     Act::command("Preview Balance", A::Process, "journal.check")
                         .param("template", template)
                         .param("batch", "DEFAULT")

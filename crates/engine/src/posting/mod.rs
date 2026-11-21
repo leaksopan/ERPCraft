@@ -366,6 +366,8 @@ pub fn post_document(ctx: &mut Ctx, side: &Side, doc_type: &str, no: &str, mode:
     let mut messages = Vec::new();
     // Item ledger entry per line created by shipping now (an invoice-only posting has none).
     let mut shipment_no = String::new();
+    // (document line no., item ledger entry no.) of what this posting received / shipped.
+    let mut posted_now: Vec<(i64, i64)> = Vec::new();
 
     // ---- Ship / Receive (orders) ----------------------------------------------------------
     if any_ship {
@@ -401,6 +403,9 @@ pub fn post_document(ctx: &mut Ctx, side: &Side, doc_type: &str, no: &str, mode:
                 if !side.sales {
                     update_item_cost(ctx, it.str("No."), qb, cost)?;
                 }
+            }
+            if ile != 0 {
+                posted_now.push((l.get("Line No.").as_int(), ile));
             }
             let mut sl = slt.init_record();
             copy_common(l, slt, &mut sl);
@@ -442,6 +447,8 @@ pub fn post_document(ctx: &mut Ctx, side: &Side, doc_type: &str, no: &str, mode:
         let (mut total_amount, mut total_incl) = (Decimal::ZERO, Decimal::ZERO);
         let (mut total_amount_lcy, mut total_incl_lcy) = (Decimal::ZERO, Decimal::ZERO);
         let mut vat_specs: Vec<crate::vat::VatSpec> = Vec::new();
+        // Item charge shares: (assignment, LCY amount, charge no.).
+        let mut charge_costs: Vec<(Record, Decimal, String)> = Vec::new();
 
         for l in lines.iter().filter(|l| !to_invoice(l).is_zero()) {
             let qty = to_invoice(l);
@@ -476,10 +483,31 @@ pub fn post_document(ctx: &mut Ctx, side: &Side, doc_type: &str, no: &str, mode:
                         setup_account(ctx, GEN_POSTING_SETUP, gen_key.clone(), f, "purchases")?
                     }
                 }
+                "Charge (Item)" if side.sales => {
+                    let f = if credit { "Sales Credit Memo Account" } else { "Sales Account" };
+                    setup_account(ctx, GEN_POSTING_SETUP, gen_key.clone(), f, "sales")?
+                }
+                // A purchase charge goes onto the inventory of the items it is assigned to.
+                "Charge (Item)" => String::new(),
                 other => refuse!("Lines of type {other} cannot be posted yet (line {line_no})."),
             };
             let line_desc = if l.str("Description").is_empty() { description.clone() } else { l.str("Description").to_string() };
-            gl.push(GlLine { account, amount: -g * amount, vat_amount: -g * vat, description: line_desc.clone(), gen_posting_type: gen_type });
+            if l.str("Type") == "Charge (Item)" && !side.sales {
+                let assigned = crate::item_charge::check_assigned(ctx, l, qty)?;
+                for (a, share) in crate::item_charge::shares(&assigned, qty, amount) {
+                    let it = ctx.get_code(ITEM, a.str("Item No."))?;
+                    let loc = a.get("Applies-to Doc. Line No.").as_int();
+                    let location = lines.iter().find(|x| x.get("Line No.").as_int() == loc).map(|x| x.str("Location Code").to_string()).unwrap_or_else(|| l.str("Location Code").to_string());
+                    let acc = inventory_account(ctx, &it, &location)?;
+                    gl.push(GlLine { account: acc, amount: -g * share, vat_amount: Decimal::ZERO, description: line_desc.clone(), gen_posting_type: gen_type });
+                    charge_costs.push((a, -g * share, l.str("No.").to_string()));
+                }
+                if let Some(last) = gl.last_mut() {
+                    last.vat_amount = -g * vat;
+                }
+            } else {
+                gl.push(GlLine { account, amount: -g * amount, vat_amount: -g * vat, description: line_desc.clone(), gen_posting_type: gen_type });
+            }
             let vat_key = Key(vec![header.get("VAT Bus. Posting Group").clone(), l.get("VAT Prod. Posting Group").clone()]);
             if !vat.is_zero() {
                 let f = if side.sales { "Sales VAT Account" } else { "Purchase VAT Account" };
@@ -514,7 +542,8 @@ pub fn post_document(ctx: &mut Ctx, side: &Side, doc_type: &str, no: &str, mode:
                         (false, true) => "Purchase Credit Memo",
                     };
                     let sales_amount = if side.sales { if credit { -amount } else { amount } } else { Decimal::ZERO };
-                    post_item_entry(ctx, side, it, posting_date, ile_doc, &posted_no, &line_desc, l.str("Location Code"), signed, cost, sales_amount, l.get("Unit of Measure Code"), &party_no, l)?;
+                    let ile = post_item_entry(ctx, side, it, posting_date, ile_doc, &posted_no, &line_desc, l.str("Location Code"), signed, cost, sales_amount, l.get("Unit of Measure Code"), &party_no, l)?;
+                    posted_now.push((l.get("Line No.").as_int(), ile));
                     if !side.sales && !credit && !qty.is_zero() {
                         update_item_cost(ctx, it.str("No."), qty * per(l), amount)?;
                     }
@@ -550,6 +579,19 @@ pub fn post_document(ctx: &mut Ctx, side: &Side, doc_type: &str, no: &str, mode:
         )?;
         for spec in &fa_specs {
             crate::fa::post_entry(ctx, &txn, spec, posting_date, ledger_doc_type, &posted_no, &ext_doc_no)?;
+        }
+        // Item charges land on the entries they were assigned to.
+        let at = ctx.table(crate::item_charge::ASSIGNMENT)?;
+        for (a, cost, charge) in &charge_costs {
+            let Some(ile) = crate::item_charge::target_entry(ctx, a, &posted_now) else {
+                refuse!("Item charge {charge} is assigned to line {} of {} {}, which has not been received yet.", a.get("Applies-to Doc. Line No.").as_int(), a.str("Applies-to Doc. Type"), a.str("Applies-to Doc. No."));
+            };
+            crate::item_charge::add_cost(ctx, ile, charge, *cost, &posted_no, posting_date)?;
+            let mut done = a.clone();
+            done.set("Qty. Assigned", dec(done.get("Qty. Assigned").as_dec() + done.get("Qty. to Assign").as_dec()));
+            done.set("Qty. to Assign", dec(Decimal::ZERO));
+            done.set("Amount to Assign", dec(Decimal::ZERO));
+            ctx.db.modify(at, done)?;
         }
         crate::vat::post(
             ctx,

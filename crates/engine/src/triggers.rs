@@ -205,6 +205,7 @@ pub fn on_validate(ctx: &mut Ctx, t: &TableDef, r: &mut Record, field: &str, old
     crate::item_setup::on_validate(ctx, t, r, field)?;
     crate::transfer::on_validate(ctx, t, r, field)?;
     crate::tracking::on_validate(ctx, t, r, field)?;
+    crate::item_charge::on_validate(ctx, t, r, field);
     if t.name == crate::schema::bank_rec::BANK_REC_LINE {
         crate::bank_rec::on_line_validate(ctx, r, field);
     }
@@ -478,6 +479,12 @@ fn validate_line(ctx: &mut Ctx, side: &Side, r: &mut Record, field: &str, old: &
                     let per = r.get("Qty. per Unit of Measure").as_dec();
                     let price = if per.is_zero() || per == Decimal::ONE { price } else { (price * per).round_dp(5) };
                     r.set(side.price, dec(price));
+                }
+                "Charge (Item)" => {
+                    let c = ctx.get_code(crate::item_charge::ITEM_CHARGE, &no)?;
+                    r.set("Description", c.get("Description").clone());
+                    r.set("Gen. Prod. Posting Group", c.get("Gen. Prod. Posting Group").clone());
+                    r.set("VAT Prod. Posting Group", c.get("VAT Prod. Posting Group").clone());
                 }
                 "G/L Account" => {
                     let acc = ctx.get_code(GL_ACCOUNT, &no)?;

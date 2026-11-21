@@ -37,6 +37,7 @@ pub mod item_setup;
 pub mod transfer;
 pub mod tracking;
 pub mod costing;
+pub mod item_charge;
 mod error;
 pub mod fa;
 pub mod item_journal;

@@ -23,14 +23,14 @@ orders this list into phases.
 | Foundation | 8 | 58 | 0 | 2 |
 | HumanResources | 0 | 57 | 0 | 15 |
 | Integration | 0 | 87 | 0 | 0 |
-| Inventory | 33 | 312 | 1 | 101 |
+| Inventory | 34 | 312 | 1 | 101 |
 | Invoicing | 0 | 7 | 0 | 0 |
 | Manufacturing | 0 | 134 | 0 | 50 |
 | Modules | 2 | 93 | 0 | 1 |
 | OtherCapabilities | 2 | 30 | 0 | 1 |
 | Pricing | 0 | 14 | 0 | 2 |
 | Projects | 0 | 135 | 0 | 40 |
-| Purchases | 25 | 153 | 5 | 51 |
+| Purchases | 26 | 153 | 5 | 51 |
 | RoleCenters | 0 | 16 | 0 | 0 |
 | Sales | 41 | 222 | 8 | 78 |
 | Service | 0 | 192 | 0 | 55 |
@@ -38,7 +38,7 @@ orders this list into phases.
 | Utilities | 0 | 12 | 0 | 2 |
 | Warehouse | 0 | 144 | 0 | 35 |
 | eServices | 0 | 25 | 0 | 0 |
-| **Base Application** | **173** | **2638** | **16** | **659** |
+| **Base Application** | **175** | **2638** | **16** | **659** |
 
 ### (root)
 
@@ -1754,7 +1754,7 @@ Pages 0 / 87, reports 0 / 0.
 
 ### Inventory
 
-Pages 33 / 312, reports 1 / 101.
+Pages 34 / 312, reports 1 / 101.
 
 <details><summary>Inventory / Analysis: pages 0 / 34, reports 0 / 8</summary>
 
@@ -1974,7 +1974,7 @@ Pages 33 / 312, reports 1 / 101.
 
 </details>
 
-<details><summary>Inventory / Item: pages 13 / 61, reports 0 / 2</summary>
+<details><summary>Inventory / Item: pages 14 / 61, reports 0 / 2</summary>
 
 - [x] Page 30 Item Card (Card)
 - [x] Page 31 Item List (List)
@@ -2015,7 +2015,7 @@ Pages 33 / 312, reports 1 / 101.
 - [ ] Page 5735 Item Reference List (List)
 - [ ] Page 5736 Item References (List)
 - [x] Page 5737 Item Reference Entries (List)
-- [ ] Page 5800 Item Charges (List)
+- [x] Page 5800 Item Charges (List)
 - [x] Page 5826 Inventory Posting Setup (List)
 - [ ] Page 7497 Item From Picture Wizard (NavigatePage)
 - [ ] Page 7498 Item From Picture (Card)
@@ -2977,7 +2977,7 @@ Pages 0 / 135, reports 0 / 40.
 
 ### Purchases
 
-Pages 25 / 153, reports 5 / 51.
+Pages 26 / 153, reports 5 / 51.
 
 <details><summary>Purchases / Analysis: pages 0 / 11, reports 0 / 2</summary>
 
@@ -3029,7 +3029,7 @@ Pages 25 / 153, reports 5 / 51.
 
 </details>
 
-<details><summary>Purchases / Document: pages 9 / 36, reports 1 / 15</summary>
+<details><summary>Purchases / Document: pages 10 / 36, reports 1 / 15</summary>
 
 - [x] Page 49 Purchase Quote (Document)
 - [x] Page 50 Purchase Order (Document)
@@ -3054,7 +3054,7 @@ Pages 25 / 153, reports 5 / 51.
 - [ ] Page 665 Purchase Prepmt. Percentages (Worksheet)
 - [ ] Page 1159 Purchase Documents (ListPart)
 - [ ] Page 1328 Purch. Order From Sales Order (Worksheet)
-- [ ] Page 5805 Item Charge Assignment (Purch) (Worksheet)
+- [x] Page 5805 Item Charge Assignment (Purch) (Worksheet)
 - [ ] Page 6640 Purchase Return Order (Document)
 - [ ] Page 6641 Purchase Return Order Subform (ListPart)
 - [ ] Page 6643 Purchase Return Orders (List)

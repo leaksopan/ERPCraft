@@ -115,6 +115,49 @@ pub fn register(m: &mut Metadata) {
     if let Some(p) = m.pages.get_mut("item-ledger-entries") {
         p.actions.push(Act::page("&Value Entries", A::Navigate, "value-entries").link("Item Ledger Entry No.", "Entry No.").icon("ledger").shortcut("Ctrl+F7").tooltip("View the history of posted amounts that affect the value of the item. Value entries are created for every transaction with the item."));
     }
+    // Item charges and their purchase assignment.
+    m.add_table(
+        TableDef::new(crate::item_charge::ITEM_CHARGE, 5800)
+            .fields(vec![F::code("No.", 20).not_blank(), F::text("Description", 100), F::code("Gen. Prod. Posting Group", 20), F::code("VAT Prod. Posting Group", 20), F::code("Search Description", 100)])
+            .key(&["No."])
+            .describe_by("Description")
+            .pages("item-charges", None),
+    );
+    m.add_table(
+        TableDef::new(crate::item_charge::ASSIGNMENT, 5805)
+            .fields(vec![
+                F::option("Document Type", crate::schema::tables::PURCH_DOC_TYPES),
+                F::code("Document No.", 20),
+                F::integer("Document Line No."),
+                F::integer("Line No."),
+                F::code("Item Charge No.", 20),
+                F::code("Item No.", 20),
+                F::text("Description", 100),
+                F::decimal("Qty. to Assign"),
+                F::decimal("Qty. Assigned").read_only(),
+                F::decimal("Unit Cost"),
+                F::decimal("Amount to Assign").auto_format(1).read_only(),
+                F::option("Applies-to Doc. Type", crate::item_charge::APPLIES_TO_TYPES),
+                F::code("Applies-to Doc. No.", 20),
+                F::integer("Applies-to Doc. Line No."),
+            ])
+            .key(&["Document Type", "Document No.", "Document Line No.", "Line No."]),
+    );
+    let mut charges = PageDef::new("item-charges", 5800, "Item Charges", PageKind::List, Some(crate::item_charge::ITEM_CHARGE));
+    charges.columns = ["No.", "Description", "Gen. Prod. Posting Group", "VAT Prod. Posting Group", "Search Description"].iter().map(|c| (*c).to_string()).collect();
+    charges.editable = true;
+    charges.keywords = "freight item charge landed cost".to_string();
+    m.add_page(charges);
+    let mut assign = PageDef::new("item-charge-assignment-purch", 5805, "Item Charge Assignment (Purch)", PageKind::List, Some(crate::item_charge::ASSIGNMENT));
+    assign.columns = ["Applies-to Doc. Type", "Applies-to Doc. No.", "Applies-to Doc. Line No.", "Item No.", "Description", "Qty. to Assign", "Qty. Assigned", "Amount to Assign"].iter().map(|c| (*c).to_string()).collect();
+    assign.editable = true;
+    assign.actions = vec![
+        Act::command("Suggest Item &Charge Assignment", A::Process, "purchase.charge.suggest").icon("apply").ask(&["method"]).tooltip("Use a function that assigns and distributes the item charge when the document has more than one line of type Item."),
+    ];
+    m.add_page(assign);
+    if let Some(p) = m.pages.get_mut("purchase-lines") {
+        p.actions.push(Act::command("Item Charge &Assignment", A::Navigate, "purchase.charge.assignment").icon("list").shortcut("Alt+I").tooltip("Record additional direct costs, for example for freight. This action is available only for Charge (Item) line types."));
+    }
     let mut codes = PageDef::new("item-tracking-codes", 6502, "Item Tracking Codes", PageKind::List, Some(TRACKING_CODE));
     codes.columns = ["Code", "Description"].iter().map(|c| (*c).to_string()).collect();
     codes.card_page = Some("item-tracking-code-card".to_string());

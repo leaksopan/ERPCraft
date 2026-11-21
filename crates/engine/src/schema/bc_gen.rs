@@ -1838,6 +1838,47 @@ pub fn extend(m: &mut Metadata) {
     );
     relabel(
         m,
+        "Item Charge",
+        &[
+            ("No.", "No.", "Specifies the number of the involved entry or record, according to the specified number series.", 0),
+            ("Description", "Description", "Specifies a description of the item charge number that you are setting up.", 0),
+            ("Gen. Prod. Posting Group", "Gen. Prod. Posting Group", "Specifies the item charge's product type to link transactions made for this item charge with the appropriate general ledger account according to the general posting setup.", 0),
+            ("VAT Prod. Posting Group", "VAT Prod. Posting Group", "Specifies the VAT specification of the involved item or resource to link transactions made for this record with the appropriate general ledger account according to the VAT posting setup.", 0),
+            ("Search Description", "Search Description", "Specifies text to search for when you do not know the number of the item charge.", 0),
+        ],
+    );
+    fields(
+        m,
+        "Item Charge",
+        vec![
+            F::code("Tax Group Code", 20).tooltip("Specifies the sales tax group code that this item charge belongs to."),
+        ],
+    );
+    relabel(
+        m,
+        "Item Charge Assignment (Purch)",
+        &[
+            ("Item No.", "Item No.", "Specifies the item number on the document line that this item charge is assigned to.", 0),
+            ("Description", "Description", "Specifies a description of the item on the document line that this item charge is assigned to.", 0),
+            ("Qty. to Assign", "Qty. to Assign", "Specifies how many units of the item charge will be assigned to the document line. If the document has more than one line of type Item, then this quantity reflects the distribution that you selected when you chose the Suggest Item Charge Assignment action.", 0),
+            ("Qty. Assigned", "Qty. Assigned", "Specifies the number of units of the item charge will be assigned to the document line.", 0),
+            ("Unit Cost", "Unit Cost", "", 2),
+            ("Amount to Assign", "Amount to Assign", "Specifies the value of the item charge that is going to be assigned to the document line.", 1),
+            ("Applies-to Doc. Type", "Applies-to Doc. Type", "Specifies the type of the document that this document or journal line will be applied to when you post, for example to register payment.", 0),
+            ("Applies-to Doc. No.", "Applies-to Doc. No.", "Specifies the number of the document that this document or journal line will be applied to when you post, for example to register payment.", 0),
+            ("Applies-to Doc. Line No.", "Applies-to Doc. Line No.", "Specifies the number of the line on the document that this document or journal line will be applied to when you post, for example to register payment.", 0),
+        ],
+    );
+    fields(
+        m,
+        "Item Charge Assignment (Purch)",
+        vec![
+            F::decimal("Qty. to Handle").tooltip("Specifies how many items the item charge will be assigned to on the line. It can be either equal to Qty. to Assign or to zero. If it is zero, the item charge will not be assigned to the line."),
+            F::decimal("Amount to Handle").auto_format(1).tooltip("Specifies the value of the item charge that will be actually assigned to the document line."),
+        ],
+    );
+    relabel(
+        m,
         "Item Journal Line",
         &[
             ("Journal Template Name", "Journal Template Name", "Specifies the name of the journal template, the basis of the journal batch, that the entries were posted from.", 0),
@@ -2555,6 +2596,9 @@ pub fn extend(m: &mut Metadata) {
             F::code("Item Reference No.", 50).tooltip("Specifies the referenced item number."),
             F::date("Promised Receipt Date").tooltip("Specifies the date that the vendor has promised to deliver the order."),
             F::date("Planned Receipt Date").tooltip("Specifies the date when the item is planned to arrive in inventory. Forward calculation: planned receipt date = order date + vendor lead time (per the vendor calendar and rounded to the next working day in first the vendor calendar and then the location calendar). If no vendor calendar exists, then: planned receipt date = order date + vendor lead time (per the location calendar). Backward calculation: order date = planned receipt date - vendor lead time (per the vendor calendar and rounded to the previous working day in first the vendor calendar and then the location calendar). If no vendor calendar exists, then: order date = planned receipt date - vendor lead time (per the location calendar)."),
+            F::decimal("Qty. to Assign").calc(CalcFormula::new(CalcFunc::Sum, "Item Charge Assignment (Purch)", "Qty. to Assign", &[("Document Type", "Document Type"), ("Document No.", "Document No."), ("Document Line No.", "Line No.")], &[])).tooltip("Specifies how many units of the item charge will be assigned to the line."),
+            F::decimal("Qty. Assigned").calc(CalcFormula::new(CalcFunc::Sum, "Item Charge Assignment (Purch)", "Qty. Assigned", &[("Document Type", "Document Type"), ("Document No.", "Document No."), ("Document Line No.", "Line No.")], &[])).tooltip("Specifies how much of the item charge that has been assigned."),
+            F::decimal("Item Charge Qty. to Handle").calc(CalcFormula::new(CalcFunc::Sum, "Item Charge Assignment (Purch)", "Qty. to Handle", &[("Document Type", "Document Type"), ("Document No.", "Document No."), ("Document Line No.", "Line No.")], &[])).tooltip("Specifies how many items the item charge will be assigned to on the line. It can be either equal to Qty. to Assign or to zero. If it is zero, the item charge will not be assigned to the line."),
             F::decimal("Non-Deductible VAT Base").read_only().auto_format(1).tooltip("Specifies the amount of VAT that is not deducted due to the type of goods or services purchased."),
             F::decimal("Non-Deductible VAT Amount").read_only().auto_format(1).tooltip("Specifies the amount of the transaction for which VAT is not applied, due to the type of goods or services purchased."),
             F::decimal("Over-Receipt Quantity").tooltip("Specifies over-receipt quantity."),
@@ -4480,6 +4524,8 @@ pub fn extend(m: &mut Metadata) {
             },
         ],
     );
+    columns(m, "item-charge-assignment-purch", &["Applies-to Doc. Type", "Applies-to Doc. No.", "Applies-to Doc. Line No.", "Item No.", "Description", "Qty. to Assign", "Qty. to Handle", "Qty. Assigned", "Amount to Assign", "Amount to Handle"]);
+    columns(m, "item-charges", &["No.", "Description", "Gen. Prod. Posting Group", "Tax Group Code", "VAT Prod. Posting Group", "Search Description"]);
     columns(m, "item-journal", &["Posting Date", "Price Calculation Method", "Document No.", "Item No.", "Description", "Location Code", "Quantity", "Unit of Measure Code", "Unit Amount", "Amount", "Discount Amount", "Unit Cost", "Applies-to Entry", "Serial No.", "Lot No.", "Package No.", "Expiration Date", "Warranty Date", "Shortcut Dimension 1 Code", "Shortcut Dimension 2 Code"]);
     columns(m, "item-journal-templates", &["Name", "Description", "Type", "Recurring", "No. Series", "Posting No. Series", "Source Code", "Reason Code", "Increment Batch Name"]);
     columns(m, "item-ledger-entries", &["Posting Date", "Entry Type", "Document Type", "Document No.", "Item No.", "Description", "Global Dimension 1 Code", "Global Dimension 2 Code", "Location Code", "Quantity", "Invoiced Quantity", "Remaining Quantity", "Sales Amount (Actual)", "Cost Amount (Actual)", "Cost Amount (Non-Invtbl.)", "Open", "Applied Entry to Adjust", "Order Type", "Entry No.", "Shortcut Dimension 3 Code", "Shortcut Dimension 4 Code", "Shortcut Dimension 5 Code", "Shortcut Dimension 6 Code", "Shortcut Dimension 7 Code", "Shortcut Dimension 8 Code"]);
@@ -4921,7 +4967,7 @@ pub fn extend(m: &mut Metadata) {
         ],
     );
     columns(m, "purchase-invoices", &["No.", "Buy-from Vendor No.", "Buy-from Vendor Name", "Vendor Invoice No.", "Location Code", "Assigned User ID", "Job Queue Status", "Amount"]);
-    columns(m, "purchase-lines", &["Type", "No.", "Item Reference No.", "Description", "Location Code", "Quantity", "Unit of Measure Code", "Direct Unit Cost", "Tax Area Code", "Tax Group Code", "Line Amount", "Non-Deductible VAT Base", "Non-Deductible VAT Amount", "Qty. to Receive", "Quantity Received", "Qty. to Invoice", "Quantity Invoiced", "Selected Alloc. Account No.", "Promised Receipt Date", "Planned Receipt Date", "Expected Receipt Date", "Shortcut Dimension 1 Code", "Shortcut Dimension 2 Code", "Over-Receipt Quantity", "Over-Receipt Code"]);
+    columns(m, "purchase-lines", &["Type", "No.", "Item Reference No.", "Description", "Location Code", "Quantity", "Unit of Measure Code", "Direct Unit Cost", "Tax Area Code", "Tax Group Code", "Line Amount", "Non-Deductible VAT Base", "Non-Deductible VAT Amount", "Qty. to Receive", "Quantity Received", "Qty. to Invoice", "Quantity Invoiced", "Qty. to Assign", "Item Charge Qty. to Handle", "Qty. Assigned", "Selected Alloc. Account No.", "Promised Receipt Date", "Planned Receipt Date", "Expected Receipt Date", "Shortcut Dimension 1 Code", "Shortcut Dimension 2 Code", "Over-Receipt Quantity", "Over-Receipt Code"]);
     layout(
         m,
         "purchase-order",
@@ -5643,6 +5689,14 @@ pub fn extend(m: &mut Metadata) {
     );
     actions(
         m,
+        "item-charges",
+        &[
+            Nav { caption: "Value E&ntries", page: "value-entries", link: &[("Item Charge No.", "No.")], shortcut: "Ctrl+F7" },
+            Nav { caption: "Dimensions", page: "default-dimensions", link: &[("No.", "No.")], shortcut: "Alt+D" },
+        ],
+    );
+    actions(
+        m,
         "item-journal",
         &[
             Nav { caption: "Card", page: "item-card", link: &[("No.", "Item No.")], shortcut: "Shift+F7" },
@@ -6234,6 +6288,20 @@ pub fn extend(m: &mut Metadata) {
         &[
             ("Process", &["Copy Item", "Adjust Inventory"]),
             ("Item", &["Attachments", "Co&mments", "Dimensions", "Attributes", "Items b&y Location"]),
+        ],
+    );
+    categories(
+        m,
+        "item-charge-assignment-purch",
+        &[
+            ("Process", &["Suggest &Item Charge Assignment"]),
+        ],
+    );
+    categories(
+        m,
+        "item-charges",
+        &[
+            ("Item Charge", &["Value E&ntries", "Dimensions"]),
         ],
     );
     categories(
@@ -6951,6 +7019,15 @@ pub fn extend(m: &mut Metadata) {
         vec![
             ("Amount", CalcFormula::new(CalcFunc::Sum, "Purchase Line", "Amount", &[("Document Type", "Document Type"), ("Document No.", "No.")], &[])),
             ("Amount Including VAT", CalcFormula::new(CalcFunc::Sum, "Purchase Line", "Amount Including VAT", &[("Document Type", "Document Type"), ("Document No.", "No.")], &[])),
+        ],
+    );
+    drilldowns(
+        m,
+        "Purchase Line",
+        &[
+            ("Qty. to Assign", "item-charge-assignment-purch", &[("Document Type", "Document Type"), ("Document No.", "Document No."), ("Document Line No.", "Line No.")], &[]),
+            ("Qty. Assigned", "item-charge-assignment-purch", &[("Document Type", "Document Type"), ("Document No.", "Document No."), ("Document Line No.", "Line No.")], &[]),
+            ("Item Charge Qty. to Handle", "item-charge-assignment-purch", &[("Document Type", "Document Type"), ("Document No.", "Document No."), ("Document Line No.", "Line No.")], &[]),
         ],
     );
     calcs(

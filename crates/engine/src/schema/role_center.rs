@@ -118,6 +118,7 @@ pub fn register(m: &mut Metadata) {
                     L::new("Item Categories", "item-categories"),
                     L::new("Item Attributes", "item-attributes"),
                     L::new("Item Tracking Codes", "item-tracking-codes"),
+                    L::new("Item Charges", "item-charges"),
                     L::new("Units of Measure", "units-of-measure"),
                     L::new("Inventory Posting Setup", "inventory-posting-setup"),
                 ],

@@ -378,6 +378,10 @@ pub fn master_data(ctx: &mut Ctx) -> Result<()> {
                    "Vendor No.": vendor, "Reorder Point": if *ty == "Service" { 0 } else { 10 }}),
         )?;
     }
+    // Item charges: freight and insurance on purchases.
+    for (no, desc) in [("FREIGHT", "Freight charges"), ("INSURANCE", "Transport insurance")] {
+        raw(ctx, "Item Charge", json!({"No.": no, "Description": desc, "Gen. Prod. Posting Group": "PARTS", "VAT Prod. Posting Group": "STANDARD", "Search Description": desc.to_uppercase()}))?;
+    }
     // Item tracking codes: by lot, by serial number.
     raw(ctx, "Item Tracking Code", json!({"Code": "LOTALL", "Description": "Lot specific tracking", "Lot Specific Tracking": true, "Lot Warehouse Tracking": true}))?;
     raw(ctx, "Item Tracking Code", json!({"Code": "SNALL", "Description": "Serial number specific tracking", "SN Specific Tracking": true, "SN Warehouse Tracking": true}))?;

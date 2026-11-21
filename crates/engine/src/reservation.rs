@@ -19,6 +19,8 @@ use crate::schema::tracking::RESERVATION_ENTRY;
 use crate::tracking::{Source, source_of};
 
 pub const RESERVATION: &str = "Reservation";
+pub const REQUEST: &str = "Reservation Request";
+pub const ENTRY_SUMMARY: &str = "Entry Summary";
 /// Source Type of a supply on inventory (table 32, Item Ledger Entry).
 const ILE: i64 = 32;
 
@@ -148,6 +150,11 @@ fn insert_pair(ctx: &mut Ctx, p: &Pair) -> Result<()> {
 /// Reserves what is not reserved yet of a sales order line: first from inventory at its
 /// location, then from purchase order lines by expected receipt date. Returns what was reserved.
 pub fn reserve_line(ctx: &mut Ctx, l: &Record) -> Result<Decimal> {
+    reserve_line_from(ctx, l, None)
+}
+
+/// As `reserve_line`, from one kind of supply only (32 inventory, 39 purchase lines).
+pub fn reserve_line_from(ctx: &mut Ctx, l: &Record, only: Option<i64>) -> Result<Decimal> {
     if l.str("Document Type") != "Order" || l.str("Type") != "Item" {
         refuse!("You can only reserve items on sales order lines.");
     }
@@ -166,7 +173,7 @@ pub fn reserve_line(ctx: &mut Ctx, l: &Record) -> Result<Decimal> {
     let shipment = l.get("Shipment Date").as_date();
     let mut left = need;
     // Inventory first: the latest receipt at the location stands for it.
-    let from_stock = available_inventory(ctx, &item_no, &location).min(left);
+    let from_stock = if only.is_none_or(|o| o == ILE) { available_inventory(ctx, &item_no, &location).min(left) } else { Decimal::ZERO };
     if from_stock > Decimal::ZERO {
         let ile = ctx
             .db
@@ -188,7 +195,7 @@ pub fn reserve_line(ctx: &mut Ctx, l: &Record) -> Result<Decimal> {
         .collect();
     purchases.sort_by_key(|p| (p.get("Expected Receipt Date").as_date(), p.str("Document No.").to_string(), p.get("Line No.").as_int()));
     for p in purchases {
-        if left <= Decimal::ZERO {
+        if left <= Decimal::ZERO || only.is_some_and(|o| o != 39) {
             break;
         }
         let free = p.get("Outstanding Quantity").as_dec() * per(&p) - reserved_base(&ctx.db, PURCH_LINE, &p);
@@ -204,17 +211,169 @@ pub fn reserve_line(ctx: &mut Ctx, l: &Record) -> Result<Decimal> {
     Ok(need - left)
 }
 
+/// BC's Reserve on a sales order line: the Reservation page for it.
 fn reserve(ctx: &mut Ctx, p: &Json) -> Result<Json> {
+    let (table, l) = line_of(ctx, p)?;
+    if table != SALES_LINE || l.str("Document Type") != "Order" || l.str("Type") != "Item" {
+        refuse!("You can only reserve items on sales order lines.");
+    }
+    let item = ctx.get_code(ITEM, l.str("No."))?;
+    if item.str("Reserve") == "Never" {
+        refuse!("Reserve must not be Never in Item No.={}.", l.str("No."));
+    }
+    let s = source_of(SALES_LINE, &l).ok_or_else(|| EngineError::refused("This line cannot be reserved."))?;
+    refresh_request(ctx, &l, &s)?;
+    Ok(json!({"open": {"page": "reservation-card", "key": [s.table, s.subtype, s.id, s.line]}}))
+}
+
+/// BC's Reserve from Inventory: reserve the line from inventory, without the page.
+fn reserve_from_inventory(ctx: &mut Ctx, p: &Json) -> Result<Json> {
     let (table, l) = line_of(ctx, p)?;
     if table != SALES_LINE {
         refuse!("You can only reserve items on sales order lines.");
     }
+    let got = reserve_line_from(ctx, &l, Some(ILE))?;
+    if got.is_zero() {
+        refuse!("There is nothing available to reserve.");
+    }
+    Ok(json!({"reserved": got.to_string(), "message": format!("{} {} was reserved from inventory.", got.normalize(), l.str("No."))}))
+}
+
+/// The page's header and summary lines for a demand line, recalculated.
+fn refresh_request(ctx: &mut Ctx, l: &Record, s: &Source) -> Result<()> {
+    let item = l.str("No.").to_string();
+    let location = l.str("Location Code").to_string();
+    let need = l.get("Outstanding Quantity").as_dec() * per(l);
+    let reserved = reserved_base(&ctx.db, SALES_LINE, l);
+    let rt = ctx.table(REQUEST)?;
+    let mut h = rt.init_record();
+    for (f, v) in [("Source Type", Value::Int(s.table)), ("Source Subtype", Value::Int(s.subtype)), ("Source ID", Value::text(&s.id)), ("Source Ref. No.", Value::Int(s.line))] {
+        h.set(f, v);
+    }
+    h.set("Item No.", Value::text(&item));
+    h.set("Variant Code", l.get("Variant Code").clone());
+    h.set("Location Code", Value::text(&location));
+    h.set("Shipment Date", l.get("Shipment Date").clone());
+    h.set("Description", l.get("Description").clone());
+    h.set("Quantity to Reserve", dec(need));
+    h.set("Reserved Quantity", dec(reserved));
+    h.set("Unreserved Quantity", dec(need - reserved));
+    h.set("Caption", Value::text(format!("Reservation - {} {} {item}", l.str("Document Type"), l.str("Document No."))));
+    if ctx.db.get(&rt.name, &h.key(rt)).is_some() {
+        ctx.db.modify(rt, h)?;
+    } else {
+        ctx.db.insert(rt, h)?;
+    }
+    // Summary lines: inventory, then purchase orders.
+    let st = ctx.table(ENTRY_SUMMARY)?;
+    let old: Vec<Record> = ctx.db.rows(ENTRY_SUMMARY).filter(|e| of_source(e, s)).cloned().collect();
+    for e in old {
+        ctx.db.remove(&st.name, &e.key(st));
+    }
+    let mine = entries_of(ctx, s);
+    let supplies: Vec<Record> = mine.iter().filter_map(|e| pair_of(ctx, e)).collect();
+    let current = |table: i64| -> Decimal { supplies.iter().filter(|x| x.get("Source Type").as_int() == table).map(|x| x.get("Quantity (Base)").as_dec()).sum() };
+    let inv_total = on_hand(ctx, &item, &location);
+    let inv_reserved = inv_total - available_inventory(ctx, &item, &location);
+    let purchases: Vec<Record> = ctx.db.rows(PURCH_LINE).filter(|p| p.str("Document Type") == "Order" && p.str("Type") == "Item" && p.str("No.") == item && p.str("Location Code") == location).cloned().collect();
+    let po_total: Decimal = purchases.iter().map(|p| p.get("Outstanding Quantity").as_dec() * per(p)).sum();
+    let po_reserved: Decimal = purchases.iter().map(|p| reserved_base(&ctx.db, PURCH_LINE, p)).sum();
+    let rows = [(1, ILE, "Item Ledger Entry", inv_total, inv_reserved), (2, 39, "Purchase Order", po_total, po_reserved)];
+    for (n, table, caption, total, res) in rows {
+        if total.is_zero() && res.is_zero() {
+            continue;
+        }
+        let mut e = st.init_record();
+        for (f, v) in [("Source Type", Value::Int(s.table)), ("Source Subtype", Value::Int(s.subtype)), ("Source ID", Value::text(&s.id)), ("Source Ref. No.", Value::Int(s.line))] {
+            e.set(f, v);
+        }
+        e.set("Entry No.", Value::Int(n));
+        e.set("Table ID", Value::Int(table));
+        e.set("Summary Type", Value::text(caption));
+        e.set("Total Quantity", dec(total));
+        e.set("Total Reserved Quantity", dec(res));
+        e.set("Total Available Quantity", dec(total - res));
+        e.set("Current Reserved Quantity", dec(current(table)));
+        ctx.db.insert(st, e)?;
+    }
+    Ok(())
+}
+
+/// The demand line and its source behind a Reservation page row (header or summary line).
+fn request_of(ctx: &Ctx, p: &Json) -> Result<(Record, Source, Option<Record>)> {
+    let table = opt_str(p, "table").unwrap_or(REQUEST);
+    let t = ctx.table(table)?;
+    let rec = ctx.get(table, &Key::from_json(t, p.get("key").unwrap_or(&Json::Null)).map_err(EngineError::invalid)?)?;
+    let s = Source { table: rec.get("Source Type").as_int(), subtype: rec.get("Source Subtype").as_int(), id: rec.str("Source ID").to_string(), batch: String::new(), line: rec.get("Source Ref. No.").as_int() };
+    let doc_type = crate::schema::tables::SALES_DOC_TYPES.get(usize::try_from(s.subtype).unwrap_or(0)).copied().unwrap_or("Order");
+    let l = ctx.get(SALES_LINE, &Key(vec![Value::text(doc_type), Value::text(&s.id), Value::Int(s.line)]))?;
+    let summary = (table == ENTRY_SUMMARY).then_some(rec);
+    Ok((l, s, summary))
+}
+
+/// BC's Reserve from Current Line: from the selected summary line's kind of supply.
+fn reserve_from_line(ctx: &mut Ctx, p: &Json) -> Result<Json> {
+    let (l, s, summary) = request_of(ctx, p)?;
+    let only = summary.as_ref().map(|e| e.get("Table ID").as_int());
+    let got = reserve_line_from(ctx, &l, only)?;
+    if got.is_zero() {
+        refuse!("There is nothing available to reserve.");
+    }
+    refresh_request(ctx, &l, &s)?;
+    Ok(json!({"reserved": got.to_string()}))
+}
+
+/// BC's Auto Reserve: the first available quantity, inventory first.
+fn auto_reserve(ctx: &mut Ctx, p: &Json) -> Result<Json> {
+    let (l, s, _) = request_of(ctx, p)?;
     let got = reserve_line(ctx, &l)?;
     if got.is_zero() {
         refuse!("There is nothing available to reserve.");
     }
-    let need = l.get("Outstanding Quantity").as_dec() * per(&l);
-    Ok(json!({"reserved": got.to_string(), "message": format!("{} of {} {} is reserved.", reserved_base(&ctx.db, SALES_LINE, &l).normalize(), need.normalize(), l.str("No."))}))
+    refresh_request(ctx, &l, &s)?;
+    Ok(json!({"reserved": got.to_string()}))
+}
+
+/// BC's Cancel Reservation from Current Line: the line's reservations on that kind of supply.
+fn cancel_from_line(ctx: &mut Ctx, p: &Json) -> Result<Json> {
+    let (l, s, summary) = request_of(ctx, p)?;
+    let only = summary.as_ref().map(|e| e.get("Table ID").as_int());
+    let t = ctx.table(RESERVATION_ENTRY)?;
+    let mut total = Decimal::ZERO;
+    for e in entries_of(ctx, &s) {
+        let Some(o) = pair_of(ctx, &e) else { continue };
+        if only.is_some_and(|x| o.get("Source Type").as_int() != x) {
+            continue;
+        }
+        total += e.get("Quantity (Base)").as_dec().abs();
+        ctx.db.remove(&t.name, &o.key(t));
+        ctx.db.remove(&t.name, &e.key(t));
+    }
+    if total.is_zero() {
+        refuse!("There are no reservations to cancel.");
+    }
+    refresh_request(ctx, &l, &s)?;
+    Ok(json!({"message": format!("The reservation of {} {} was canceled.", total.normalize(), l.str("No."))}))
+}
+
+/// BC's Available to Reserve: the supply behind a summary line.
+fn available(ctx: &mut Ctx, p: &Json) -> Result<Json> {
+    let (l, _, summary) = request_of(ctx, p)?;
+    match summary.map(|e| e.get("Table ID").as_int()) {
+        Some(39) => Ok(json!({"report": {"title": format!("Available - Purchase Lines - {}", l.str("No.")), "columns": ["Document No.", "Line No.", "Expected Receipt Date", "Outstanding Qty. (Base)", "Reserved Qty. (Base)"], "rows":
+            ctx.db.rows(PURCH_LINE).filter(|x| x.str("Document Type") == "Order" && x.str("Type") == "Item" && x.str("No.") == l.str("No.") && x.str("Location Code") == l.str("Location Code"))
+                .map(|x| json!([x.str("Document No."), x.get("Line No.").as_int(), x.get("Expected Receipt Date").as_date().map(|d| d.to_string()).unwrap_or_default(), (x.get("Outstanding Quantity").as_dec() * per(x)).normalize().to_string(), reserved_base(&ctx.db, PURCH_LINE, x).normalize().to_string()]))
+                .collect::<Vec<Json>>()}})),
+        _ => Ok(json!({"open": {"page": "item-ledger-entries", "filters": [["Item No.", l.str("No.")], ["Location Code", l.str("Location Code")], ["Open", "Yes"]]}})),
+    }
+}
+
+/// Reservation Entries from the Reservation page: those of its demand line.
+fn entries_of_request(ctx: &mut Ctx, p: &Json) -> Result<Json> {
+    let (_, s, _) = request_of(ctx, p)?;
+    Ok(json!({"open": {"page": "reservation-entries", "filters": [
+        ["Source Type", s.table.to_string()], ["Source Subtype", s.subtype.to_string()], ["Source ID", s.id], ["Source Ref. No.", s.line.to_string()]
+    ]}}))
 }
 
 /// Removes every reservation of a line, with the other half of each.
@@ -394,8 +553,18 @@ fn s_promise() -> Json {
         "accept": {"type": "boolean", "description": "set each line's shipment date to its earliest shipment date"}}, "required": ["no"]})
 }
 
+fn s_row() -> Json {
+    json!({"type": "object", "properties": {"table": {"type": "string", "default": "Reservation Request"}, "key": {}}, "required": ["key"]})
+}
+
 pub static COMMANDS: &[CommandDef] = &[
-    CommandDef { id: "reservation.reserve", label: "Reserve", group: "Inventory", summary: "Reserve a sales order line's quantity from inventory and purchase orders.", mutates: true, params: s_line, run: reserve },
+    CommandDef { id: "reservation.reserve", label: "Reserve", group: "Inventory", summary: "Open the Reservation page of a sales order line.", mutates: true, params: s_line, run: reserve },
+    CommandDef { id: "reservation.reserve_from_inventory", label: "Reserve from Inventory", group: "Inventory", summary: "Reserve a sales order line from inventory.", mutates: true, params: s_line, run: reserve_from_inventory },
+    CommandDef { id: "reservation.reserve_from_line", label: "Reserve from Current Line", group: "Inventory", summary: "Reserve from the selected summary line's supply.", mutates: true, params: s_row, run: reserve_from_line },
+    CommandDef { id: "reservation.auto_reserve", label: "Auto Reserve", group: "Inventory", summary: "Reserve the first available quantity for the line.", mutates: true, params: s_row, run: auto_reserve },
+    CommandDef { id: "reservation.cancel_from_line", label: "Cancel Reservation from Current Line", group: "Inventory", summary: "Cancel the line's reservations on the selected supply.", mutates: true, params: s_row, run: cancel_from_line },
+    CommandDef { id: "reservation.available", label: "Available to Reserve", group: "Inventory", summary: "The supply behind a summary line.", mutates: false, params: s_row, run: available },
+    CommandDef { id: "reservation.entries_of_request", label: "Reservation Entries", group: "Inventory", summary: "The reservation entries of the page's line.", mutates: false, params: s_row, run: entries_of_request },
     CommandDef { id: "reservation.cancel", label: "Cancel Reservation", group: "Inventory", summary: "Cancel the reservations of a sales or purchase line.", mutates: true, params: s_line, run: cancel },
     CommandDef { id: "reservation.entries", label: "Reservation Entries", group: "Inventory", summary: "The reservation entries of a sales or purchase line.", mutates: false, params: s_line, run: entries },
     CommandDef { id: "sales.order_promising", label: "Order Promising", group: "Sales", summary: "The earliest date each item line of a sales order can be shipped; accept to set the shipment dates.", mutates: true, params: s_promise, run: order_promising },

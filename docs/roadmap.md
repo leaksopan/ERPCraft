@@ -27,7 +27,7 @@ Each target is checked by a script or a screenshot, not by eye.
 | 3 | Every W1 app's pages and reports exist (or are decided out) | inventory, W1 apps section | 0 / ~1,700 pages |
 | 4 | Every page we have matches BC's structure | `cargo run -p bc-parity -- --summary --check` exits 0 | ✅ blocking 0 |
 | 5 | Every field BC shows on our pages exists | "needs table field" = 0 | 67 |
-| 6 | Every action BC offers on our pages exists and works | "actions missing" = 0 | 1,521 |
+| 6 | Every action BC offers on our pages exists and works | "actions missing" = 0 | 1,520 |
 | 7 | Every page looks and behaves like BC | [visual checklist](#visual-parity-checklist) | 7 pages |
 | 8 | Every function has tests | `cargo test --workspace` | ✅ 27 suites |
 
@@ -114,7 +114,7 @@ The order follows impact for Auto Craft (a workshop and auto-parts business): mo
 ### Phase E: Inventory (312 / 101)
 
 - [ ] **Item tracking**: lot and serial numbers, item tracking lines, entries, Document Line Tracking (tracking codes, Item Tracking Lines on sales / purchase / journal / transfer lines, split and checked posting, Item Tracking Entries, Lot / Serial No. Information cards with Blocked and must-exist rules, expiration dates (calculated, required, one per lot, strict posting) done; Document Line Tracking, Item Tracing to do)
-- [x] **Reservations** and Reserved Quantity, order promising (reserve from inventory and purchase orders, cancel, Reservation Entries, receipts move and shipments use reservations; Available-to-Promise dates. Automatic reservation for Reserve = Always to do)
+- [x] **Reservations** and Reserved Quantity, order promising (reserve from inventory and purchase orders, cancel, Reservation Entries, receipts move and shipments use reservations; Available-to-Promise dates. Reservation page (498) with Reserve from Current Line / Auto Reserve / Cancel Reservation from Current Line / Available to Reserve, Reserve from Inventory; compared with live BC. Automatic reservation for Reserve = Always to do)
 - [x] **Item charges**: assignment, Qty. to Assign (purchase and sales item charges with assignment, Suggest Equally / By Amount, Get Receipt Lines / Get Shipment Lines, cost onto receiving entries, sales amount onto shipped entries; by weight / volume, transfer and return lines to do)
 - [x] **Transfer orders**: shipments and receipts between locations (ship / receive through in-transit, partial quantities, direct transfers, posted shipments and receipts)
 - [ ] Stockkeeping units, item variants, units of measure per item, item references, substitutions, catalog items (item units of measure with conversion on documents, variants, references, substitutions, extended texts, translations, attributes, categories, stockkeeping units with Create Stockkeeping Unit and planning per SKU, variants on document / journal lines and entries, catalog items with Create Item from item templates done; nonstock items on sales lines to do)

@@ -357,6 +357,21 @@ fn action_tabs(ui: &mut Ui, page: &PageDef, run: &mut Option<ActionDef>) {
         ui.painter().rect_filled(line, 0.0, TOKENS.divider);
         ui.horizontal(|ui| {
             if let Some(tab) = tabs.get(current) {
+                action_row(ui, tab, run);
+            }
+        });
+    });
+    ui.ctx().data_mut(|d| {
+        d.insert_temp(id, current);
+        d.insert_temp(more_id, more);
+    });
+}
+
+/// One tab's actions in a row: buttons, BC's split buttons and sub-menus.
+pub fn action_row(ui: &mut Ui, tab: &ActionTab, run: &mut Option<ActionDef>) {
+    {
+        {
+            {
                 let mut i = 0;
                 while i < tab.actions.len() {
                     // A promoted group: its actions together, as BC's split button or sub-menu.
@@ -394,12 +409,8 @@ fn action_tabs(ui: &mut Ui, page: &PageDef, run: &mut Option<ActionDef>) {
                     }
                 }
             }
-        });
-    });
-    ui.ctx().data_mut(|d| {
-        d.insert_temp(id, current);
-        d.insert_temp(more_id, more);
-    });
+        }
+    }
 }
 
 /// The FactBox pane: a white card with a "Details" tab header and the page's FactBoxes.
@@ -416,6 +427,10 @@ pub fn factbox_pane(app: &ErpApp, ui: &mut Ui, page: &PageDef, rec: Option<&Reco
 
 /// `10000 · Bengkel Maju Jaya`, `S-ORD1001 · Prima Auto Service`.
 pub fn record_title(t: &TableDef, r: &Record) -> String {
+    // A record that carries its page's caption (BC's CaptionExpression), e.g. the Reservation page.
+    if t.field("Caption").is_some() && !r.str("Caption").is_empty() {
+        return r.str("Caption").to_string();
+    }
     let key = if t.primary_key.first().map(String::as_str) == Some("Document Type") {
         r.str("No.").to_string()
     } else if t.primary_key.first().map(String::as_str) == Some("Primary Key") {
@@ -669,27 +684,56 @@ fn lines_part(app: &mut ErpApp, ui: &mut Ui, host: &PageDef, header: &Record, pa
     let side_prefix = if lt.name.starts_with("Sales") { "sales" } else { "purchase" };
     ui.add_space(14.0);
     let mut line_action: Option<ActionDef> = None;
+    // The part's own tabs (BC's action groups); None = Manage.
+    let cat_names: Vec<&str> = page.categories.iter().map(|(c, _)| c.as_str()).collect();
+    let part_tabs: Vec<ActionTab> = if page.categories.is_empty() { Vec::new() } else { action_tab_list(page).into_iter().filter(|t| cat_names.contains(&t.caption.as_str())).collect() };
+    let tab_id = egui::Id::unique(("part_tab", &part.page));
+    let manage = page.editable && host.editable;
+    let mut part_tab: Option<usize> = ui.ctx().data(|d| d.get_temp::<Option<usize>>(tab_id)).unwrap_or(if manage { None } else { Some(0) });
+    if part_tab.is_some_and(|i| i >= part_tabs.len()) {
+        part_tab = None;
+    }
     ui.horizontal(|ui| {
         widgets::flat(ui);
         ui.set_min_height(30.0);
         ui.label(RichText::new(&part.caption).font(theme::bold(theme::SUBTITLE)).color(TOKENS.text));
         widgets::vsep(ui);
         // Posted documents' lines can't change: BC shows no Manage tab there.
-        if page.editable && host.editable {
-            let r = ui.label(RichText::new("Manage").color(TOKENS.accent));
-            ui.painter().line_segment([r.rect.left_bottom() + vec2(0.0, 3.0), r.rect.right_bottom() + vec2(0.0, 3.0)], egui::Stroke::new(2.0, TOKENS.accent));
+        if manage {
+            let sel = part_tab.is_none();
+            let r = ui.add(egui::Button::new(RichText::new("Manage").color(if sel { TOKENS.accent } else { TOKENS.text })).frame(false));
+            if sel {
+                ui.painter().line_segment([r.rect.left_bottom() + vec2(6.0, 3.0), r.rect.right_bottom() + vec2(-6.0, 3.0)], egui::Stroke::new(2.0, TOKENS.accent));
+            }
+            if r.clicked() {
+                part_tab = None;
+            }
         }
-        // BC's "Line" menu (what to look at for the selected line) and "Functions" menu (what to
-        // do with it), as on the subforms.
+        // BC's tabs beside Manage: the part's action groups (Line, Order, Functions, ...), their
+        // actions on the row below; without them a Line and a Functions menu.
         use erpcraft_engine::meta::ActionArea;
-        let (navigate, functions): (Vec<&ActionDef>, Vec<&ActionDef>) = page.actions.iter().partition(|a| matches!(a.area, ActionArea::Navigate | ActionArea::Report));
-        if !navigate.is_empty() {
-            crate::list::action_menu(ui, "Line  ▾", &navigate, &mut line_action);
-        }
-        if !functions.is_empty() {
-            crate::list::action_menu(ui, "Functions  ▾", &functions, &mut line_action);
+        if page.categories.is_empty() {
+            let (navigate, functions): (Vec<&ActionDef>, Vec<&ActionDef>) = page.actions.iter().partition(|a| matches!(a.area, ActionArea::Navigate | ActionArea::Report));
+            if !navigate.is_empty() {
+                crate::list::action_menu(ui, "Line  ▾", &navigate, &mut line_action);
+            }
+            if !functions.is_empty() {
+                crate::list::action_menu(ui, "Functions  ▾", &functions, &mut line_action);
+            }
+        } else {
+            for (i, tab) in part_tabs.iter().enumerate() {
+                let sel = part_tab == Some(i);
+                let r = ui.add(egui::Button::new(RichText::new(&tab.caption).color(if sel { TOKENS.accent } else { TOKENS.text })).frame(false));
+                if sel {
+                    ui.painter().line_segment([r.rect.left_bottom() + vec2(6.0, 3.0), r.rect.right_bottom() + vec2(-6.0, 3.0)], egui::Stroke::new(2.0, TOKENS.accent));
+                }
+                if r.clicked() {
+                    part_tab = Some(i);
+                }
+            }
         }
     });
+    ui.ctx().data_mut(|d| d.insert_temp(tab_id, part_tab));
     if let Some(a) = line_action {
         // As in BC, the current line is the first one until another is selected.
         match state.selected_line.clone().or_else(|| lines.first().map(|l| l.key(lt))) {
@@ -699,8 +743,22 @@ fn lines_part(app: &mut ErpApp, ui: &mut Ui, host: &PageDef, header: &Record, pa
     }
     widgets::divider(ui);
     let lines_editable = page.editable && host.editable;
+    if let Some(tab) = part_tab.and_then(|i| part_tabs.get(i)) {
+        let mut row_action: Option<ActionDef> = None;
+        ui.horizontal(|ui| {
+            widgets::flat(ui);
+            ui.set_min_height(34.0);
+            action_row(ui, tab, &mut row_action);
+        });
+        if let Some(a) = row_action {
+            match state.selected_line.clone().or_else(|| lines.first().map(|l| l.key(lt))) {
+                Some(k) => app.run_action(&a, Some((&lt.name, &k))),
+                None => app.error("There are no lines."),
+            }
+        }
+    }
     ui.horizontal(|ui| {
-        if !lines_editable {
+        if !lines_editable || part_tab.is_some() {
             return;
         }
         widgets::flat(ui);

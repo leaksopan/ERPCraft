@@ -317,6 +317,38 @@ pub struct AlPage {
     pub promoted_actions: Vec<String>,
     /// The action bar's categories: caption and the names of the actions it shows, in order.
     pub categories: Vec<(String, Vec<String>)>,
+    /// A part's action tabs: the top-level groups of its processing actions (BC shows "Line",
+    /// "Order", "Functions" beside "Manage"), each with (sub-menu caption, action name).
+    pub action_groups: Vec<(String, Vec<(Option<String>, String)>)>,
+}
+
+/// The actions under a node, with the nearest enclosing sub-group's caption.
+fn group_members(n: &Node, sub: Option<&str>, out: &mut Vec<(Option<String>, String)>) {
+    for k in &n.kids {
+        let (kind, args) = k.kind();
+        match kind.as_str() {
+            "action" | "customaction" | "fileuploadaction" if visibility(k) != Vis::Hidden => out.push((sub.map(str::to_string), unquote(args))),
+            "group" if visibility(k) != Vis::Hidden => {
+                let caption = k.caption_or(args).replace('&', "");
+                group_members(k, Some(sub.unwrap_or(&caption)), out);
+            }
+            _ => {}
+        }
+    }
+}
+
+/// A field shown through an expression over one table field (`ReservMgt.FormatQty(Rec."Total
+/// Quantity")`) is that field; one computed from the whole record (`ReservedThisLine(Rec)`) is
+/// the control's own name.
+fn wrapped_field(control: &str, expr: &str) -> Option<String> {
+    let refs: Vec<&str> = expr.match_indices("Rec.").map(|(i, _)| &expr[i + 4..]).collect();
+    // Only formatting wraps the field itself; other functions compute something else from it.
+    let formats = expr.split('(').next().is_some_and(|f| f.to_ascii_lowercase().contains("format"));
+    if let ([rest], true) = (refs.as_slice(), formats) {
+        let name = if let Some(q) = rest.strip_prefix('"') { q.split('"').next().unwrap_or("") } else { rest.split(|c: char| !(c.is_alphanumeric() || c == '_')).next().unwrap_or("") };
+        return (!name.is_empty()).then(|| name.to_string());
+    }
+    (refs.is_empty() && expr.contains("(Rec)")).then(|| unquote(control))
 }
 
 fn al_field(n: &Node, inherited: Vis, subgroup: Option<(usize, Option<String>)>, column: Option<usize>) -> AlField {
@@ -332,7 +364,7 @@ fn al_field(n: &Node, inherited: Vis, subgroup: Option<(usize, Option<String>)>,
     let word = !expr.is_empty() && expr.chars().all(|c| c.is_alphanumeric() || c == '_');
     AlField {
         // Document subforms show Type through a text variable (TypeAsText) in the Essential experience.
-        source: if expr == "TypeAsText" { Some("Type".to_string()) } else { (quoted || (rec && word)).then(|| unquote(expr)) },
+        source: if expr == "TypeAsText" { Some("Type".to_string()) } else { (quoted || (rec && word)).then(|| unquote(expr)).or_else(|| wrapped_field(parts.first().copied().unwrap_or(""), expr)) },
         vis: combine(inherited, visibility(n)),
         importance: n.prop("Importance").unwrap_or("Standard").to_string(),
         caption: n.prop("Caption").and_then(literal),
@@ -504,7 +536,18 @@ fn al_page_in(src: &str, areas: Option<Vec<String>>) -> Option<AlPage> {
                     }
                 }
             }
-            "actions" => collect_actions(k, "", &mut p.actions, &mut p.promoted_actions, &mut p.categories),
+            "actions" => {
+                collect_actions(k, "", &mut p.actions, &mut p.promoted_actions, &mut p.categories);
+                for area in k.kids.iter().filter(|a| a.kind().0 == "area" && a.kind().1.trim().eq_ignore_ascii_case("processing")) {
+                    for g in area.kids.iter().filter(|g| g.kind().0 == "group" && visibility(g) != Vis::Hidden) {
+                        let mut members = Vec::new();
+                        group_members(g, None, &mut members);
+                        if !members.is_empty() {
+                            p.action_groups.push((g.caption_or(g.kind().1).replace('&', ""), members));
+                        }
+                    }
+                }
+            }
             _ => {}
         }
     }

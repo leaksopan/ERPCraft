@@ -753,6 +753,20 @@ pub fn extend(m: &mut Metadata) {
     );
     relabel(
         m,
+        "Entry Summary",
+        &[
+            ("Summary Type", "Summary Type", "Specifies which type of line or entry is summarized in the entry summary.", 0),
+            ("Total Quantity", "Total Quantity", "Specifies the total quantity of the item in inventory.", 0),
+            ("Total Reserved Quantity", "Total Reserved Quantity", "Specifies the total quantity of the relevant item that is reserved on documents or entries of the type on the line.", 0),
+            ("Total Available Quantity", "Total Available Quantity", "Specifies the quantity available for the user to request, in entries of the type on the line.", 0),
+            ("Current Reserved Quantity", "Current Reserved Quantity", "Specifies the quantity of items in the entry that are reserved for the line that the Reservation window is opened from.", 0),
+            ("Qty. Alloc. in Warehouse", "Qty. Alloc. in Warehouse", "", 0),
+            ("Res. Qty. on Picks & Shipmts.", "Res. Qty. on Picks & Shipmts.", "", 0),
+            ("Non-specific Reserved Qty.", "Non-specific Reserved Qty.", "Specifies the quantity of the item that is reserved but does not have specific item tracking numbers in the reservation.", 0),
+        ],
+    );
+    relabel(
+        m,
         "Extended Text Header",
         &[
             ("Language Code", "Language Code", "Specifies the language that is used when translating specified text on documents to foreign business partner, such as an item description on an order confirmation.", 0),
@@ -5844,6 +5858,7 @@ pub fn extend(m: &mut Metadata) {
     columns(m, "req-worksheet", &["Type", "No.", "Price Calculation Method", "Action Message", "Accept Action Message", "Description", "Location Code", "Original Quantity", "Quantity", "Unit of Measure Code", "Direct Unit Cost", "Original Due Date", "Due Date", "Vendor No.", "Vendor Item No.", "Replenishment System"]);
     columns(m, "req-worksheet-templates", &["Name", "Description", "Recurring", "Increment Batch Name"]);
     columns(m, "requests-to-approve", &["Sender ID", "Due Date", "Status", "Amount", "Amount (LCY)", "Currency Code"]);
+    columns(m, "reservation", &["Summary Type", "Total Quantity", "Total Reserved Quantity", "Qty. Alloc. in Warehouse", "Total Available Quantity", "Current Reserved Quantity"]);
     columns(m, "reservation-entries", &["Reservation Status", "Item No.", "Location Code", "Quantity (Base)", "Entry No.", "Transferred from Entry No."]);
     columns(m, "revaluation-journal", &["Posting Date", "Document No.", "Item No.", "Description", "Location Code", "Quantity", "Amount", "Unit Cost (Calculated)", "Inventory Value (Calculated)", "Unit Cost (Revalued)", "Inventory Value (Revalued)", "Applies-to Entry", "Shortcut Dimension 1 Code", "Shortcut Dimension 2 Code"]);
     columns(m, "sales-comment-sheet", &["Date", "Comment"]);
@@ -7311,6 +7326,13 @@ pub fn extend(m: &mut Metadata) {
     );
     categories(
         m,
+        "phys-invt-recording-subform",
+        &[
+            ("Line", &["Serial No. Information Card", "Lot No. Information Card"]),
+        ],
+    );
+    categories(
+        m,
         "physical-inventory-order",
         &[
             ("Process", &["split » Posting » P&ost", "split » Posting » Preview Posting", "split » Posting » Post and &Print", "Make New &Recording", "&Print", "Fi&nish", "Reo&pen"]),
@@ -7323,6 +7345,14 @@ pub fn extend(m: &mut Metadata) {
         "physical-inventory-order-lines",
         &[
             ("Process", &["Show Document"]),
+        ],
+    );
+    categories(
+        m,
+        "physical-inventory-order-subf",
+        &[
+            ("Line", &["Recording Lines", "menu » Entries » Ledger E&ntries"]),
+            ("Functions", &["Calculate Expected &Qty."]),
         ],
     );
     categories(
@@ -7355,6 +7385,13 @@ pub fn extend(m: &mut Metadata) {
     );
     categories(
         m,
+        "posted-purchase-cr-memo-lines",
+        &[
+            ("Line", &["Dimensions", "Co&mments"]),
+        ],
+    );
+    categories(
+        m,
         "posted-purchase-credit-memo",
         &[
             ("Process", &["Find entries..."]),
@@ -7382,6 +7419,13 @@ pub fn extend(m: &mut Metadata) {
     );
     categories(
         m,
+        "posted-purchase-invoice-lines",
+        &[
+            ("Line", &["Dimensions", "Co&mments"]),
+        ],
+    );
+    categories(
+        m,
         "posted-purchase-invoices",
         &[
             ("Process", &["Find entries..."]),
@@ -7399,9 +7443,23 @@ pub fn extend(m: &mut Metadata) {
     );
     categories(
         m,
+        "posted-purchase-receipt-lines",
+        &[
+            ("Line", &["Dimensions", "Co&mments"]),
+        ],
+    );
+    categories(
+        m,
         "posted-purchase-receipts",
         &[
             ("Process", &["&Print", "Find entries...", "menu » Receipt » Dimensions", "menu » Receipt » Co&mments"]),
+        ],
+    );
+    categories(
+        m,
+        "posted-sales-cr-memo-lines",
+        &[
+            ("Line", &["Dimensions", "Co&mments"]),
         ],
     );
     categories(
@@ -7433,6 +7491,13 @@ pub fn extend(m: &mut Metadata) {
     );
     categories(
         m,
+        "posted-sales-invoice-lines",
+        &[
+            ("Line", &["Dimensions", "Co&mments"]),
+        ],
+    );
+    categories(
+        m,
         "posted-sales-invoices",
         &[
             ("Process", &["Find entries..."]),
@@ -7447,6 +7512,13 @@ pub fn extend(m: &mut Metadata) {
             ("Process", &["&Print", "Find entries..."]),
             ("Print/Send", &["&Print", "Attach as PDF"]),
             ("Shipment", &["Dimensions", "Co&mments"]),
+        ],
+    );
+    categories(
+        m,
+        "posted-sales-shipment-lines",
+        &[
+            ("Line", &["Dimensions", "Co&mments"]),
         ],
     );
     categories(
@@ -7493,6 +7565,13 @@ pub fn extend(m: &mut Metadata) {
             ("Release", &["Re&lease", "Re&open"]),
             ("Posting", &["P&ost", "Post &Batch", "Preview Posting", "Post and &Print"]),
             ("Invoice", &["Dimensions", "Statistics", "Co&mments", "Approvals", "Vendor"]),
+        ],
+    );
+    categories(
+        m,
+        "purchase-lines",
+        &[
+            ("Line", &["Reservation Entries", "Item &Tracking Lines", "Dimensions", "Co&mments", "Item Charge &Assignment"]),
         ],
     );
     categories(
@@ -7590,6 +7669,14 @@ pub fn extend(m: &mut Metadata) {
     );
     categories(
         m,
+        "reservation",
+        &[
+            ("Process", &["&Reserve from Current Line", "&Auto Reserve", "&Cancel Reservation from Current Line"]),
+            ("Line", &["&Available to Reserve", "&Reservation Entries"]),
+        ],
+    );
+    categories(
+        m,
         "reservation-entries",
         &[
             ("Process", &["Cancel Reservation"]),
@@ -7641,6 +7728,13 @@ pub fn extend(m: &mut Metadata) {
             ("Release", &["Re&lease", "Re&open"]),
             ("Posting", &["P&ost", "Post &Batch", "Preview Posting"]),
             ("Invoice", &["Dimensions", "Statistics", "Co&mments", "Approvals", "Customer", "Posted Sales Invoices"]),
+        ],
+    );
+    categories(
+        m,
+        "sales-lines",
+        &[
+            ("Line", &["menu » Functions » &Reserve", "menu » Functions » Reserve from Inventory", "menu » Related Information » Reservation Entries", "menu » Related Information » Item &Tracking Lines", "menu » Related Information » Dimensions", "menu » Related Information » Co&mments", "menu » Related Information » Item Charge &Assignment"]),
         ],
     );
     categories(

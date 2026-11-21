@@ -101,7 +101,11 @@ pub fn on_insert(ctx: &mut Ctx, t: &TableDef, r: &mut Record) -> Result<()> {
             r.set("Posting Date", wd.clone());
         }
         if matches!(doc_type.as_str(), "Order" | "Quote") {
-            r.set("Order Date", wd);
+            r.set("Order Date", wd.clone());
+        }
+        // BC's Sales Header InitRecord: the shipment date starts at the work date.
+        if side.sales && r.get("Shipment Date").as_date().is_none() {
+            r.set("Shipment Date", wd);
         }
         r.set("Status", Value::text("Open"));
         r.set("Assigned User ID", Value::text(ctx.user.to_uppercase()));
@@ -121,6 +125,11 @@ pub fn on_insert(ctx: &mut Ctx, t: &TableDef, r: &mut Record) -> Result<()> {
             r.set("Line No.", Value::Int(last.saturating_add(10000)));
         }
         r.set(side.party_no, header.get(side.party_no).clone());
+        // BC's InitFromSalesHeader / InitFromPurchHeader: the line's date from the header.
+        let date_field = if side.sales { "Shipment Date" } else { "Expected Receipt Date" };
+        if r.get(date_field).as_date().is_none() && header.get(date_field).as_date().is_some() {
+            r.set(date_field, header.get(date_field).clone());
+        }
         r.set("Gen. Bus. Posting Group", header.get("Gen. Bus. Posting Group").clone());
         r.set("VAT Bus. Posting Group", header.get("VAT Bus. Posting Group").clone());
         if r.str("Location Code").is_empty() {

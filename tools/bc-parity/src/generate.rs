@@ -373,6 +373,30 @@ pub fn generate(meta: &Metadata, src: &Sources) -> String {
                 grouped.entry(n.to_ascii_lowercase()).or_insert_with(|| format!("{kind} \u{bb} {caption} \u{bb} "));
             }
         }
+        // A part without promoted categories: its top-level action groups are the tabs.
+        if al.categories.is_empty() && al.kind.eq_ignore_ascii_case("ListPart") && !al.action_groups.is_empty() {
+            let tabs: Vec<String> = al
+                .action_groups
+                .iter()
+                .filter_map(|(tab, members)| {
+                    let mut seen = BTreeSet::new();
+                    let acts: Vec<String> = members
+                        .iter()
+                        .filter_map(|(sub, n)| caption_of(n).map(|c| (sub, c)))
+                        .filter(|(_, c)| have.contains(&norm(c)) && seen.insert(norm(c)))
+                        .map(|(sub, c)| match sub {
+                            Some(s) => format!("menu \u{bb} {s} \u{bb} {c}"),
+                            None => c,
+                        })
+                        .collect();
+                    (!acts.is_empty()).then(|| format!("            ({tab:?}, {}),", strs(&acts)))
+                })
+                .collect();
+            if !tabs.is_empty() {
+                let _ = writeln!(out, "    categories(\n        m,\n        {id:?},\n        &[\n{}\n        ],\n    );", tabs.join("\n"));
+            }
+            continue;
+        }
         let cats: Vec<String> = al
             .categories
             .iter()

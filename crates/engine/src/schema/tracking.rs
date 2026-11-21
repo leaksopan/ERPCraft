@@ -349,6 +349,68 @@ pub fn register(m: &mut Metadata) {
         crate::schema::tables::ITEM,
         vec![F::decimal("Reserved Qty. on Inventory").flow(), F::decimal("Reserved Qty. on Sales Orders").flow(), F::decimal("Reserved Qty. on Purch. Orders").flow()],
     );
+    // BC's Reservation page (498): the line to reserve for over its supply, one summary line per
+    // kind of supply (BC's temporary Entry Summary, here kept per demand line).
+    m.add_table(
+        TableDef::new(crate::reservation::REQUEST, 0)
+            .fields(vec![
+                F::integer("Source Type"),
+                F::integer("Source Subtype"),
+                F::code("Source ID", 20),
+                F::integer("Source Ref. No."),
+                F::code("Item No.", 20).read_only(),
+                F::code("Variant Code", 10).read_only(),
+                F::code("Location Code", 10).read_only(),
+                F::date("Shipment Date").read_only(),
+                F::text("Description", 100).read_only(),
+                F::decimal("Quantity to Reserve").read_only(),
+                F::decimal("Reserved Quantity").read_only(),
+                F::decimal("Unreserved Quantity").read_only(),
+                F::text("Caption", 250).read_only(),
+            ])
+            .key(&["Source Type", "Source Subtype", "Source ID", "Source Ref. No."])
+            .describe_by("Description"),
+    );
+    m.add_table(
+        TableDef::new(crate::reservation::ENTRY_SUMMARY, 338)
+            .fields(vec![
+                F::integer("Source Type"),
+                F::integer("Source Subtype"),
+                F::code("Source ID", 20),
+                F::integer("Source Ref. No."),
+                F::integer("Entry No."),
+                F::integer("Table ID"),
+                F::text("Summary Type", 80).read_only(),
+                F::decimal("Total Quantity").read_only(),
+                F::decimal("Total Reserved Quantity").read_only(),
+                F::decimal("Qty. Alloc. in Warehouse").read_only().caption("Qty. Allocated in Warehouse"),
+                F::decimal("Res. Qty. on Picks & Shipmts.").read_only().caption("Reserved Qty. on Picks and Shipments"),
+                F::decimal("Total Available Quantity").read_only(),
+                F::decimal("Non-specific Reserved Qty.").read_only(),
+                F::decimal("Current Reserved Quantity").read_only(),
+            ])
+            .key(&["Source Type", "Source Subtype", "Source ID", "Source Ref. No.", "Entry No."]),
+    );
+    let mut summary = PageDef::new("reservation", 498, "Reservation", PageKind::ListPart, Some(crate::reservation::ENTRY_SUMMARY));
+    summary.columns = ["Summary Type", "Total Quantity", "Total Reserved Quantity", "Qty. Alloc. in Warehouse", "Total Available Quantity", "Current Reserved Quantity"].iter().map(|c| (*c).to_string()).collect();
+    summary.actions = vec![
+        Act::command("&Available to Reserve", A::Navigate, "reservation.available").icon("list").tooltip("View all the item ledger entries and other supply that is available to reserve for the line."),
+        Act::command("&Reservation Entries", A::Navigate, "reservation.entries_of_request").icon("list").tooltip("View all reservations that are made for the item, either manually or automatically."),
+        Act::command("Reserve from Current Line", A::Process, "reservation.reserve_from_line").icon("apply").tooltip("Reserve the quantity that is available from the current summary line."),
+        Act::command("&Auto Reserve", A::Process, "reservation.auto_reserve").icon("apply").tooltip("Automatically reserve the first available quantity for the item on the line."),
+        Act::command("Cancel Reservation from Current Line", A::Process, "reservation.cancel_from_line").icon("delete").confirm("Do you want to cancel the reservations from the current summary line?").tooltip("Cancel the selected reservation entry."),
+    ];
+    m.add_page(summary);
+    m.add_page(
+        PageDef::new("reservation-card", 0, "Reservation", PageKind::Document, Some(crate::reservation::REQUEST))
+            .read_only()
+            .group(G::new("General", &["Item No.", "Shipment Date", "Description", "Quantity to Reserve", "Reserved Quantity", "Unreserved Quantity"]))
+            .part("Lines", "reservation", &[("Source Type", "Source Type"), ("Source Subtype", "Source Subtype"), ("Source ID", "Source ID"), ("Source Ref. No.", "Source Ref. No.")])
+            .group(G::new("Filters", &["Variant Code", "Location Code"]).collapsed())
+            .action(Act::command("Reserve from Current Line", A::Home, "reservation.reserve_from_line").icon("apply").tooltip("Reserve the quantity that is available from the current summary line."))
+            .action(Act::command("&Auto Reserve", A::Home, "reservation.auto_reserve").icon("apply").tooltip("Automatically reserve the first available quantity for the item on the line."))
+            .action(Act::command("Cancel Reservation from Current Line", A::Home, "reservation.cancel_from_line").icon("delete").tooltip("Cancel the selected reservation entry.")),
+    );
     let mut res = PageDef::new("reservation-entries", 497, "Reservation Entries", PageKind::List, Some(RESERVATION_ENTRY)).view("Reservation Status", "Reservation");
     res.columns = ["Reservation Status", "Item No.", "Location Code", "Quantity (Base)", "Positive", "Source Type", "Source Subtype", "Source ID", "Source Ref. No.", "Shipment Date", "Expected Receipt Date", "Description", "Creation Date", "Created By", "Entry No."]
         .iter()
@@ -358,7 +420,8 @@ pub fn register(m: &mut Metadata) {
     res.actions = vec![Act::command("Cancel Reservation", A::Process, "reservation.cancel").icon("delete").confirm("Do you want to cancel the reservation of this line?").tooltip("Cancel the selected reservation entry.")];
     m.add_page(res);
     if let Some(p) = m.pages.get_mut("sales-lines") {
-        p.actions.push(Act::command("&Reserve", A::Process, "reservation.reserve").icon("apply").tooltip("Reserve the quantity of the selected item that is required on the document line from which you opened this page."));
+        p.actions.push(Act::command("&Reserve...", A::Process, "reservation.reserve").icon("apply").tooltip("Reserve the quantity of the selected item that is required on the document line from which you opened this page."));
+        p.actions.push(Act::command("Reserve from &Inventory", A::Process, "reservation.reserve_from_inventory").icon("apply").tooltip("Reserve items for the selected line from inventory."));
         p.actions.push(Act::command("Cancel Reservation", A::Process, "reservation.cancel").icon("delete").confirm("Do you want to cancel the reservations of this line?").tooltip("Cancel the reservations of the line."));
         p.actions.push(Act::command("Reservation Entries", A::Navigate, "reservation.entries").icon("list").tooltip("View the entries for every reservation that is made, either manually or automatically."));
     }

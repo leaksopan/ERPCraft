@@ -126,18 +126,51 @@ fn create(ctx: &mut Ctx, p: &Json) -> Result<Json> {
     Ok(json!({"created": created, "message": format!("{created} stockkeeping unit(s) were created.")}))
 }
 
+/// BC's Inventory - List (report 701) over stockkeeping units, and Inventory Availability
+/// (report 705): per SKU its inventory and, for availability, its requirements and receipts.
+fn inventory_report(ctx: &mut Ctx, p: &Json, availability: bool) -> Result<Json> {
+    let only = opt_str(p, "item_no").map(str::to_string);
+    let mut skus: Vec<Record> = ctx.db.rows(SKU).filter(|s| only.as_ref().is_none_or(|o| s.str("Item No.") == o)).cloned().collect();
+    skus.sort_by(|a, b| (a.str("Item No."), a.str("Location Code")).cmp(&(b.str("Item No."), b.str("Location Code"))));
+    let mut rows = Vec::new();
+    for mut s in skus {
+        calc_fields(&ctx.db, &mut s);
+        let n = |f: &str| s.get(f).as_dec().normalize().to_string();
+        if availability {
+            let projected = s.get("Inventory").as_dec() + s.get("Qty. on Purch. Order").as_dec() - s.get("Qty. on Sales Order").as_dec();
+            let reorder = !s.str("Reordering Policy").is_empty() && projected <= s.get("Reorder Point").as_dec();
+            rows.push(json!([s.str("Item No."), s.str("Location Code"), s.str("Variant Code"), s.str("Description"), n("Inventory"), n("Qty. on Sales Order"), n("Qty. on Purch. Order"), projected.normalize().to_string(), n("Reorder Point"), if reorder { "Yes" } else { "" }]));
+        } else {
+            rows.push(json!([s.str("Item No."), s.str("Location Code"), s.str("Variant Code"), s.str("Description"), s.str("Shelf No."), n("Inventory"), format!("{:.2}", s.get("Unit Cost").as_dec())]));
+        }
+    }
+    Ok(if availability {
+        json!({"report": {"title": "Inventory Availability", "columns": ["Item No.", "Location Code", "Variant Code", "Description", "Inventory", "Gross Requirement", "Scheduled Receipt", "Projected Available Balance", "Reorder Point", "Reorder"], "rows": rows}})
+    } else {
+        json!({"report": {"title": "Inventory - List", "columns": ["Item No.", "Location Code", "Variant Code", "Description", "Shelf No.", "Inventory", "Unit Cost"], "rows": rows}})
+    })
+}
+
+fn inventory_list(ctx: &mut Ctx, p: &Json) -> Result<Json> {
+    inventory_report(ctx, p, false)
+}
+
+fn inventory_availability(ctx: &mut Ctx, p: &Json) -> Result<Json> {
+    inventory_report(ctx, p, true)
+}
+
+fn s_report() -> Json {
+    json!({"type": "object", "properties": {"item_no": {"type": "string"}}})
+}
+
 fn s_create() -> Json {
     json!({"type": "object", "properties": {"no": {"type": "string"}, "table": {"type": "string"}, "key": {}, "keys": {"type": "array"},
         "location_code": {"type": "string", "description": "only this location (blank: every location)"},
         "replace_previous": {"type": "boolean", "description": "Replace Previous SKUs"}}})
 }
 
-pub static COMMANDS: &[CommandDef] = &[CommandDef {
-    id: "item.create_sku",
-    label: "Create Stockkeeping Unit",
-    group: "Inventory",
-    summary: "Create a stockkeeping unit of the item for each location.",
-    mutates: true,
-    params: s_create,
-    run: create,
-}];
+pub static COMMANDS: &[CommandDef] = &[
+    CommandDef { id: "item.create_sku", label: "Create Stockkeeping Unit", group: "Inventory", summary: "Create a stockkeeping unit of the item for each location.", mutates: true, params: s_create, run: create },
+    CommandDef { id: "sku.inventory_list", label: "Inventory - List", group: "Inventory", summary: "The stockkeeping units with their inventory and unit cost.", mutates: false, params: s_report, run: inventory_list },
+    CommandDef { id: "sku.inventory_availability", label: "Inventory Availability", group: "Inventory", summary: "The stockkeeping units' inventory, requirements, receipts and projected balance.", mutates: false, params: s_report, run: inventory_availability },
+];

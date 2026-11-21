@@ -12,9 +12,18 @@ use crate::error::{EngineError, Result};
 use crate::party_stats::{money, periods};
 use crate::schema::tables::{ITEM, ITEM_LEDGER};
 
+/// The location a view is limited to: `location_code`, or the stockkeeping unit it runs from.
+fn location_of(p: &Json) -> Option<String> {
+    opt_str(p, "location_code").map(str::to_string).or_else(|| {
+        (opt_str(p, "table") == Some(crate::schema::sku::SKU)).then(|| p.get("key").and_then(Json::as_array).and_then(|a| a.first()).and_then(Json::as_str).map(str::to_string)).flatten()
+    })
+}
+
 fn item_no(ctx: &Ctx, p: &Json) -> Result<String> {
+    let sku_item = (opt_str(p, "table") == Some(crate::schema::sku::SKU)).then(|| p.get("key").and_then(Json::as_array).and_then(|a| a.get(1)).and_then(Json::as_str).map(str::to_string)).flatten();
     let no = opt_str(p, "no")
         .map(str::to_string)
+        .or(sku_item)
         .or_else(|| {
             (opt_str(p, "table") == Some(ITEM)).then(|| p.get("key")).flatten().and_then(|k| match k {
                 Json::Array(a) => a.first().and_then(Json::as_str).map(str::to_string),
@@ -255,9 +264,10 @@ fn n(d: Decimal) -> String {
 /// projected inventory after it.
 fn by_event(ctx: &mut Ctx, p: &Json) -> Result<Json> {
     let no = item_no(ctx, p)?;
-    let mut balance = on_hand(ctx, &no, None);
+    let loc = location_of(p);
+    let mut balance = on_hand(ctx, &no, loc.as_deref());
     let mut rows = vec![json!([ctx.work_date.to_string(), "Inventory", "", "", n(balance)])];
-    for m in movements(ctx, &no) {
+    for m in movements(ctx, &no).into_iter().filter(|m| loc.as_ref().is_none_or(|l| &m.location == l)) {
         balance += m.qty;
         let (gross, receipt) = if m.qty < Decimal::ZERO { (n(-m.qty), String::new()) } else { (String::new(), n(m.qty)) };
         rows.push(json!([m.date.to_string(), m.what, gross, receipt, n(balance)]));
@@ -269,8 +279,9 @@ fn by_event(ctx: &mut Ctx, p: &Json) -> Result<Json> {
 /// and the projected available balance at the end of it.
 fn by_period(ctx: &mut Ctx, p: &Json) -> Result<Json> {
     let no = item_no(ctx, p)?;
-    let moves = movements(ctx, &no);
-    let mut balance = on_hand(ctx, &no, None);
+    let loc = location_of(p);
+    let moves: Vec<Movement> = movements(ctx, &no).into_iter().filter(|m| loc.as_ref().is_none_or(|l| &m.location == l)).collect();
+    let mut balance = on_hand(ctx, &no, loc.as_deref());
     let first = NaiveDate::from_ymd_opt(ctx.work_date.year(), ctx.work_date.month(), 1).unwrap_or(ctx.work_date);
     let mut rows = Vec::new();
     for i in 0..6u32 {

@@ -360,6 +360,7 @@ pub fn extend(m: &mut Metadata) {
             F::boolean("Use GLN in Electronic Document").caption("Use GLN in Electronic Documents").tooltip("Specifies whether the GLN is used in electronic documents as a party identification number."),
             F::code("Responsibility Center", 10).tooltip("Specifies the code for the default responsibility center."),
             F::code("Check-Avail. Period Calc.", 32).tooltip("Specifies a date formula that defines the length of the period after the planned shipment date on demand lines in which the system checks availability for the demand line in question."),
+            F::option("Check-Avail. Time Bucket", &["Day", "Week", "Month", "Quarter", "Year", "Accounting Period"]).tooltip("Specifies how frequently the system checks supply-demand events to discover if the item on the demand line is available on its shipment date."),
             F::code("Base Calendar Code", 10).tooltip("Specifies the code for the base calendar that you want to assign to your company."),
             F::code("Cal. Convergence Time Frame", 32).tooltip("Specifies how dates based on calendar and calendar-related documents are calculated."),
             F::text("Power BI Workspace Name", 200).tooltip("Specifies the name of the Power BI workspace that deployable Power BI reports are deployed to. An empty value means the reports are deployed to \"My Workspace\"."),
@@ -1619,6 +1620,14 @@ pub fn extend(m: &mut Metadata) {
         vec![
             F::option("Cost Adjustment Logging", &["Disabled", "Errors Only", "All"]).tooltip("Specifies if you want to log cost adjustments runs. Disabled: No logging. Errors Only: The program will only log cost adjustment runs that have errors. All: The program will log all cost adjustment runs."),
             F::date("Earliest Allowed Val. Date").caption("Earliest Allowed Valuation Date").tooltip("Specifies the earliest date allowed for a Valuation Date on new value entries. If set, user-initiated postings with a Valuation Date before this date are blocked. System-generated entries such as cost adjustments, rounding, and expected-to-actual corrections are exempt. Leave blank to allow all dates."),
+            F::code("Current Demand Forecast", 10).tooltip("Specifies the name of the relevant demand forecast to use to calculate a plan."),
+            F::boolean("Use Forecast on Variants").caption("Use forecast on variants").tooltip("Specifies that actual demand for the selected demand forecast is nettet for the specified item variant. If you leave the check box empty, the program regards the demand forecast as valid for all variants."),
+            F::boolean("Use Forecast on Locations").caption("Use forecast on locations").tooltip("Specifies that actual demand for the selected demand forecast is nettet for the specified location only. If you leave the check box empty, the program regards the demand forecast as valid for all locations."),
+            F::boolean("Combined MPS/MRP Calculation").tooltip("Specifies if both master production schedule and material requirements plan are run when you choose the Calc. Regenerative Plan action in the planning worksheet."),
+            F::decimal("Default Dampener %").tooltip("Specifies a percentage of an item's lot size by which an existing supply must change before a planning suggestion is made."),
+            F::code("Default Safety Lead Time", 32).tooltip("Specifies a time period that is added to the lead time of all items that do not have another value specified in the Safety Lead Time field."),
+            F::option("Blank Overflow Level", &["Allow Default Calculation", "Use Item/SKU Values Only"]).tooltip("Specifies how the planning system should react if the Overflow Level field on the item or SKU card is empty."),
+            F::code("Default Dampener Period", 32).tooltip("Specifies a period of time during which you do not want the planning system to propose to reschedule existing supply order's forward. This value in this field applies to all items except for items that have a different value in the Dampener Period field on the item card. When a dampener time is set, an order is only rescheduled when the defined dampener time has passed since the order s original due date. Note: The dampener time that is applied to an item can never be higher than the value in the item's Lot Accumulation Period field. This is because the inventory build-up time that occurs during a dampener period would conflict with the build-up period defined by the item's lot accumulation period. Accordingly, the default dampener period generally applies to all items. However, if an item's lot accumulation period is shorter than the default dampener period, then the item's dampener time equals its lot accumulation period."),
             F::boolean("Variant Mandatory if Exists").tooltip("Specifies whether a variant must be selected if variants exist for an item. This is the default setting for all items. However, the same option is available on the Item Card page for items. That setting applies to the specific item."),
             F::boolean("Skip Prompt to Create Item").tooltip("Specifies if a message about creating a new item card appears when you enter an item number that does not exist."),
             F::boolean("Copy Item Descr. to Entries").tooltip("Specifies if you want the description on item cards to be copied to item ledger entries during posting."),
@@ -1836,6 +1845,16 @@ pub fn extend(m: &mut Metadata) {
             F::option("Variant Mandatory if Exists", &["Default", "No", "Yes"]).tooltip("Specifies whether a variant must be selected if variants exist for the item."),
             F::code("GTIN", 14).tooltip("Specifies the number that is used for barcodes etc."),
             F::code("Default Deferral Template Code", 10).tooltip("Specifies the default template that governs how to defer revenues and expenses to the periods when they occurred."),
+            F::decimal("Maximum Order Quantity").tooltip("Specifies a maximum allowable quantity for an item order proposal."),
+            F::code("Safety Lead Time", 32).tooltip("Specifies a date formula to indicate a safety lead time that can be used as a buffer period for production and other delays."),
+            F::code("Time Bucket", 32).tooltip("Specifies a time period that defines the recurring planning horizon used with Fixed Reorder Qty. or Maximum Qty. reordering policies."),
+            F::boolean("Include Inventory").tooltip("Specifies that the inventory quantity is included in the projected available balance when replenishment orders are calculated."),
+            F::code("Rescheduling Period", 32).tooltip("Specifies a period within which any suggestion to change a supply date always consists of a Reschedule action and never a Cancel + New action."),
+            F::code("Lot Accumulation Period", 32).tooltip("Specifies a period in which multiple demands are accumulated into one supply order when you use the Lot-for-Lot reordering policy."),
+            F::code("Dampener Period", 32).tooltip("Specifies a period of time during which you do not want the planning system to propose to reschedule existing supply orders."),
+            F::decimal("Dampener Quantity").tooltip("Specifies a dampener quantity to block insignificant change suggestions for an existing supply, if the change quantity is lower than the dampener quantity."),
+            F::decimal("Overflow Level").tooltip("Specifies a quantity you allow projected inventory to exceed the reorder point, before the system suggests to decrease supply orders."),
+            F::boolean("Stockkeeping Unit Exists").calc(CalcFormula::new(CalcFunc::Exist, "Stockkeeping Unit", "", &[("Item No.", "No.")], &[])).tooltip("Specifies that a stockkeeping unit exists for this item."),
             F::boolean("Substitutes Exist").calc(CalcFormula::new(CalcFunc::Exist, "Item Substitution", "", &[("No.", "No.")], &[("Type", "Item")])).tooltip("Specifies that a substitute exists for this item."),
             F::code("Purchasing Code", 10).tooltip("Specifies the code for a special procurement method, such as drop shipment."),
             F::code("Warehouse Class Code", 10).tooltip("Specifies the warehouse class code for the item."),
@@ -1844,6 +1863,7 @@ pub fn extend(m: &mut Metadata) {
             F::code("Put-away Unit of Measure Code", 10).tooltip("Specifies the code of the item unit of measure in which the program will put the item away."),
             F::boolean("Use Cross-Docking").tooltip("Specifies if this item can be cross-docked."),
             F::code("Over-Receipt Code", 20).tooltip("Specifies the policy that will be used for the item if more items than ordered are received."),
+            F::option("Order Tracking Policy", &["None", "Tracking Only", "Tracking & Action Msg."]).tooltip("Specifies if and how order tracking entries are created and maintained between supply and its corresponding demand."),
             F::boolean("Critical").tooltip("Specifies if the item is included in availability calculations to promise a shipment date for its parent item."),
             F::code("Common Item No.", 20).tooltip("Specifies the unique common item number that the intercompany partners agree upon."),
         ],
@@ -2112,6 +2132,7 @@ pub fn extend(m: &mut Metadata) {
             F::decimal("Indirect Cost %").tooltip("Specifies the percentage of the item's last purchase cost that includes indirect costs, such as freight that is associated with the purchase of the item."),
             F::code("Vendor No.", 20).relation("Vendor").tooltip("Specifies the vendor code of who supplies this item by default."),
             F::code("Lead Time Calculation", 32).tooltip("Specifies a date formula for the amount of time it takes to replenish the item."),
+            F::decimal("Reorder Point").tooltip("Specifies a stock quantity that sets the inventory below the level that you must replenish the item."),
             F::code("Tariff No.", 20).tooltip("Specifies a code for the item's tariff number."),
             F::boolean("Blocked").tooltip("Specifies that the related record is blocked from being posted in transactions, for example an item that is placed in quarantine."),
             F::boolean("Price Includes VAT").tooltip("Specifies if the Unit Price and Line Amount fields on sales document lines for this item should be shown with or without VAT."),
@@ -2121,7 +2142,9 @@ pub fn extend(m: &mut Metadata) {
             F::option("Variant Mandatory if Exists", &["Default", "No", "Yes"]).tooltip("Specifies whether a variant must be selected if variants exist for the item."),
             F::option("Assembly Policy", &["Assemble-to-Stock", "Assemble-to-Order"]).tooltip("Specifies which default order flow is used to supply this assembly item."),
             F::code("Serial Nos.", 20).tooltip("Specifies a number series code to assign consecutive serial numbers to items produced."),
+            F::decimal("Minimum Order Quantity").tooltip("Specifies a minimum allowable quantity for an item order proposal."),
             F::option("Replenishment System", &["Purchase", "Prod. Order", "Transfer", ""]).tooltip("Specifies the type of supply order created by the planning system when the item needs to be replenished."),
+            F::option("Reordering Policy", &["", "Fixed Reorder Qty.", "Maximum Qty.", "Order", "Lot-for-Lot"]).tooltip("Specifies the reordering policy."),
             F::code("Lot Nos.", 20).tooltip("Specifies the number series code that will be used when assigning lot numbers."),
             F::code("Special Equipment Code", 10).tooltip("Specifies the code of the equipment that warehouse employees must use when handling the item."),
             F::code("Put-away Template Code", 10).tooltip("Specifies the code of the put-away template by which the program determines the most appropriate zone and bin for storage of the item after receipt."),
@@ -3740,6 +3763,8 @@ pub fn extend(m: &mut Metadata) {
             F::decimal("Qty. to Assemble to Order").tooltip("Specifies how many units of the sales line quantity that you want to supply by assembly."),
             F::code("Selected Alloc. Account No.", 20).caption("Allocation Account No.").tooltip("Specifies the allocation account number that will be used to distribute the amounts during the posting process."),
             F::code("Item Reference No.", 50).tooltip("Specifies the referenced item number."),
+            F::date("Planned Delivery Date").tooltip("Specifies the planned date that the shipment will be delivered at the customer's address. If the customer requests a delivery date, the program calculates whether the items will be available for delivery on this date. If the items are available, the planned delivery date will be the same as the requested delivery date. If not, the program calculates the date that the items are available for delivery and enters this date in the Planned Delivery Date field."),
+            F::date("Planned Shipment Date").tooltip("Specifies the date that the shipment should ship from the warehouse. If the customer requests a delivery date, the program calculates the planned shipment date by subtracting the shipping time from the requested delivery date. If the customer does not request a delivery date or the requested delivery date cannot be met, the program calculates the content of this field by adding the shipment time to the shipping date."),
             F::decimal("Qty. to Assign").calc(CalcFormula::new(CalcFunc::Sum, "Item Charge Assignment (Sales)", "Qty. to Assign", &[("Document Type", "Document Type"), ("Document No.", "Document No."), ("Document Line No.", "Line No.")], &[])).tooltip("Specifies how many units of the item charge will be assigned to the line."),
             F::decimal("Qty. Assigned").calc(CalcFormula::new(CalcFunc::Sum, "Item Charge Assignment (Sales)", "Qty. Assigned", &[("Document Type", "Document Type"), ("Document No.", "Document No."), ("Document Line No.", "Line No.")], &[])).tooltip("Specifies the quantity of the item charge that was assigned to a specified item when you posted this sales line."),
             F::decimal("Item Charge Qty. to Handle").calc(CalcFormula::new(CalcFunc::Sum, "Item Charge Assignment (Sales)", "Qty. to Handle", &[("Document Type", "Document Type"), ("Document No.", "Document No."), ("Document Line No.", "Line No.")], &[])).tooltip("Specifies how many items the item charge will be assigned to on the line. It can be either equal to Qty. to Assign or to zero. If it is zero, the item charge will not be assigned to the line."),
@@ -3922,6 +3947,16 @@ pub fn extend(m: &mut Metadata) {
         "Stockkeeping Unit",
         vec![
             F::option("Assembly Policy", &["Assemble-to-Stock", "Assemble-to-Order"]).tooltip("Specifies which default order flow is used to supply this SKU by assembly."),
+            F::decimal("Maximum Order Quantity").tooltip("Specifies for the SKU, the same as the field does on the item card."),
+            F::code("Safety Lead Time", 32).tooltip("Specifies for the SKU, the same as the field does on the item card."),
+            F::code("Time Bucket", 32).tooltip("Specifies a time period for the recurring planning horizon of the SKU when you use Fixed Reorder Qty. or Maximum Qty. reordering policies."),
+            F::boolean("Include Inventory").tooltip("Specifies for the SKU, the same as the field does on the item card."),
+            F::code("Rescheduling Period", 32).tooltip("Specifies a period within which any suggestion to change a supply date always consists of a Reschedule action and never a Cancel + New action."),
+            F::code("Lot Accumulation Period", 32).tooltip("Specifies a period in which multiple demands are accumulated into one supply order when you use the Lot-for-Lot reordering policy."),
+            F::code("Dampener Period", 32).tooltip("Specifies a period of time during which you do not want the planning system to propose to reschedule existing supply orders forward. The dampener period limits the number of insignificant rescheduling of existing supply to a later date if that new date is within the dampener period. The dampener period function is only initiated if the supply can be rescheduled to a later date and not if the supply can be rescheduled to an earlier date. Accordingly, if the suggested new supply date is after the dampener period, then the rescheduling suggestion is not blocked. If the lot accumulation period is less than the dampener period, then the dampener period is dynamically set to equal the lot accumulation period. This is not shown in the value that you enter in the Dampener Period field. The last demand in the lot accumulation period is used to determine whether a potential supply date is in the dampener period. If this field is empty, then the value in the Default Dampener Period field in the Manufacturing Setup window applies. The value that you enter in the Dampener Period field must be a date formula, and one day (1D) is the shortest allowed period."),
+            F::decimal("Dampener Quantity").tooltip("Specifies a dampener quantity to block insignificant change suggestions, if the quantity by which the supply would change is lower than the dampener quantity."),
+            F::decimal("Overflow Level").tooltip("Specifies a quantity you allow projected inventory to exceed the reorder point before the system suggests to decrease existing supply orders."),
+            F::code("Special Equipment Code", 10).tooltip("Specifies the code of the equipment that you need to use when working with the SKU."),
             F::code("Put-away Template Code", 10).tooltip("Specifies the put-away template that the program uses when it performs a put-away for the SKU."),
             F::code("Put-away Unit of Measure Code", 10).tooltip("Specifies the code of the unit of measure that the program uses when it performs a put-away for the SKU."),
             F::boolean("Use Cross-Docking").tooltip("Specifies if the SKU can be cross-docked."),
@@ -4662,7 +4697,7 @@ pub fn extend(m: &mut Metadata) {
             },
             Tab {
                 caption: "Shipping",
-                fields: &["Ship-to Name", "Ship-to Address", "Ship-to Address 2", "Ship-to City", "Ship-to Post Code", "Ship-to Country/Region Code", "Ship-to Phone No.", "Ship-to Contact", "Location Code", "Responsibility Center", "Check-Avail. Period Calc.", "Base Calendar Code", "Cal. Convergence Time Frame"],
+                fields: &["Ship-to Name", "Ship-to Address", "Ship-to Address 2", "Ship-to City", "Ship-to Post Code", "Ship-to Country/Region Code", "Ship-to Phone No.", "Ship-to Contact", "Location Code", "Responsibility Center", "Check-Avail. Period Calc.", "Check-Avail. Time Bucket", "Base Calendar Code", "Cal. Convergence Time Frame"],
                 ..Tab::default()
             },
             Tab {
@@ -4987,6 +5022,11 @@ pub fn extend(m: &mut Metadata) {
                 ..Tab::default()
             },
             Tab {
+                caption: "Planning",
+                fields: &["Current Demand Forecast", "Use Forecast on Locations", "Use Forecast on Variants", "Default Safety Lead Time", "Blank Overflow Level", "Combined MPS/MRP Calculation", "Default Dampener Period", "Default Dampener %"],
+                ..Tab::default()
+            },
+            Tab {
                 caption: "Dimensions",
                 fields: &["Item Group Dimension Code", "Package Caption"],
                 ..Tab::default()
@@ -5084,15 +5124,18 @@ pub fn extend(m: &mut Metadata) {
             },
             Tab {
                 caption: "Replenishment",
-                fields: &["Lead Time Calculation", "Vendor No.", "Purchasing Blocked"],
+                fields: &["Lead Time Calculation", "Vendor No.", "Vendor Item No.", "Purch. Unit of Measure", "Purchasing Blocked"],
                 breaks: &["Vendor No."],
                 headings: &[("Vendor No.", "Purchase")],
                 ..Tab::default()
             },
             Tab {
                 caption: "Planning",
-                fields: &["Reserve", "Critical"],
-                additional: &["Reserve"],
+                fields: &["Reordering Policy", "Reserve", "Order Tracking Policy", "Stockkeeping Unit Exists", "Dampener Period", "Dampener Quantity", "Critical", "Safety Lead Time", "Safety Stock Quantity", "Include Inventory", "Lot Accumulation Period", "Rescheduling Period", "Reorder Point", "Reorder Quantity", "Maximum Inventory", "Overflow Level", "Time Bucket", "Minimum Order Quantity", "Maximum Order Quantity", "Order Multiple"],
+                promoted: &["Reordering Policy", "Order Tracking Policy"],
+                additional: &["Reserve", "Dampener Period", "Dampener Quantity", "Overflow Level", "Time Bucket"],
+                breaks: &["Include Inventory", "Reorder Point", "Minimum Order Quantity"],
+                headings: &[("Include Inventory", "Lot-for-Lot Parameters"), ("Overflow Level", "Reorder-Point Parameters")],
                 ..Tab::default()
             },
             Tab {
@@ -5130,8 +5173,8 @@ pub fn extend(m: &mut Metadata) {
     columns(m, "item-ledger-entries", &["Posting Date", "Entry Type", "Document Type", "Document No.", "Item No.", "Description", "Global Dimension 1 Code", "Global Dimension 2 Code", "Location Code", "Quantity", "Invoiced Quantity", "Remaining Quantity", "Sales Amount (Actual)", "Cost Amount (Actual)", "Cost Amount (Non-Invtbl.)", "Open", "Applied Entry to Adjust", "Order Type", "Entry No.", "Shortcut Dimension 3 Code", "Shortcut Dimension 4 Code", "Shortcut Dimension 5 Code", "Shortcut Dimension 6 Code", "Shortcut Dimension 7 Code", "Shortcut Dimension 8 Code"]);
     columns(m, "item-list", &["No.", "Description", "Type", "Inventory", "Substitutes Exist", "Base Unit of Measure", "Cost is Adjusted", "Unit Cost", "Unit Price", "Vendor No.", "Default Deferral Template Code"]);
     columns(m, "item-reclass-journal", &["Posting Date", "Document No.", "Item No.", "Description", "Location Code", "New Location Code", "Quantity", "Unit of Measure Code", "Applies-to Entry", "Shortcut Dimension 1 Code", "New Shortcut Dimension 1 Code", "Shortcut Dimension 2 Code", "New Shortcut Dimension 2 Code"]);
-    columns(m, "item-reference-entries", &["Reference Type", "Reference Type No.", "Reference No.", "Unit of Measure", "Description", "Starting Date", "Ending Date"]);
-    columns(m, "item-substitution-entry", &["Substitute Type", "Substitute No.", "Description", "Interchangeable", "Condition"]);
+    columns(m, "item-reference-entries", &["Reference Type", "Reference Type No.", "Reference No.", "Variant Code", "Unit of Measure", "Description", "Starting Date", "Ending Date"]);
+    columns(m, "item-substitution-entry", &["Variant Code", "Substitute Type", "Substitute No.", "Description", "Interchangeable", "Condition"]);
     layout(
         m,
         "item-templ-card",
@@ -5174,6 +5217,13 @@ pub fn extend(m: &mut Metadata) {
                 promoted: &["Replenishment System"],
                 breaks: &["Vendor No.", "Assembly Policy"],
                 headings: &[("Vendor No.", "Purchase"), ("Assembly Policy", "Assembly")],
+                ..Tab::default()
+            },
+            Tab {
+                caption: "Planning",
+                fields: &["Reordering Policy", "Reorder Point", "Minimum Order Quantity"],
+                promoted: &["Reordering Policy"],
+                breaks: &["Reorder Point", "Minimum Order Quantity"],
                 ..Tab::default()
             },
             Tab {
@@ -5236,7 +5286,7 @@ pub fn extend(m: &mut Metadata) {
     columns(m, "item-tracking-entries", &["Positive", "Document No.", "Item No.", "Serial No.", "Lot No.", "Package No.", "Location Code", "Quantity", "Remaining Quantity", "Warranty Date", "Expiration Date", "Entry No."]);
     columns(m, "item-translations", &["Language Code", "Description"]);
     columns(m, "item-units-of-measure", &["Code", "Qty. per Unit of Measure", "Height", "Width", "Length", "Cubage", "Weight"]);
-    columns(m, "item-variants", &["Blocked", "Sales Blocked", "Purchasing Blocked"]);
+    columns(m, "item-variants", &["Code", "Description", "Blocked", "Sales Blocked", "Purchasing Blocked"]);
     columns(m, "locations", &["Code", "Name"]);
     layout(
         m,
@@ -5244,7 +5294,7 @@ pub fn extend(m: &mut Metadata) {
         &[
             Tab {
                 caption: "General",
-                fields: &["Item No.", "Lot No.", "Description", "Test Quality", "Certificate Number", "Blocked"],
+                fields: &["Item No.", "Variant Code", "Lot No.", "Description", "Test Quality", "Certificate Number", "Blocked"],
                 additional: &["Test Quality"],
                 ..Tab::default()
             },
@@ -5940,7 +5990,7 @@ pub fn extend(m: &mut Metadata) {
         ],
     );
     columns(m, "sales-invoice-list", &["No.", "Sell-to Customer No.", "Sell-to Customer Name", "External Document No.", "Sell-to Contact", "Posting Date", "Location Code", "Assigned User ID", "Due Date", "Job Queue Status", "Amount"]);
-    columns(m, "sales-lines", &["Type", "No.", "Item Reference No.", "Description", "Location Code", "Quantity", "Qty. to Assemble to Order", "Reserved Quantity", "Unit of Measure Code", "Unit Price", "Tax Area Code", "Tax Group Code", "Line Discount %", "Line Amount", "Selected Alloc. Account No.", "Qty. to Ship", "Quantity Shipped", "Qty. to Invoice", "Quantity Invoiced", "Qty. to Assign", "Item Charge Qty. to Handle", "Qty. Assigned", "Shipment Date", "Shortcut Dimension 1 Code", "Shortcut Dimension 2 Code"]);
+    columns(m, "sales-lines", &["Type", "No.", "Item Reference No.", "Description", "Location Code", "Quantity", "Qty. to Assemble to Order", "Reserved Quantity", "Unit of Measure Code", "Unit Price", "Tax Area Code", "Tax Group Code", "Line Discount %", "Line Amount", "Selected Alloc. Account No.", "Qty. to Ship", "Quantity Shipped", "Qty. to Invoice", "Quantity Invoiced", "Qty. to Assign", "Item Charge Qty. to Handle", "Qty. Assigned", "Planned Delivery Date", "Planned Shipment Date", "Shipment Date", "Shortcut Dimension 1 Code", "Shortcut Dimension 2 Code"]);
     layout(
         m,
         "sales-order",
@@ -6074,7 +6124,7 @@ pub fn extend(m: &mut Metadata) {
         &[
             Tab {
                 caption: "General",
-                fields: &["Item No.", "Serial No.", "Description", "Blocked"],
+                fields: &["Item No.", "Variant Code", "Serial No.", "Description", "Blocked"],
                 ..Tab::default()
             },
             Tab {
@@ -6093,25 +6143,35 @@ pub fn extend(m: &mut Metadata) {
         &[
             Tab {
                 caption: "General",
-                fields: &["Location Code", "Shelf No."],
-                promoted: &["Location Code"],
+                fields: &["Item No.", "Description", "Location Code", "Variant Code", "Shelf No.", "Last Date Modified", "Qty. on Purch. Order", "Qty. in Transit", "Qty. on Sales Order", "Inventory"],
+                promoted: &["Item No.", "Location Code", "Variant Code", "Inventory"],
                 ..Tab::default()
             },
             Tab {
                 caption: "Invoicing",
-                fields: &["Standard Cost"],
+                fields: &["Standard Cost", "Unit Cost", "Last Direct Cost"],
+                promoted: &["Unit Cost"],
                 ..Tab::default()
             },
             Tab {
                 caption: "Replenishment",
-                fields: &["Assembly Policy"],
-                breaks: &["Assembly Policy"],
-                headings: &[("Assembly Policy", "Assembly")],
+                fields: &["Lead Time Calculation", "Vendor No.", "Vendor Item No.", "Transfer-from Code", "Assembly Policy"],
+                breaks: &["Vendor No.", "Transfer-from Code", "Assembly Policy"],
+                headings: &[("Vendor No.", "Purchase"), ("Transfer-from Code", "Transfer"), ("Assembly Policy", "Assembly")],
+                ..Tab::default()
+            },
+            Tab {
+                caption: "Planning",
+                fields: &["Reordering Policy", "Dampener Period", "Dampener Quantity", "Safety Lead Time", "Safety Stock Quantity", "Include Inventory", "Lot Accumulation Period", "Rescheduling Period", "Reorder Point", "Reorder Quantity", "Maximum Inventory", "Overflow Level", "Time Bucket", "Minimum Order Quantity", "Maximum Order Quantity", "Order Multiple"],
+                promoted: &["Reordering Policy"],
+                additional: &["Overflow Level", "Time Bucket"],
+                breaks: &["Include Inventory", "Reorder Point", "Minimum Order Quantity"],
+                headings: &[("Include Inventory", "Lot-for-Lot Parameters"), ("Overflow Level", "Reorder-Point Parameters")],
                 ..Tab::default()
             },
             Tab {
                 caption: "Warehouse",
-                fields: &["Put-away Template Code", "Put-away Unit of Measure Code", "Phys Invt Counting Period Code", "Next Counting Start Date", "Next Counting End Date", "Use Cross-Docking"],
+                fields: &["Special Equipment Code", "Put-away Template Code", "Put-away Unit of Measure Code", "Phys Invt Counting Period Code", "Last Counting Period Update", "Next Counting Start Date", "Next Counting End Date", "Use Cross-Docking"],
                 promoted: &["Put-away Unit of Measure Code", "Phys Invt Counting Period Code"],
                 ..Tab::default()
             },
@@ -6496,6 +6556,7 @@ pub fn extend(m: &mut Metadata) {
         m,
         "item-card",
         &[
+            Nav { caption: "Requisition Worksheet", page: "req-worksheet", link: &[], shortcut: "" },
             Nav { caption: "Item Journal", page: "item-journal", link: &[], shortcut: "" },
             Nav { caption: "Item Reclassification Journal", page: "item-reclass-journal", link: &[], shortcut: "" },
             Nav { caption: "&Reservation Entries", page: "reservation-entries", link: &[("Item No.", "No.")], shortcut: "" },
@@ -6524,6 +6585,7 @@ pub fn extend(m: &mut Metadata) {
             Nav { caption: "&Reservation Entries", page: "reservation-entries", link: &[("Item No.", "No.")], shortcut: "" },
             Nav { caption: "Physical Inventory Journal", page: "phys-inventory-journal", link: &[], shortcut: "" },
             Nav { caption: "Revaluation Journal", page: "revaluation-journal", link: &[], shortcut: "" },
+            Nav { caption: "Requisition Worksheet", page: "req-worksheet", link: &[], shortcut: "" },
             Nav { caption: "Item Reclassification Journal", page: "item-reclass-journal", link: &[], shortcut: "" },
             Nav { caption: "Dimensions-Single", page: "default-dimensions", link: &[("No.", "No.")], shortcut: "Alt+D" },
             Nav { caption: "Co&mments", page: "comment-sheet", link: &[("No.", "No.")], shortcut: "" },
@@ -6549,6 +6611,7 @@ pub fn extend(m: &mut Metadata) {
         m,
         "item-variants",
         &[
+            Nav { caption: "Translations", page: "item-translations", link: &[("Item No.", "Item No."), ("Variant Code", "Code")], shortcut: "" },
             Nav { caption: "Item References", page: "item-reference-entries", link: &[("Item No.", "Item No."), ("Variant Code", "Code")], shortcut: "" },
         ],
     );
@@ -6773,9 +6836,15 @@ pub fn extend(m: &mut Metadata) {
         m,
         "stockkeeping-unit-card",
         &[
+            Nav { caption: "Card", page: "item-card", link: &[("No.", "Item No.")], shortcut: "Shift+F7" },
+            Nav { caption: "Co&mments", page: "comment-sheet", link: &[("No.", "Item No.")], shortcut: "" },
             Nav { caption: "Dimensions", page: "default-dimensions", link: &[("No.", "Item No.")], shortcut: "Alt+D" },
+            Nav { caption: "&Units of Measure", page: "item-units-of-measure", link: &[("Item No.", "Item No.")], shortcut: "" },
+            Nav { caption: "Va&riants", page: "item-variants", link: &[("Item No.", "Item No.")], shortcut: "" },
+            Nav { caption: "E&xtended Texts", page: "extended-text-list", link: &[("No.", "Item No.")], shortcut: "" },
             Nav { caption: "Ledger E&ntries", page: "item-ledger-entries", link: &[("Item No.", "Item No."), ("Location Code", "Location Code"), ("Variant Code", "Variant Code")], shortcut: "Ctrl+F7" },
             Nav { caption: "&Value Entries", page: "value-entries", link: &[("Item No.", "Item No."), ("Location Code", "Location Code"), ("Variant Code", "Variant Code")], shortcut: "" },
+            Nav { caption: "New Item", page: "item-card", link: &[], shortcut: "" },
         ],
     );
     actions(
@@ -7196,7 +7265,7 @@ pub fn extend(m: &mut Metadata) {
         "item-card",
         &[
             ("Process", &["Copy Item", "Adjust Inventory", "&Create Stockkeeping Unit"]),
-            ("Item", &["Attachments", "Co&mments", "Dimensions", "menu » Item Availability by » Event", "menu » Item Availability by » Period", "menu » Item Availability by » Location", "Attributes", "Items b&y Location"]),
+            ("Item", &["Attachments", "Co&mments", "Dimensions", "menu » Item Availability by » Event", "menu » Item Availability by » Period", "menu » Item Availability by » Variant", "menu » Item Availability by » Location", "Attributes", "Items b&y Location"]),
         ],
     );
     categories(
@@ -7241,7 +7310,7 @@ pub fn extend(m: &mut Metadata) {
         "item-list",
         &[
             ("Process", &["Adjust Inventory", "Copy Item"]),
-            ("Item", &["split » Dimensions » Dimensions-&Multiple", "split » Dimensions » Dimensions-Single", "Co&mments", "Items b&y Location", "menu » Item Availability by » Event", "menu » Item Availability by » Period", "menu » Item Availability by » Location", "Item References"]),
+            ("Item", &["split » Dimensions » Dimensions-&Multiple", "split » Dimensions » Dimensions-Single", "Co&mments", "Items b&y Location", "menu » Item Availability by » Event", "menu » Item Availability by » Period", "menu » Item Availability by » Variant", "menu » Item Availability by » Location", "Item References"]),
             ("Attributes", &["Attributes"]),
         ],
     );
@@ -7271,7 +7340,7 @@ pub fn extend(m: &mut Metadata) {
         m,
         "item-variants",
         &[
-            ("Variant", &["Item References"]),
+            ("Variant", &["Item References", "Translations"]),
         ],
     );
     categories(
@@ -7805,7 +7874,8 @@ pub fn extend(m: &mut Metadata) {
         m,
         "stockkeeping-unit-card",
         &[
-            ("Item", &["Dimensions"]),
+            ("Item", &["Dimensions", "Co&mments"]),
+            ("SKU", &["Co&mments"]),
         ],
     );
     categories(
@@ -7813,6 +7883,8 @@ pub fn extend(m: &mut Metadata) {
         "stockkeeping-unit-list",
         &[
             ("Item", &["Dimensions", "Co&mments"]),
+            ("Item Availability by", &["Event", "Period"]),
+            ("Reports", &["Inventory - List", "Inventory Availability"]),
         ],
     );
     categories(
@@ -8069,6 +8141,7 @@ pub fn extend(m: &mut Metadata) {
             ("Reserved Qty. on Sales Orders", "reservation-entries", &[("Item No.", "No.")], &[("Source Type", "37"), ("Source Subtype", "1"), ("Reservation Status", "Reservation")]),
             ("Reserved Qty. on Purch. Orders", "reservation-entries", &[("Item No.", "No.")], &[("Source Type", "39"), ("Source Subtype", "1"), ("Reservation Status", "Reservation")]),
             ("Net Invoiced Qty.", "item-ledger-entries", &[("Item No.", "No.")], &[]),
+            ("Stockkeeping Unit Exists", "stockkeeping-unit-list", &[("Item No.", "No.")], &[]),
             ("Substitutes Exist", "item-substitution-entry", &[("No.", "No.")], &[("Type", "Item")]),
         ],
     );

@@ -436,7 +436,8 @@ pub fn record_title(t: &TableDef, r: &Record) -> String {
     } else if t.primary_key.first().map(String::as_str) == Some("Primary Key") {
         return t.caption.clone();
     } else {
-        r.key(t).display()
+        // BC's caption of a record: its key values, the empty ones left out.
+        t.primary_key.iter().map(|f| r.get(f).to_string()).filter(|v| !v.is_empty()).collect::<Vec<_>>().join(" ")
     };
     match t.description_field.as_deref().map(|f| r.str(f)).filter(|s| !s.is_empty()) {
         Some(d) => format!("{key} · {d}"),

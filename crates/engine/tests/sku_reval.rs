@@ -93,3 +93,18 @@ fn the_inventory_value_test_leaves_the_journal_empty() {
     assert!(!r["report"]["rows"].as_array().unwrap().is_empty());
     assert_eq!(rows(&mut s, "Item Journal Line", json!({"Journal Template Name": "REVAL"})).len(), 0);
 }
+
+#[test]
+fn stockkeeping_unit_availability_and_reports() {
+    let mut s = Session::in_memory();
+    s.run("company.init", &json!({"demo": true})).unwrap();
+    s.run("item.create_sku", &json!({"no": "1000"})).unwrap();
+    let key = json!(["MAIN", "1000", ""]);
+    let ev = s.run("item.availability_by_event", &json!({"table": "Stockkeeping Unit", "key": key})).unwrap();
+    let on_hand = sum(&mut s, "Item Ledger Entry", json!({"Item No.": "1000", "Location Code": "MAIN"}), "Quantity");
+    assert_eq!(d(&ev["report"]["rows"][0][4]), on_hand, "{ev}");
+    s.run("item.availability_by_period", &json!({"table": "Stockkeeping Unit", "key": key})).unwrap();
+    let list = s.run("sku.inventory_list", &json!({"item_no": "1000"})).unwrap();
+    assert!(!list["report"]["rows"].as_array().unwrap().is_empty());
+    s.run("sku.inventory_availability", &json!({})).unwrap();
+}

@@ -6,7 +6,7 @@ use std::collections::BTreeMap;
 use std::path::{Path, PathBuf};
 
 /// Application areas the Essential experience (what a new BC company runs) does not show.
-const HIDDEN_AREAS: &[&str] = &["manufacturing", "planning", "service", "adcs", "advanced"];
+const HIDDEN_AREAS: &[&str] = &["manufacturing", "service", "adcs", "advanced"];
 
 thread_local! {
     /// The application areas of the page being read: a page that BC shows (say a Warehouse page

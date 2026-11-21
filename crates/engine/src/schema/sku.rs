@@ -97,11 +97,18 @@ pub fn register(m: &mut Metadata) {
             .describe_by("Description")
             .pages("stockkeeping-unit-list", Some("stockkeeping-unit-card")),
     );
-    let mut list = PageDef::new("stockkeeping-unit-list", 5701, "Stockkeeping Unit List", PageKind::List, Some(SKU));
+    let mut list = PageDef::new("stockkeeping-unit-list", 5701, "Stockkeeping Units", PageKind::List, Some(SKU));
     list.columns = ["Item No.", "Location Code", "Variant Code", "Replenishment System", "Description", "Inventory", "Reordering Policy", "Unit Cost", "Last Direct Cost"].iter().map(|c| (*c).to_string()).collect();
     list.card_page = Some("stockkeeping-unit-card".to_string());
     list.keywords = "sku stockkeeping location planning".to_string();
-    list.actions = vec![sku_reservations(), sku_tracking()];
+    list.actions = vec![
+        Act::command("Event", A::Navigate, "item.availability_by_event").icon("stats").tooltip("View how the actual and the projected available balance of an item will develop over time according to supply and demand events."),
+        Act::command("Period", A::Navigate, "item.availability_by_period").icon("stats").tooltip("Show the projected quantity of the item over time according to time periods, such as day, week, or month."),
+        sku_reservations(),
+        sku_tracking(),
+        Act::command("Inventory - List", A::Report, "sku.inventory_list").icon("report").tooltip("View various information about the item, such as name, unit of measure, posting group, shelf number, vendor's item number, lead time calculation, minimum inventory, and alternate item number. You can also see if the item is blocked."),
+        Act::command("Inventory Availability", A::Report, "sku.inventory_availability").icon("report").tooltip("View, print, or save a summary of historical inventory transactions with selected items, for example, to decide when to purchase the items. The report specifies quantity on sales order, quantity on purchase order, back orders from vendors, minimum inventory, and whether there are reorders."),
+    ];
     m.add_page(list);
     m.add_page(
         PageDef::new("stockkeeping-unit-card", 5700, "Stockkeeping Unit Card", PageKind::Card, Some(SKU))

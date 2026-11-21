@@ -19,6 +19,7 @@ mod demo;
 mod documents;
 pub mod bc;
 pub mod doc_tools;
+pub mod item_tools;
 mod error;
 pub mod fa;
 pub mod item_journal;

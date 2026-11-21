@@ -37,6 +37,11 @@ const FALSE_BY_DEFAULT: &[&str] = &[
     "paymentservicevisible",
     // The subform's Type field (ApplicationArea Advanced) gives way to TypeAsText.
     "not typeastextfieldvisible",
+    // Item card pairs; the live client shows Variant Mandatory "Default (No)", Stockout Warning
+    // "Default (Yes)" and Inventory with its adjust-inventory button.
+    "showvariantmandatorydefaultyes",
+    "showstockoutwarningdefaultno",
+    "not isinventoryadjmtallowed",
 ];
 
 #[derive(Debug, Default)]

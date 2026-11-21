@@ -148,7 +148,7 @@ pub fn missing_params(command: &str, params: &Map<String, Json>, has_context: bo
     let schema = (cmd.params)();
     let required: Vec<String> =
         schema.get("required").and_then(Json::as_array).map(|a| a.iter().filter_map(|v| v.as_str().map(str::to_string)).collect()).unwrap_or_default();
-    let context_covers = |n: &str| has_context && matches!(n, "no" | "customer_no" | "vendor_no" | "document_type" | "table" | "key");
+    let context_covers = |n: &str| has_context && matches!(n, "no" | "customer_no" | "vendor_no" | "item_no" | "document_type" | "table" | "key");
     let mut out: Vec<String> = required.into_iter().filter(|r| !params.contains_key(r) && !context_covers(r)).collect();
     if !out.is_empty() {
         // Offer the optional ones too (e.g. applies-to document, posting date).

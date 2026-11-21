@@ -2955,16 +2955,16 @@ pub fn extend(m: &mut Metadata) {
         &[
             Tab {
                 caption: "Item",
-                fields: &["No.", "Description", "Blocked", "Type", "Base Unit of Measure", "Last Date Modified", "GTIN", "Item Category Code", "Automatic Ext. Texts", "Common Item No.", "Purchasing Code", "Variant Mandatory if Exists", "Variant Mandatory if Exists"],
+                fields: &["No.", "Description", "Blocked", "Type", "Base Unit of Measure", "Last Date Modified", "GTIN", "Item Category Code", "Automatic Ext. Texts", "Common Item No.", "Purchasing Code", "Variant Mandatory if Exists"],
                 promoted: &["Base Unit of Measure"],
                 additional: &["Last Date Modified", "GTIN", "Automatic Ext. Texts", "Common Item No.", "Purchasing Code"],
                 ..Tab::default()
             },
             Tab {
                 caption: "Inventory",
-                fields: &["Shelf No.", "Created From Nonstock Item", "Search Description", "Inventory", "Inventory", "Qty. on Purch. Order", "Qty. on Sales Order", "Stockout Warning", "Stockout Warning", "Prevent Negative Inventory", "Prevent Negative Inventory", "Net Weight", "Gross Weight", "Unit Volume", "Over-Receipt Code"],
-                promoted: &["Inventory", "Inventory"],
-                additional: &["Created From Nonstock Item", "Search Description", "Prevent Negative Inventory", "Prevent Negative Inventory", "Net Weight", "Gross Weight"],
+                fields: &["Shelf No.", "Created From Nonstock Item", "Search Description", "Inventory", "Qty. on Purch. Order", "Qty. on Sales Order", "Stockout Warning", "Prevent Negative Inventory", "Net Weight", "Gross Weight", "Unit Volume", "Over-Receipt Code"],
+                promoted: &["Inventory"],
+                additional: &["Created From Nonstock Item", "Search Description", "Prevent Negative Inventory", "Net Weight", "Gross Weight"],
                 ..Tab::default()
             },
             Tab {
@@ -4011,6 +4011,13 @@ pub fn extend(m: &mut Metadata) {
             Nav { caption: "Item Journal", page: "item-journal", link: &[], shortcut: "" },
         ],
     );
+    categories(
+        m,
+        "item-card",
+        &[
+            ("Process", &["Copy Item", "Adjust Inventory"]),
+        ],
+    );
     actions(
         m,
         "item-journal",
@@ -4031,6 +4038,13 @@ pub fn extend(m: &mut Metadata) {
         "item-list",
         &[
             Nav { caption: "Physical Inventory Journal", page: "phys-inventory-journal", link: &[], shortcut: "" },
+        ],
+    );
+    categories(
+        m,
+        "item-list",
+        &[
+            ("Process", &["Adjust Inventory", "Copy Item"]),
         ],
     );
     actions(

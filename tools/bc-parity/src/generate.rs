@@ -246,7 +246,14 @@ pub fn generate(meta: &Metadata, src: &Sources) -> String {
             PageKind::Card | PageKind::Document => {
                 let mut tabs = Vec::new();
                 for g in al.groups.iter().filter(|g| g.vis != al::Vis::Hidden) {
-                    let shown: Vec<&al::AlField> = g.fields.iter().filter(|f| f.shown() && f.source.as_deref().is_some_and(has)).collect();
+                    // One control per field: BC pairs controls behind opposite conditions (X / not X).
+                    let mut seen_src = BTreeSet::new();
+                    let shown: Vec<&al::AlField> = g
+                        .fields
+                        .iter()
+                        .filter(|f| f.shown() && f.source.as_deref().is_some_and(has))
+                        .filter(|f| f.source.as_deref().is_some_and(|s| seen_src.insert(s.to_ascii_lowercase())))
+                        .collect();
                     if shown.is_empty() {
                         continue;
                     }

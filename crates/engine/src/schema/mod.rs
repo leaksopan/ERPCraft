@@ -115,7 +115,8 @@ mod gen_support {
             if p.actions.iter().any(|a| norm(&a.caption) == norm(n.caption)) {
                 continue;
             }
-            let mut a = ActionDef::page(n.caption, ActionArea::Navigate, n.page);
+            let icon = if n.caption.contains("Entries") || n.caption.contains("E&ntries") { "ledger" } else { "list" };
+            let mut a = ActionDef::page(n.caption, ActionArea::Navigate, n.page).icon(icon);
             for (target, source) in n.link {
                 a = a.link(target, source);
             }

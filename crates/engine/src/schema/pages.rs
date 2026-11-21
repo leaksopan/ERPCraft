@@ -342,6 +342,14 @@ fn vendor_actions() -> Vec<Act> {
 
 fn item_actions() -> Vec<Act> {
     vec![
+        Act::command("Copy Item", A::Home, "item.copy")
+            .icon("copy")
+            .ask(&["target_no"])
+            .tooltip("Create a copy of the current item."),
+        Act::command("Adjust Inventory", A::Home, "item.adjust_inventory")
+            .icon("adjust")
+            .ask(&["location_code", "new_inventory"])
+            .tooltip("Increase or decrease the item's inventory quantity manually by entering a new quantity. Adjusting the inventory quantity manually might be relevant after a physical count or if you do not record purchased quantities."),
         Act::page("Ledger E&ntries", A::Navigate, "item-ledger-entries").link("Item No.", "No.").shortcut("Ctrl+F7").icon("ledger"),
         Act::command("Item Availability", A::Report, "item.availability").icon("stats"),
     ]

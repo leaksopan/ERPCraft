@@ -84,7 +84,12 @@ fn compare(ours: &PageDef, table: Option<&TableDef>, al: &AlPage) -> Gaps {
                 let Some(src) = &f.source else { continue };
                 bc_shown.insert(src.to_ascii_lowercase());
                 match our_tab_of(src, &cap) {
-                    Some(c) if c == cap => al_order.push(src.to_ascii_lowercase()),
+                    // Paired controls (X / not X) show one field once.
+                    Some(c) if c == cap => {
+                        if !al_order.contains(&src.to_ascii_lowercase()) {
+                            al_order.push(src.to_ascii_lowercase());
+                        }
+                    }
                     Some(c) => g.misplaced.push(format!("{src} (BC: {}, ours: {c})", t.caption)),
                     None if has(src) => g.missing.push(format!("{}: {src}", t.caption)),
                     None => g.needs_table.push(format!("{}: {src}", t.caption)),

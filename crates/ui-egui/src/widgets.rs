@@ -35,7 +35,13 @@ pub fn glyph(icon: &str) -> &'static str {
         "search" => "🔍",
         "print" => "🖶",
         "filter" => "⏷",
-        _ => "",
+        "copy" => "⧉",
+        "adjust" => "±",
+        "preview" => "◎",
+        "report" => "▤",
+        "list" => "☰",
+        // BC gives every action an icon.
+        _ => "▸",
     }
 }
 
@@ -151,6 +157,14 @@ pub fn field_editor(
     // Narrow grid cells can report no room at all; egui panics on negative widths.
     let width = if width.is_finite() { width.max(24.0) } else { 120.0 };
     let shown = display_field(v, f);
+    if (!editable || f.is_flow()) && f.ty == FieldType::Boolean && !f.is_flow() {
+        // A read-only Boolean keeps BC's switch, greyed out.
+        let mut on = v.as_bool();
+        ui.allocate_ui_with_layout(vec2(width, 26.0), Layout::left_to_right(Align::Center), |ui| {
+            ui.add_enabled_ui(false, |ui| toggle(ui, &mut on));
+        });
+        return None;
+    }
     if !editable || f.is_flow() {
         let text = RichText::new(if shown.is_empty() && f.ty.is_numeric() { "0.00".to_string() } else { shown });
         let text = if f.is_flow() { text.color(TOKENS.accent) } else { text.color(TOKENS.text) };
@@ -258,6 +272,14 @@ pub fn field_editor(
 /// `Input readOnly`); clicking it switches the card to edit mode.
 pub fn view_value(ui: &mut Ui, f: &FieldDef, v: &Value, width: f32) -> egui::Response {
     let width = if width.is_finite() { width.max(24.0) } else { 120.0 };
+    // BC shows a Boolean as its switch in view mode too, just not clickable.
+    if f.ty == FieldType::Boolean {
+        let r = ui.allocate_ui_with_layout(vec2(width, 26.0), Layout::left_to_right(Align::Center), |ui| {
+            let mut on = v.as_bool();
+            ui.add_enabled_ui(false, |ui| toggle(ui, &mut on));
+        });
+        return r.response.interact(Sense::click());
+    }
     let text = display_field(v, f);
     let inner = egui::Frame::new()
         .fill(TOKENS.table_header)

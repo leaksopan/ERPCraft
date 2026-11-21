@@ -189,3 +189,16 @@ fn lot_information_is_copied_to_a_new_lot() {
     assert_eq!((c["Description"].as_str().unwrap(), c["Certificate Number"].as_str().unwrap()), ("Batch A", "C-77"));
     assert!(s.run("tracking.copy_info", &json!({"table": "Lot No. Information", "key": ["1000L", "", "A1"], "new_no": "A2"})).is_err());
 }
+
+#[test]
+fn lot_information_finds_its_entries_and_prints_a_label() {
+    let mut s = demo();
+    buy_lot(&mut s, "F1", 3, None).unwrap();
+    s.run("record.new", &json!({"table": "Lot No. Information", "values": {"Item No.": "1000L", "Lot No.": "F1"}})).unwrap();
+    let key = json!(["1000L", "", "F1"]);
+    let nav = s.run("navigate", &json!({"table": "Lot No. Information", "key": key})).unwrap();
+    assert_eq!(nav["report"]["rows"][0][1], 1, "{nav}");
+    assert_eq!(nav["report"]["links"][0]["page"], "item-ledger-entries");
+    let label = s.run("tracking.print_label", &json!({"table": "Lot No. Information", "key": key})).unwrap();
+    assert_eq!(label["report"]["rows"][0][3], "F1");
+}

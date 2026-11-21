@@ -93,8 +93,10 @@ pub fn register(m: &mut Metadata) {
                 .pages(list_id, Some(card_id)),
         );
         let entries = Act::page("Item &Tracking Entries", A::Navigate, "item-tracking-entries").link("Item No.", "Item No.").link(no_field, no_field).icon("list").tooltip("View serial, lot or package numbers that are assigned to items.");
+        let find = Act::command("Find entries...", A::Process, "navigate").icon("navigate").shortcut("Ctrl+Alt+Q").tooltip("Find entries and documents that exist for the document number and posting date on the selected document. (Formerly this action was named Navigate.)");
+        let label = Act::command("Print Label", A::Report, "tracking.print_label").icon("print").tooltip(if table == LOT_INFO { "Print a label for the lot number." } else { "Print a label for the serial number." });
         let mut l = PageDef::new(list_id, list_obj, list_caption, PageKind::List, Some(table));
-        l.actions = vec![entries.clone()];
+        l.actions = vec![entries.clone(), find.clone(), label.clone()];
         l.columns = ["Item No.", "Variant Code", no_field, "Description", "Test Quality", "Certificate Number", "Blocked", "Inventory", "Expired Inventory"].iter().map(|c| (*c).to_string()).collect();
         l.card_page = Some(card_id.to_string());
         l.keywords = "lot serial batch tracking information".to_string();
@@ -105,6 +107,8 @@ pub fn register(m: &mut Metadata) {
                 .group(G::new("Inventory", &["Inventory", "Expired Inventory"]))
                 .action(Act::page("&Item Tracing", A::Navigate, "item-tracking-entries").link("Item No.", "Item No.").link(no_field, no_field).icon("list").tooltip("Trace where a lot or serial number assigned to the item was used, for example, to find which lot a defective component came from or to find all the customers that have received items containing the defective component."))
                 .action(entries)
+                .action(find)
+                .action(label)
                 .action(
                     Act::command("Copy &Info", A::Process, "tracking.copy_info")
                         .icon("copy")

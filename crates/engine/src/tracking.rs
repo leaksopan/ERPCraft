@@ -438,6 +438,22 @@ fn copy_info(ctx: &mut Ctx, p: &Json) -> Result<Json> {
     Ok(json!({"open": {"page": if table == LOT_INFO { "lot-no-information-card" } else { "serial-no-information-card" }, "key": [src.str("Item No."), src.str("Variant Code"), new_no]}, "message": format!("{field} {new_no} has the information of {}.", src.str(field))}))
 }
 
+/// BC's Lot No. Label / Serial No. Label (reports 6505 / 6504): a label per selected number.
+fn print_label(ctx: &mut Ctx, p: &Json) -> Result<Json> {
+    let table = opt_str(p, "table").filter(|t| *t == LOT_INFO || *t == SERIAL_INFO).ok_or_else(|| EngineError::invalid("Print Label runs from a lot or serial number information card."))?;
+    let t = ctx.table(table)?;
+    let r = ctx.get(table, &Key::from_json(t, p.get("key").unwrap_or(&Json::Null)).map_err(EngineError::invalid)?)?;
+    let field = if table == LOT_INFO { "Lot No." } else { "Serial No." };
+    let item = ctx.get_code(ITEM, r.str("Item No."))?;
+    let expiration = ctx.db.rows(ITEM_LEDGER).filter(|e| e.str("Item No.") == r.str("Item No.") && e.str(field) == r.str(field)).filter_map(|e| e.get("Expiration Date").as_date()).max();
+    let rows = vec![json!([r.str("Item No."), item.str("Description"), r.str("Variant Code"), r.str(field), expiration.map(|d| d.to_string()).unwrap_or_default()])];
+    Ok(json!({"report": {"title": if table == LOT_INFO { "Lot No. Label" } else { "Serial No. Label" }, "columns": ["Item No.", "Description", "Variant Code", field, "Expiration Date"], "rows": rows}}))
+}
+
+fn s_copy_info_key() -> Json {
+    json!({"type": "object", "properties": {"table": {"type": "string"}, "key": {}}, "required": ["key"]})
+}
+
 fn s_copy_info() -> Json {
     json!({"type": "object", "properties": {"table": {"type": "string"}, "key": {}, "new_no": {"type": "string", "description": "the new lot / serial number"}}, "required": ["key", "new_no"]})
 }
@@ -448,5 +464,6 @@ fn s_line() -> Json {
 
 pub static COMMANDS: &[CommandDef] = &[
     CommandDef { id: "tracking.lines", label: "Item Tracking Lines", group: "Inventory", summary: "The lot and serial numbers of a document or journal line.", mutates: false, params: s_line, run: lines },
+    CommandDef { id: "tracking.print_label", label: "Print Label", group: "Inventory", summary: "A label for a lot or serial number.", mutates: false, params: s_copy_info_key, run: print_label },
     CommandDef { id: "tracking.copy_info", label: "Copy Info", group: "Inventory", summary: "Copy a lot / serial number information card to a new number.", mutates: true, params: s_copy_info, run: copy_info },
 ];

@@ -7356,8 +7356,15 @@ pub fn extend(m: &mut Metadata) {
         m,
         "lot-no-information-card",
         &[
-            ("Process", &["Copy &Info"]),
+            ("Process", &["Find entries...", "Copy &Info", "Print Label"]),
             ("Lot No.", &["Item &Tracking Entries", "&Item Tracing"]),
+        ],
+    );
+    categories(
+        m,
+        "lot-no-information-list",
+        &[
+            ("Process", &["Find entries...", "Print Label"]),
         ],
     );
     categories(
@@ -7862,6 +7869,20 @@ pub fn extend(m: &mut Metadata) {
         "salespersons",
         &[
             ("Salesperson", &["split » Dimensions » Dimensions-Single"]),
+        ],
+    );
+    categories(
+        m,
+        "serial-no-information-card",
+        &[
+            ("Process", &["Find entries...", "Print Label"]),
+        ],
+    );
+    categories(
+        m,
+        "serial-no-information-list",
+        &[
+            ("Process", &["Find entries...", "Print Label"]),
         ],
     );
     categories(

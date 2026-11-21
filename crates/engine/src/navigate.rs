@@ -41,7 +41,29 @@ fn target(ctx: &Ctx, p: &Json) -> Result<(String, String)> {
     Ok((no.to_string(), opt_str(p, "posting_date").unwrap_or("").to_string()))
 }
 
+/// Find entries from a lot / serial number information card: the entries with that number.
+fn navigate_tracking(ctx: &Ctx, table: &str, p: &Json) -> Result<Json> {
+    let t = ctx.table(table)?;
+    let r = ctx.get(&t.name, &Key::from_json(t, p.get("key").unwrap_or(&Json::Null)).map_err(EngineError::invalid)?)?;
+    let field = if table == crate::schema::tracking::LOT_INFO { "Lot No." } else { "Serial No." };
+    let (item, no) = (r.str("Item No.").to_string(), r.str(field).to_string());
+    let mut rows = Vec::new();
+    let mut links = Vec::new();
+    for (source, page) in [("Item Ledger Entry", "item-ledger-entries"), ("Reservation Entry", "reservation-entries")] {
+        let count = ctx.db.rows(source).filter(|e| e.str("Item No.") == item && e.str(field) == no).count();
+        if count > 0 {
+            rows.push(json!([ctx.table(source)?.caption, count]));
+            links.push(json!({"page": page, "filters": [["Item No.", item], [field, no]]}));
+        }
+    }
+    let message = rows.is_empty().then(|| format!("There are no entries with {field} {no}."));
+    Ok(json!({"message": message, "report": {"title": format!("Navigate - {field} {no}"), "columns": ["Related Entries", "No. of Entries"], "rows": rows, "links": links}}))
+}
+
 fn navigate(ctx: &mut Ctx, p: &Json) -> Result<Json> {
+    if let Some(table @ (crate::schema::tracking::LOT_INFO | crate::schema::tracking::SERIAL_INFO)) = opt_str(p, "table") {
+        return navigate_tracking(ctx, table, p);
+    }
     let (no, date) = target(ctx, p)?;
     if no.is_empty() {
         return Err(EngineError::invalid("There is no document number to find entries for."));

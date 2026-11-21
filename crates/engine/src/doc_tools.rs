@@ -523,6 +523,88 @@ fn party_stats(ctx: &mut Ctx, side: &Side, p: &Json) -> Result<Json> {
     crate::commands::party_statistics(ctx, &json!({"no": party}), side.party_table)
 }
 
+/// BC's Post Batch (reports Batch Post Sales / Purchase Orders, Invoices, Credit Memos): every
+/// document of the type (or the `nos` given) posted on its own, optionally with a new posting
+/// and document date. A document that fails is listed and the others still post.
+fn post_batch(ctx: &mut Ctx, side: &Side, p: &Json) -> Result<Json> {
+    let doc_type = opt_str(p, "document_type").unwrap_or("Order").to_string();
+    let flag = |k: &str, d: bool| p.get(k).and_then(Json::as_bool).unwrap_or(d);
+    let mode = if doc_type == "Order" {
+        let (ship, invoice) = (flag(if side.sales { "ship" } else { "receive" }, true), flag("invoice", false));
+        if !ship && !invoice {
+            refuse!("You must select {} or Invoice, or both.", if side.sales { "Ship" } else { "Receive" });
+        }
+        PostMode { ship, invoice }
+    } else {
+        PostMode::BOTH
+    };
+    let posting_date = match opt_str(p, "posting_date").map(str::trim).filter(|s| !s.is_empty()) {
+        Some(s) => Some(chrono::NaiveDate::parse_from_str(s, "%Y-%m-%d").map_err(|_| EngineError::invalid(format!("'{s}' is not a date (YYYY-MM-DD).")))?),
+        None => None,
+    };
+    let (replace_posting, replace_document) = (flag("replace_posting_date", false), flag("replace_document_date", false));
+    if (replace_posting || replace_document) && posting_date.is_none() {
+        refuse!("Enter the posting date.");
+    }
+    let mut nos: Vec<String> = match p.get("nos").and_then(Json::as_array) {
+        Some(a) => a.iter().filter_map(Json::as_str).map(str::to_string).collect(),
+        None => ctx.db.rows(side.header).filter(|h| h.str("Document Type") == doc_type).map(|h| h.str("No.").to_string()).collect(),
+    };
+    nos.sort();
+    let ht = ctx.table(side.header)?;
+    let mut posted = Vec::new();
+    let mut errors: Vec<Json> = Vec::new();
+    for no in &nos {
+        let attempt = run_on_copy(ctx, |c| {
+            let mut h = c.get(side.header, &documents::header_key(&doc_type, no))?;
+            if crate::approvals::workflow(c, side, &doc_type).is_some() && h.str("Status") == "Pending Approval" {
+                refuse!("Cannot post {} document no. {no} of type {doc_type} because it is pending approval.", if side.sales { "sales" } else { "purchase" });
+            }
+            if let Some(d) = posting_date {
+                if replace_posting {
+                    h.set("Posting Date", Value::Date(d));
+                }
+                if replace_document {
+                    h.set("Document Date", Value::Date(d));
+                }
+                if replace_posting || replace_document {
+                    c.db.modify(ht, h)?;
+                }
+            }
+            posting::post_document(c, side, &doc_type, no, mode)
+        });
+        match attempt {
+            Ok((db, _)) => {
+                *ctx.db = db;
+                posted.push(no.clone());
+            }
+            Err(e) => errors.push(json!([no, e.message])),
+        }
+    }
+    let message = if errors.is_empty() {
+        "All of your selections were processed.".to_string()
+    } else {
+        format!("{} out of {} selected documents were posted. Some documents could not be posted.", posted.len(), nos.len())
+    };
+    let mut out = json!({"posted": posted, "message": message});
+    if !errors.is_empty() {
+        out["report"] = json!({"title": "Error Messages", "columns": ["Document No.", "Description"], "rows": errors});
+    }
+    Ok(out)
+}
+
+fn s_post_batch() -> Json {
+    json!({"type": "object", "properties": {
+        "document_type": {"type": "string", "default": "Order"},
+        "ship": {"type": "boolean", "default": true, "description": "sales orders: ship"},
+        "receive": {"type": "boolean", "default": true, "description": "purchase orders: receive"},
+        "invoice": {"type": "boolean", "default": false, "description": "orders: invoice"},
+        "posting_date": {"type": "string", "description": "YYYY-MM-DD"},
+        "replace_posting_date": {"type": "boolean", "default": false},
+        "replace_document_date": {"type": "boolean", "default": false},
+        "nos": {"type": "array", "items": {"type": "string"}, "description": "the documents to post; all of the type when left out"}}})
+}
+
 macro_rules! per_side {
     ($sales:ident, $purch:ident, $f:ident) => {
         fn $sales(c: &mut Ctx, p: &Json) -> Result<Json> {
@@ -534,6 +616,7 @@ macro_rules! per_side {
     };
 }
 per_side!(sales_preview, purch_preview, preview);
+per_side!(sales_post_batch, purch_post_batch, post_batch);
 per_side!(sales_party_stats, purch_party_stats, party_stats);
 per_side!(sales_test, purch_test, test_report);
 per_side!(sales_post_new, purch_post_new, post_and_new);
@@ -559,6 +642,8 @@ pub static COMMANDS: &[CommandDef] = &[
     cmd!("document.posted_statistics", "Statistics", "Documents", false, s_posted_stats, posted_statistics, "Amounts, VAT, cost and profit of a posted invoice or credit memo."),
     cmd!("sales.document.customer_statistics", "Customer Statistics", "Sales", false, s_doc_ref, sales_party_stats, "Balance, sales and payments of a sales document's bill-to customer."),
     cmd!("purchase.document.vendor_statistics", "Vendor Statistics", "Purchasing", false, s_doc_ref, purch_party_stats, "Balance, purchases and payments of a purchase document's pay-to vendor."),
+    cmd!("sales.document.post_batch", "Post Batch", "Sales", true, s_post_batch, sales_post_batch, "Post every sales order, invoice or credit memo (or the ones given) at once; failures are listed."),
+    cmd!("purchase.document.post_batch", "Post Batch", "Purchasing", true, s_post_batch, purch_post_batch, "Post every purchase order, invoice or credit memo (or the ones given) at once; failures are listed."),
     cmd!("journal.post_and_print", "Post and Print", "Finance", true, s_journal, journal_post_and_print, "Post a general journal batch and print the G/L Register of what was posted."),
     cmd!("item_journal.post_and_print", "Post and Print", "Inventory", true, s_journal, item_journal_post_and_print, "Post an item journal batch and print the Item Register of what was posted."),
     cmd!("journal.line.card", "Card", "Finance", false, s_line, journal_card, "Open the card of the selected journal line's account."),

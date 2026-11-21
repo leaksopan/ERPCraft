@@ -143,3 +143,26 @@ fn customer_and_vendor_statistics_on_documents() {
     let r = s.run("purchase.document.vendor_statistics", &json!({"table": "Purchase Header", "key": ["Order", p["No."]]})).unwrap();
     assert!(r.to_string().contains("Purchases (LCY)"), "{r}");
 }
+
+#[test]
+fn post_batch_posts_what_it_can_and_lists_the_rest() {
+    let mut s = demo();
+    let good = s.run("sales.document.new", &json!({"document_type": "Invoice", "customer_no": "10000", "lines": [{"no": "1000", "quantity": 1}]})).unwrap();
+    let empty = s.run("sales.document.new", &json!({"document_type": "Invoice", "customer_no": "20000"})).unwrap();
+    let r = s
+        .run(
+            "sales.document.post_batch",
+            &json!({"document_type": "Invoice", "nos": [good["no"], empty["no"]], "posting_date": "2026-11-30", "replace_posting_date": true}),
+        )
+        .unwrap();
+    assert_eq!(r["posted"], json!([good["no"]]), "{r}");
+    assert_eq!(r["report"]["title"], "Error Messages");
+    assert_eq!(r["report"]["rows"][0][0], empty["no"]);
+    assert!(s.run("record.get", &json!({"table": "Sales Header", "key": ["Invoice", good["no"]]})).is_err(), "posted and gone");
+    assert!(s.run("record.get", &json!({"table": "Sales Header", "key": ["Invoice", empty["no"]]})).is_ok(), "the failure leaves its document");
+    let inv = s.run("record.list", &json!({"table": "Sales Invoice Header", "filters": {"Pre-Assigned No.": good["no"]}})).unwrap();
+    assert_eq!(inv["records"][0]["Posting Date"], "2026-11-30");
+    let bad = s.run("sales.document.post_batch", &json!({"document_type": "Order", "ship": false, "invoice": false}));
+    assert!(bad.unwrap_err().message.contains("Ship or Invoice"));
+    assert!(s.run("sales.document.post_batch", &json!({"document_type": "Invoice", "replace_posting_date": true})).unwrap_err().message.contains("Enter the posting date"));
+}

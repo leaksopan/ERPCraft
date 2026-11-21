@@ -4688,7 +4688,7 @@ pub fn extend(m: &mut Metadata) {
         "purchase-credit-memos",
         &[
             ("Release", &["Re&lease", "Re&open"]),
-            ("Posting", &["P&ost", "Post and &Print", "Preview Posting"]),
+            ("Posting", &["P&ost", "Post and &Print", "Post &Batch", "Preview Posting"]),
             ("Credit Memo", &["Dimensions", "Statistics", "Co&mments", "Approvals", "Vendor"]),
         ],
     );
@@ -4707,7 +4707,7 @@ pub fn extend(m: &mut Metadata) {
         "purchase-invoices",
         &[
             ("Release", &["Re&lease", "Re&open"]),
-            ("Posting", &["P&ost", "Preview Posting", "Post and &Print"]),
+            ("Posting", &["P&ost", "Post &Batch", "Preview Posting", "Post and &Print"]),
             ("Invoice", &["Dimensions", "Statistics", "Co&mments", "Approvals", "Vendor"]),
         ],
     );
@@ -4727,7 +4727,7 @@ pub fn extend(m: &mut Metadata) {
         "purchase-order-list",
         &[
             ("Release", &["Re&lease", "Re&open"]),
-            ("Posting", &["P&ost", "Preview Posting", "Post and &Print"]),
+            ("Posting", &["P&ost", "Post &Batch", "Preview Posting", "Post and &Print"]),
             ("Print/Send", &["&Print", "Attach as PDF"]),
             ("Order", &["Dimensions", "Statistics", "Co&mments", "Approvals", "Receipts"]),
         ],
@@ -4782,7 +4782,7 @@ pub fn extend(m: &mut Metadata) {
         "sales-credit-memos",
         &[
             ("Release", &["Re&lease", "Re&open"]),
-            ("Posting", &["P&ost", "Preview Posting"]),
+            ("Posting", &["P&ost", "Post &Batch", "Preview Posting"]),
             ("Credit Memo", &["Dimensions", "Statistics", "Co&mments", "Approvals", "Customer"]),
         ],
     );
@@ -4802,7 +4802,7 @@ pub fn extend(m: &mut Metadata) {
         "sales-invoice-list",
         &[
             ("Release", &["Re&lease", "Re&open"]),
-            ("Posting", &["P&ost", "Preview Posting"]),
+            ("Posting", &["P&ost", "Post &Batch", "Preview Posting"]),
             ("Invoice", &["Dimensions", "Statistics", "Co&mments", "Approvals", "Customer", "Posted Sales Invoices"]),
         ],
     );
@@ -4822,7 +4822,7 @@ pub fn extend(m: &mut Metadata) {
         "sales-order-list",
         &[
             ("Release", &["Re&lease", "Re&open"]),
-            ("Posting", &["P&ost", "Preview Posting"]),
+            ("Posting", &["P&ost", "Post &Batch", "Preview Posting"]),
             ("Print/Send", &["Print Confirmation", "Work Order", "Attach as PDF"]),
             ("Order", &["Dimensions", "Statistics", "Co&mments", "Approvals", "S&hipments"]),
         ],

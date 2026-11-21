@@ -62,6 +62,28 @@ pub fn register(m: &mut Metadata) {
     posted_documents(m);
     ledgers(m);
     setup(m);
+    post_batch_actions(m);
+}
+
+/// BC's Post Batch on the order, invoice and credit memo lists.
+fn post_batch_actions(m: &mut Metadata) {
+    for (sales, pages) in [(true, SALES_DOC_PAGES), (false, PURCH_DOC_PAGES)] {
+        for (doc_type, list_id, ..) in pages.iter().filter(|d| d.0 != "Quote") {
+            let Some(p) = m.pages.get_mut(*list_id) else { continue };
+            let prefix = if sales { "sales" } else { "purchase" };
+            let mut ask = vec!["posting_date", "replace_posting_date", "replace_document_date"];
+            if *doc_type == "Order" {
+                ask.splice(0..0, [if sales { "ship" } else { "receive" }, "invoice"]);
+            }
+            p.actions.push(
+                Act::command("Post &Batch", A::Process, &format!("{prefix}.document.post_batch"))
+                    .param("document_type", doc_type)
+                    .ask(&ask)
+                    .icon("post")
+                    .tooltip("Post several documents at once. A report request window opens where you can specify which documents to post."),
+            );
+        }
+    }
 }
 
 fn master_data(m: &mut Metadata) {

@@ -27,7 +27,7 @@ Each target is checked by a script or a screenshot, not by eye.
 | 3 | Every W1 app's pages and reports exist (or are decided out) | inventory, W1 apps section | 0 / ~1,700 pages |
 | 4 | Every page we have matches BC's structure | `cargo run -p bc-parity -- --summary --check` exits 0 | ✅ blocking 0 |
 | 5 | Every field BC shows on our pages exists | "needs table field" = 0 | 67 |
-| 6 | Every action BC offers on our pages exists and works | "actions missing" = 0 | 1,221 |
+| 6 | Every action BC offers on our pages exists and works | "actions missing" = 0 | 1,199 |
 | 7 | Every page looks and behaves like BC | [visual checklist](#visual-parity-checklist) | 7 pages |
 | 8 | Every function has tests | `cargo test --workspace` | ✅ 27 suites |
 
@@ -70,10 +70,10 @@ The order follows impact for Auto Craft (a workshop and auto-parts business): mo
 
 ### Phase A: what exists, everywhere BC offers it
 
-- [ ] Approvals, Send/Cancel Approval Request on document **lists**, acting on the selected row
-- [ ] Co&mments on lists and journals (journal approvals and their Comments done; Co&mments on posted line lists to do)
+- [x] Approvals, Send/Cancel Approval Request on document **lists**, acting on the selected row
+- [x] Co&mments on lists and journals (journal approval Comments; line Comments and Dimensions from the Lines part's Line menu)
 - [ ] Statistics, Customer Statistics, Vendor Statistics on lists and documents (Customer / Vendor Statistics on documents and their lists, Entry Statistics and Statistics by Currencies on customers and vendors done; item statistics to do)
-- [ ] Post and Print, Test Report, Preview Posting, Post Batch on **journals** (Preview Posting, Test Report, Renumber Document Numbers, Post and Print, Card, Ledger Entries done; Post Batch belongs to the batches page)
+- [ ] Post and Print, Test Report, Preview Posting, Post Batch on **journals** (Preview Posting, Test Report, Renumber Document Numbers, Post and Print, Card, Ledger Entries done; Post Batch on order, invoice and credit memo lists done)
 - [x] Card actions mirrored on their list pages (generator `mirror` pass)
 - [ ] Attachments and Attach as PDF on posted document lists
 - [ ] Dimensions-Multiple and Set Dimension Filter on lists (Set Dimension Filter on every ledger entry list done; Dimensions-Multiple needs multi-select)

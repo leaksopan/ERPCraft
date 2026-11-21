@@ -137,4 +137,35 @@ pub fn register(m: &mut Metadata) {
         };
         p.actions.push(a.link("No.", "No.").link("Document Line No.", "=0"));
     }
+    // Lines: the comments of the selected line.
+    let lines: Vec<(String, Option<&str>, bool)> = m
+        .pages
+        .values()
+        .filter(|p| p.kind == PageKind::ListPart)
+        .filter_map(|p| {
+            let t = p.source_table.as_deref()?;
+            let (sales, posted) = match t {
+                "Sales Line" => (true, None),
+                "Purchase Line" => (false, None),
+                "Sales Invoice Line" | "Purch. Inv. Line" => (t.starts_with("Sales"), Some("Posted Invoice")),
+                "Sales Cr.Memo Line" | "Purch. Cr. Memo Line" => (t.starts_with("Sales"), Some("Posted Credit Memo")),
+                "Sales Shipment Line" => (true, Some("Shipment")),
+                "Purch. Rcpt. Line" => (false, Some("Receipt")),
+                _ => return None,
+            };
+            Some((p.id.clone(), posted, sales))
+        })
+        .collect();
+    for (id, posted, sales) in lines {
+        let Some(p) = m.pages.get_mut(&id) else { continue };
+        if p.actions.iter().any(|a| a.caption == "Co&mments") {
+            continue;
+        }
+        let a = comments_action(if sales { "sales-comment-sheet" } else { "purch-comment-sheet" });
+        let a = match posted {
+            Some(t) => a.link("Document Type", &format!("={t}")),
+            None => a.link("Document Type", "Document Type"),
+        };
+        p.actions.push(a.link("No.", "Document No.").link("Document Line No.", "Line No."));
+    }
 }

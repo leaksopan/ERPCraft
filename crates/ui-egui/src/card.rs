@@ -616,18 +616,30 @@ fn lines_part(app: &mut ErpApp, ui: &mut Ui, host: &PageDef, header: &Record, pa
     };
     let side_prefix = if lt.name.starts_with("Sales") { "sales" } else { "purchase" };
     ui.add_space(14.0);
+    let mut line_action: Option<ActionDef> = None;
     ui.horizontal(|ui| {
         widgets::flat(ui);
         ui.set_min_height(30.0);
         ui.label(RichText::new(&part.caption).font(theme::bold(theme::SUBTITLE)).color(TOKENS.text));
-        // Posted documents' lines can't change: BC shows no Manage tab there.
-        if !(page.editable && host.editable) {
-            return;
-        }
         widgets::vsep(ui);
-        let r = ui.label(RichText::new("Manage").color(TOKENS.accent));
-        ui.painter().line_segment([r.rect.left_bottom() + vec2(0.0, 3.0), r.rect.right_bottom() + vec2(0.0, 3.0)], egui::Stroke::new(2.0, TOKENS.accent));
+        // Posted documents' lines can't change: BC shows no Manage tab there.
+        if page.editable && host.editable {
+            let r = ui.label(RichText::new("Manage").color(TOKENS.accent));
+            ui.painter().line_segment([r.rect.left_bottom() + vec2(0.0, 3.0), r.rect.right_bottom() + vec2(0.0, 3.0)], egui::Stroke::new(2.0, TOKENS.accent));
+        }
+        // BC's "Line" menu: the lines page's actions, on the selected line.
+        let actions: Vec<&ActionDef> = page.actions.iter().collect();
+        if !actions.is_empty() {
+            crate::list::action_menu(ui, "Line  ▾", &actions, &mut line_action);
+        }
     });
+    if let Some(a) = line_action {
+        // As in BC, the current line is the first one until another is selected.
+        match state.selected_line.clone().or_else(|| lines.first().map(|l| l.key(lt))) {
+            Some(k) => app.run_action(&a, Some((&lt.name, &k))),
+            None => app.error("There are no lines."),
+        }
+    }
     widgets::divider(ui);
     let lines_editable = page.editable && host.editable;
     ui.horizontal(|ui| {

@@ -270,7 +270,11 @@ impl ErpApp {
                 .page(page)
                 .and_then(|p| p.source_table.as_deref())
                 .and_then(|t| self.session.table(t))
-                .and_then(|t| Key::from_json(t, &json!(key)).ok());
+                .and_then(|t| {
+                    // Multi-field keys are joined by `|`, as in `page:key`.
+                    let k = if key.contains('|') { json!(key.split('|').collect::<Vec<_>>()) } else { json!(key) };
+                    Key::from_json(t, &k).ok()
+                });
             if let Some(key) = key {
                 self.open_card_from_list(page, key, &state);
             }

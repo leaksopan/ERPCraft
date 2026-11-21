@@ -151,7 +151,7 @@ pub fn register(m: &mut Metadata) {
     let with_set: Vec<String> = m
         .pages
         .values()
-        .filter(|p| p.source_table.as_deref().is_some_and(|t| WITH_DIM_SET.contains(&t)) && p.kind != PageKind::ListPart)
+        .filter(|p| p.source_table.as_deref().is_some_and(|t| WITH_DIM_SET.contains(&t)))
         .filter(|p| !p.actions.iter().any(|a| a.caption == "Dimensions"))
         .map(|p| p.id.clone())
         .collect();

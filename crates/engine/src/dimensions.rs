@@ -283,6 +283,87 @@ fn s_set_filter() -> Json {
         "lines": {"type": "array", "items": {"type": "object", "properties": {"dimension_code": {"type": "string"}, "value_filter": {"type": "string"}}}}}})
 }
 
+/// The selected records of a master table: `keys` (several) or `key` (one).
+fn selected_records(ctx: &Ctx, t: &TableDef, p: &Json) -> Result<Vec<Record>> {
+    let keys: Vec<Json> = match (p.get("keys").and_then(Json::as_array), p.get("key")) {
+        (Some(ks), _) if !ks.is_empty() => ks.clone(),
+        (_, Some(k)) => vec![k.clone()],
+        _ => refuse!("Select the records to set dimensions for."),
+    };
+    keys.iter().map(|k| ctx.get(&t.name, &Key::from_json(t, k).map_err(crate::error::EngineError::invalid)?)).collect()
+}
+
+/// BC's Default Dimensions-Multiple: one dimension's default value set on (or, with a blank
+/// value, removed from) every selected record. A global dimension goes through the record's
+/// Global Dimension field, so card and default dimension stay in step.
+fn dimensions_multiple(ctx: &mut Ctx, p: &Json) -> Result<Json> {
+    let table = opt_str(p, "table").ok_or_else(|| crate::error::EngineError::invalid("missing parameter 'table'"))?;
+    let t = ctx.table(table)?.clone();
+    let Some(id) = table_id(&t) else {
+        refuse!("{} has no default dimensions.", t.caption);
+    };
+    let dimension = opt_str(p, "dimension_code").map(|s| s.trim().to_uppercase()).filter(|s| !s.is_empty());
+    let records = selected_records(ctx, &t, p)?;
+    if let Some(dimension) = dimension {
+        if ctx.db.get_code(DIMENSION, &dimension).is_none() {
+            refuse!("The Dimension does not exist. Identification fields and values: Code='{dimension}'");
+        }
+        let value = opt_str(p, "dimension_value_code").unwrap_or("").trim().to_uppercase();
+        if !value.is_empty() && ctx.db.get(DIM_VALUE, &Key(vec![Value::text(&dimension), Value::text(&value)])).is_none() {
+            refuse!("The dimension value {value} has not been set up for dimension {dimension}.");
+        }
+        let n = global_no(ctx, &dimension);
+        for mut r in records.clone() {
+            let field = format!("Global Dimension {n} Code");
+            if (n == 1 || n == 2) && t.field(&field).is_some() {
+                crate::records::validate(ctx, &t, &mut r, &field, &json!(value), true)?;
+                ctx.db.modify(&t, r)?;
+                continue;
+            }
+            let no = r.str("No.").to_string();
+            let key = Key(vec![Value::Int(i64::from(id)), Value::text(&no), Value::text(&dimension)]);
+            let dt = ctx.table(DEFAULT_DIM)?;
+            match (ctx.db.get(DEFAULT_DIM, &key).cloned(), value.is_empty()) {
+                (Some(_), true) => {
+                    ctx.db.remove(DEFAULT_DIM, &key);
+                }
+                (Some(mut d), false) => {
+                    d.set("Dimension Value Code", Value::text(&value));
+                    ctx.db.modify(dt, d)?;
+                }
+                (None, false) => {
+                    let mut v = Map::new();
+                    v.insert("Table ID".into(), json!(id));
+                    v.insert("No.".into(), json!(no));
+                    v.insert("Dimension Code".into(), json!(dimension));
+                    v.insert("Dimension Value Code".into(), json!(value));
+                    crate::records::create(ctx, dt, &v, None)?;
+                }
+                (None, true) => {}
+            }
+        }
+    }
+    // The page BC shows: each dimension any of them has, with its value, or (Conflict).
+    let nos: Vec<String> = records.iter().map(|r| r.str("No.").to_string()).collect();
+    let all: Vec<Dims> = nos.iter().map(|no| defaults(ctx, id, no)).collect();
+    let codes: std::collections::BTreeSet<String> = all.iter().flat_map(|d| d.keys().cloned()).collect();
+    let rows: Vec<Json> = codes
+        .iter()
+        .map(|c| {
+            let values: std::collections::BTreeSet<String> = all.iter().map(|d| d.get(c).cloned().unwrap_or_default()).collect();
+            let shown = if values.len() == 1 { values.into_iter().next().unwrap_or_default() } else { "(Conflict)".to_string() };
+            json!([c, shown])
+        })
+        .collect();
+    Ok(json!({"records": nos.len(), "report": {"title": format!("Default Dimensions-Multiple ({} {})", nos.len(), t.caption), "columns": ["Dimension Code", "Dimension Value Code"], "rows": rows}}))
+}
+
+fn s_multiple() -> Json {
+    json!({"type": "object", "properties": {
+        "table": {"type": "string"}, "keys": {"type": "array", "description": "the selected records' keys"}, "key": {},
+        "dimension_code": {"type": "string"}, "dimension_value_code": {"type": "string", "description": "blank removes the dimension"}}})
+}
+
 pub static COMMANDS: &[CommandDef] = &[CommandDef {
     id: "dimension.set_filter",
     label: "Set Dimension Filter",
@@ -291,4 +372,12 @@ pub static COMMANDS: &[CommandDef] = &[CommandDef {
     mutates: false,
     params: s_set_filter,
     run: set_filter,
+}, CommandDef {
+    id: "dimension.multiple",
+    label: "Dimensions-Multiple",
+    group: "Finance",
+    summary: "Set or remove a default dimension on several customers, vendors, items, accounts or fixed assets at once.",
+    mutates: true,
+    params: s_multiple,
+    run: dimensions_multiple,
 }];

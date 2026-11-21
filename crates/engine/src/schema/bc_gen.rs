@@ -4319,7 +4319,7 @@ pub fn extend(m: &mut Metadata) {
         m,
         "bank-account-list",
         &[
-            ("Bank Account", &["Dimensions-Single", "Co&mments", "Ledger E&ntries"]),
+            ("Bank Account", &["Dimensions-&Multiple", "Dimensions-Single", "Co&mments", "Ledger E&ntries"]),
         ],
     );
     categories(
@@ -4335,7 +4335,7 @@ pub fn extend(m: &mut Metadata) {
         m,
         "chart-of-accounts",
         &[
-            ("Account", &["Dimensions-Single", "Co&mments", "Ledger E&ntries"]),
+            ("Account", &["Dimensions-&Multiple", "Dimensions-Single", "Co&mments", "Ledger E&ntries"]),
             ("Navigate", &["G/L Register", "General Journal"]),
             ("Report", &["G/L Register"]),
         ],
@@ -4361,7 +4361,7 @@ pub fn extend(m: &mut Metadata) {
         "customer-list",
         &[
             ("New Document", &["Sales Quote", "Sales Order", "Sales Invoice", "Sales Credit Memo"]),
-            ("Customer", &["Ledger E&ntries", "Statistics", "Dimensions-Single", "Co&mments", "Quotes", "Orders"]),
+            ("Customer", &["Ledger E&ntries", "Statistics", "Dimensions-&Multiple", "Dimensions-Single", "Co&mments", "Quotes", "Orders"]),
         ],
     );
     categories(
@@ -4421,7 +4421,7 @@ pub fn extend(m: &mut Metadata) {
         "fixed-assets",
         &[
             ("Process", &["Calculate Depreciation"]),
-            ("Fixed Asset", &["Dimensions-Single", "Co&mments"]),
+            ("Fixed Asset", &["Dimensions-&Multiple", "Dimensions-Single", "Co&mments"]),
         ],
     );
     categories(
@@ -4531,7 +4531,7 @@ pub fn extend(m: &mut Metadata) {
         "item-list",
         &[
             ("Process", &["Adjust Inventory", "Copy Item"]),
-            ("Item", &["Dimensions-Single", "Co&mments", "Items b&y Location"]),
+            ("Item", &["Dimensions-&Multiple", "Dimensions-Single", "Co&mments", "Items b&y Location"]),
         ],
     );
     categories(
@@ -4900,7 +4900,7 @@ pub fn extend(m: &mut Metadata) {
         &[
             ("Process", &["Pay Vendor"]),
             ("New Document", &["Purchase Invoice", "Purchase Order", "Purchase Credit Memo"]),
-            ("Vendor", &["Ledger E&ntries", "Statistics", "Dimensions-Single", "Co&mments", "Orders", "Quotes"]),
+            ("Vendor", &["Ledger E&ntries", "Statistics", "Dimensions-&Multiple", "Dimensions-Single", "Co&mments", "Orders", "Quotes"]),
         ],
     );
     calcs(

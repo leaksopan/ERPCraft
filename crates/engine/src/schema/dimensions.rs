@@ -185,6 +185,23 @@ pub fn register(m: &mut Metadata) {
             );
         }
     }
+    // Master lists: Dimensions-Multiple on the selected records.
+    let lists: Vec<String> = m
+        .pages
+        .values()
+        .filter(|p| p.kind == PageKind::List && p.card_page.as_deref().is_some_and(|c| MASTERS.iter().any(|(card, _)| *card == c)))
+        .map(|p| p.id.clone())
+        .collect();
+    for id in lists {
+        if let Some(p) = m.pages.get_mut(&id) {
+            p.actions.push(
+                Act::command("Dimensions-&Multiple", A::Navigate, "dimension.multiple")
+                    .ask(&["dimension_code", "dimension_value_code"])
+                    .icon("dimensions")
+                    .tooltip("View or edit dimensions for a group of records. You can assign dimension codes to transactions to distribute costs and analyze historical information."),
+            );
+        }
+    }
     for (page, table_id) in MASTERS {
         if let Some(p) = m.pages.get_mut(*page) {
             p.actions.push(

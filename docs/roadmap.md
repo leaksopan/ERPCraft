@@ -27,7 +27,7 @@ Each target is checked by a script or a screenshot, not by eye.
 | 3 | Every W1 app's pages and reports exist (or are decided out) | inventory, W1 apps section | 0 / ~1,700 pages |
 | 4 | Every page we have matches BC's structure | `cargo run -p bc-parity -- --summary --check` exits 0 | ✅ blocking 0 |
 | 5 | Every field BC shows on our pages exists | "needs table field" = 0 | 67 |
-| 6 | Every action BC offers on our pages exists and works | "actions missing" = 0 | 1,189 |
+| 6 | Every action BC offers on our pages exists and works | "actions missing" = 0 | 1,183 |
 | 7 | Every page looks and behaves like BC | [visual checklist](#visual-parity-checklist) | 7 pages |
 | 8 | Every function has tests | `cargo test --workspace` | ✅ 27 suites |
 
@@ -76,7 +76,7 @@ The order follows impact for Auto Craft (a workshop and auto-parts business): mo
 - [x] Post and Print, Test Report, Preview Posting, Post Batch on **journals** (Preview Posting, Test Report, Renumber Document Numbers, Post and Print, Card, Ledger Entries done; Post Batch on order, invoice and credit memo lists done)
 - [x] Card actions mirrored on their list pages (generator `mirror` pass)
 - [x] Attachments and Attach as PDF on posted document lists
-- [ ] Dimensions-Multiple and Set Dimension Filter on lists (Set Dimension Filter on every ledger entry list done; Dimensions-Multiple needs multi-select)
+- [x] Dimensions-Multiple and Set Dimension Filter on lists (lists mark several rows: Ctrl / Shift + click, Select More; actions get them as `keys`)
 
 ### Phase B: Finance (Finance 344 pages / 86 reports, Bank 78 / 17)
 

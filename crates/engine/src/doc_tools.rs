@@ -546,8 +546,12 @@ fn post_batch(ctx: &mut Ctx, side: &Side, p: &Json) -> Result<Json> {
     if (replace_posting || replace_document) && posting_date.is_none() {
         refuse!("Enter the posting date.");
     }
-    let mut nos: Vec<String> = match p.get("nos").and_then(Json::as_array) {
-        Some(a) => a.iter().filter_map(Json::as_str).map(str::to_string).collect(),
+    // The documents selected on the list (keys [type, no.]), the ones given, or all of the type.
+    let selected: Option<Vec<String>> = p.get("keys").and_then(Json::as_array).filter(|a| a.len() > 1).map(|a| {
+        a.iter().filter_map(|k| k.as_array().and_then(|k| k.get(1)).and_then(Json::as_str)).map(str::to_string).collect()
+    });
+    let mut nos: Vec<String> = match selected.or_else(|| p.get("nos").and_then(Json::as_array).map(|a| a.iter().filter_map(Json::as_str).map(str::to_string).collect())) {
+        Some(a) => a,
         None => ctx.db.rows(side.header).filter(|h| h.str("Document Type") == doc_type).map(|h| h.str("No.").to_string()).collect(),
     };
     nos.sort();

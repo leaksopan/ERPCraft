@@ -22,6 +22,10 @@ pub struct ListState {
     pub filter_pane: bool,
     /// The column of the selected row that has focus (framed, like BC's current cell).
     pub cell: Option<usize>,
+    /// Rows marked for an action on several records (Ctrl / Shift + click, or Select More).
+    pub marked: Vec<Key>,
+    /// BC's Select More: a click marks or unmarks a row instead of moving to it.
+    pub select_more: bool,
 }
 
 /// Where a card was opened from, so ‹ › can step through the same records.
@@ -53,7 +57,7 @@ pub struct CardState {
 impl View {
     pub fn list(page: &str, filters: Vec<(String, String)>) -> Self {
         let filter_pane = !filters.is_empty();
-        View::List(ListState { page: page.to_string(), filters, search: String::new(), search_open: false, selected: None, sort: None, filter_pane, cell: None })
+        View::List(ListState { page: page.to_string(), filters, search: String::new(), search_open: false, selected: None, sort: None, filter_pane, cell: None, marked: Vec::new(), select_more: false })
     }
 
     pub fn card(page: &str, key: Key) -> Self {

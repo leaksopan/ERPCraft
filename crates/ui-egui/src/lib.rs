@@ -52,6 +52,8 @@ pub struct ErpApp {
     pub show_factbox: bool,
     /// Columns the user chose per list page (Personalize › columns); the page's own otherwise.
     pub columns: HashMap<String, Vec<String>>,
+    /// The list rows an action runs on when several are marked (sent as `keys`).
+    pub selection: Vec<Key>,
     /// `egui` time (seconds) of the next [`Session::refresh`].
     next_refresh: f64,
     /// A failed refresh was shown in the notice bar; don't repeat it every 2 seconds.
@@ -75,6 +77,7 @@ impl ErpApp {
             pixels_per_point: 1.0,
             show_factbox: true,
             columns: HashMap::new(),
+            selection: Vec::new(),
             next_refresh: 0.0,
             refresh_failed: false,
         }
@@ -450,6 +453,10 @@ impl ErpApp {
         if let Some((t, k)) = context {
             params.insert("table".into(), json!(t));
             params.insert("key".into(), k.to_json());
+        }
+        // Several rows marked on the list: the action gets them all, as BC's SetSelectionFilter.
+        if self.selection.len() > 1 {
+            params.insert("keys".into(), Json::Array(self.selection.iter().map(Key::to_json).collect()));
         }
         let mut missing = dialogs::missing_params(command, &params, context.is_some());
         for f in &a.ask {

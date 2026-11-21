@@ -72,7 +72,9 @@ pub fn show(app: &mut ErpApp, ui: &mut Ui, idx: usize, mut state: ListState) {
             && widgets::shortcut_pressed(ui.ctx(), s)
         {
             let key = state.selected.clone();
+            app.selection = state.marked.clone();
             app.run_action(a, key.as_ref().map(|k| (table.name.as_str(), k)));
+            app.selection.clear();
         }
     }
     // Write the state back unless the action opened another page.
@@ -151,7 +153,9 @@ fn action_bar(app: &mut ErpApp, ui: &mut Ui, page: &PageDef, table: &TableDef, s
         });
     });
     if let Some(a) = run {
+        app.selection = state.marked.clone();
         app.run_action(&a, ctx_key);
+        app.selection.clear();
     }
 }
 
@@ -202,6 +206,8 @@ pub(crate) fn action_menu(ui: &mut Ui, caption: &str, actions: &[&ActionDef], ru
 /// What a row's ⋮ menu asked for.
 enum RowAct {
     Action(ActionDef),
+    SelectMore,
+    Toggle,
     View,
     Edit,
     Delete,
@@ -256,6 +262,7 @@ fn grid(app: &mut ErpApp, ui: &mut Ui, page: &PageDef, table: &TableDef, rows: &
     ui.spacing_mut().item_spacing.y = 0.0;
     // Column edges stay invisible until hovered (egui draws resize lines with this stroke).
     ui.visuals_mut().widgets.noninteractive.bg_stroke = egui::Stroke::NONE;
+    let ui_mods = ui.input(|i| i.modifiers);
     let mut builder = TableBuilder::new(ui)
         .id_salt(("list", &page.id))
         .striped(false)
@@ -296,7 +303,7 @@ fn grid(app: &mut ErpApp, ui: &mut Ui, page: &PageDef, table: &TableDef, rows: &
                 let Some(r) = rows.get(row.index()) else { return };
                 let key = r.key(table);
                 let selected = state.selected.as_ref() == Some(&key);
-                row.set_selected(selected);
+                row.set_selected(selected || state.marked.contains(&key));
                 for (i, f) in cols.iter().enumerate() {
                     let (_, cell_resp) = row.col(|ui| {
                         let cell = ui.max_rect();
@@ -335,7 +342,13 @@ fn grid(app: &mut ErpApp, ui: &mut Ui, page: &PageDef, table: &TableDef, rows: &
                                 .ctx()
                                 .pointer_hover_pos()
                                 .is_some_and(|p| p.y >= cell.top() && p.y < cell.bottom() && grid_rect.x_range().contains(p.x) && ui.ctx().layer_id_at(p) == Some(ui.layer_id()));
-                            if let Some(act) = row_menu(ui, page, selected || hovered) {
+                            if state.select_more {
+                                // Select More: a check mark per row instead of the ⋮ menu.
+                                let mark = if state.marked.contains(&key) { "☑" } else { "☐" };
+                                if ui.add(egui::Button::new(RichText::new(mark).size(15.0).color(TOKENS.grid_text)).frame(false)).clicked() {
+                                    row_act = Some((key.clone(), RowAct::Toggle));
+                                }
+                            } else if let Some(act) = row_menu(ui, page, selected || hovered, state.marked.len() > 1) {
                                 row_act = Some((key.clone(), act));
                             }
                         });
@@ -343,6 +356,29 @@ fn grid(app: &mut ErpApp, ui: &mut Ui, page: &PageDef, table: &TableDef, rows: &
                 }
                 let resp = row.response();
                 if resp.clicked() {
+                    let mods = ui_mods;
+                    if state.select_more || mods.command {
+                        // Ctrl+click (or Select More): mark or unmark this row.
+                        if state.marked.is_empty()
+                            && let Some(cur) = state.selected.clone()
+                            && cur != key
+                        {
+                            state.marked.push(cur);
+                        }
+                        if let Some(i) = state.marked.iter().position(|k| *k == key) {
+                            state.marked.remove(i);
+                        } else {
+                            state.marked.push(key.clone());
+                        }
+                    } else if mods.shift {
+                        // Shift+click: everything from the current row to this one.
+                        let from = state.selected.as_ref().and_then(|k| rows.iter().position(|r| r.key(table) == *k)).unwrap_or(0);
+                        let to = row.index();
+                        let (a, b) = if from <= to { (from, to) } else { (to, from) };
+                        state.marked = rows.get(a..=b).unwrap_or_default().iter().map(|r| r.key(table)).collect();
+                    } else {
+                        state.marked.clear();
+                    }
                     state.selected = Some(key.clone());
                 }
                 if resp.double_clicked() && page.card_page.is_some() {
@@ -362,7 +398,27 @@ fn grid(app: &mut ErpApp, ui: &mut Ui, page: &PageDef, table: &TableDef, rows: &
     if let Some((key, act)) = row_act {
         state.selected = Some(key.clone());
         match act {
-            RowAct::Action(a) => app.run_action(&a, Some((table.name.as_str(), &key))),
+            RowAct::Action(a) => {
+                app.selection = if state.marked.contains(&key) { state.marked.clone() } else { Vec::new() };
+                app.run_action(&a, Some((table.name.as_str(), &key)));
+                app.selection.clear();
+            }
+            RowAct::SelectMore => {
+                state.select_more = !state.select_more;
+                if state.select_more && !state.marked.contains(&key) {
+                    state.marked.push(key.clone());
+                }
+                if !state.select_more {
+                    state.marked.clear();
+                }
+            }
+            RowAct::Toggle => {
+                if let Some(i) = state.marked.iter().position(|k| *k == key) {
+                    state.marked.remove(i);
+                } else {
+                    state.marked.push(key);
+                }
+            }
             RowAct::View => open = Some((key, false)),
             RowAct::Edit => open = Some((key, true)),
             RowAct::Delete => {
@@ -563,7 +619,7 @@ fn grid_value(ui: &mut Ui, f: &erpcraft_engine::meta::FieldDef, v: &erpcraft_eng
 
 /// The ⋮ of a row (shown on hover and on the current row): the page's actions by category, then
 /// View, Edit and Delete.
-fn row_menu(ui: &mut Ui, page: &PageDef, show: bool) -> Option<RowAct> {
+fn row_menu(ui: &mut Ui, page: &PageDef, show: bool, several: bool) -> Option<RowAct> {
     let resp = ui.add_visible(show, egui::Button::new(RichText::new("⋮").size(16.0).color(TOKENS.grid_text)).frame(false));
     let mut out = None;
     egui::Popup::from_toggle_button_response(&resp)
@@ -582,6 +638,10 @@ fn row_menu(ui: &mut Ui, page: &PageDef, show: bool) -> Option<RowAct> {
                 }
             }
             ui.separator();
+            if ui.button(if several { "☑   Select More (on)" } else { "☑   Select More" }).clicked() {
+                out = Some(RowAct::SelectMore);
+                ui.close();
+            }
             if page.card_page.is_some() {
                 if ui.button("👁   View").clicked() {
                     out = Some(RowAct::View);

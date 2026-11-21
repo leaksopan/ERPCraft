@@ -95,3 +95,27 @@ fn set_dimension_filter_limits_entries_to_matching_sets() {
     let bad = s.run("dimension.set_filter", &json!({"dimension_code": "NOPE", "value_filter": "X"}));
     assert!(bad.unwrap_err().message.contains("does not exist"));
 }
+
+#[test]
+fn dimensions_multiple_sets_and_clears_a_default_on_every_selected_record() {
+    let mut s = demo();
+    let keys = json!(["10000", "20000", "30000"]);
+    let r = s.run("dimension.multiple", &json!({"table": "Customer", "keys": keys, "dimension_code": "PROJECT", "dimension_value_code": "fleet"})).unwrap();
+    assert_eq!(r["records"], 3);
+    for no in ["10000", "20000", "30000"] {
+        let d = get(&mut s, "Default Dimension", json!([18, no, "PROJECT"]));
+        assert_eq!(d["Dimension Value Code"], "FLEET");
+    }
+    let rows = r["report"]["rows"].as_array().unwrap();
+    assert!(rows.iter().any(|r| r[0] == "PROJECT" && r[1] == "FLEET"));
+    // A global dimension goes through the card's field.
+    s.run("dimension.multiple", &json!({"table": "Customer", "keys": keys, "dimension_code": "AREA", "dimension_value_code": "SBY"})).unwrap();
+    assert_eq!(get(&mut s, "Customer", json!("20000"))["Global Dimension 2 Code"], "SBY");
+    // Different values show as (Conflict); a blank value removes the dimension from all.
+    s.run("record.validate", &json!({"table": "Customer", "key": "10000", "field": "Global Dimension 2 Code", "value": "JKT"})).unwrap();
+    let r = s.run("dimension.multiple", &json!({"table": "Customer", "keys": keys})).unwrap();
+    assert!(r["report"]["rows"].as_array().unwrap().iter().any(|r| r[0] == "AREA" && r[1] == "(Conflict)"), "{r}");
+    s.run("dimension.multiple", &json!({"table": "Customer", "keys": keys, "dimension_code": "PROJECT", "dimension_value_code": ""})).unwrap();
+    assert!(s.run("record.get", &json!({"table": "Default Dimension", "key": [18, "30000", "PROJECT"]})).is_err());
+    assert!(s.run("dimension.multiple", &json!({"table": "Customer", "keys": keys, "dimension_code": "PROJECT", "dimension_value_code": "MARS"})).is_err());
+}

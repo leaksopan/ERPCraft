@@ -3,7 +3,7 @@
 //! account ledger entries. Mirrors BC's Gen. Jnl.-Post Line for these account types.
 
 use chrono::NaiveDate;
-use erpcraft_meta::{Record, Value};
+use erpcraft_meta::{Record, TableDef, Value};
 use rust_decimal::Decimal;
 use serde_json::{Value as Json, json};
 
@@ -20,6 +20,8 @@ pub struct Txn {
     pub source_code: String,
     pub template: String,
     pub batch: String,
+    /// The document's or journal line's dimension set: its entries carry it.
+    pub dim_set: i64,
 }
 
 impl Txn {
@@ -30,7 +32,7 @@ impl Txn {
             .flat_map(|t| ctx.db.rows(t).map(|r| r.get("Transaction No.").as_int()))
             .max()
             .unwrap_or(0);
-        Self { no: max.saturating_add(1), source_code: source_code.to_string(), template: template.to_string(), batch: batch.to_string() }
+        Self { no: max.saturating_add(1), source_code: source_code.to_string(), template: template.to_string(), batch: batch.to_string(), dim_set: 0 }
     }
 }
 
@@ -111,6 +113,7 @@ pub fn post_party_entry(ctx: &mut Ctx, side: &Side, txn: &Txn, e: &PartyEntry) -
     r.set("Source Code", Value::text(&txn.source_code));
     r.set("Journal Batch Name", Value::text(&txn.batch));
     r.set("User ID", Value::text(ctx.user.to_uppercase()));
+    stamp_dims(ctx, lt, &mut r, txn.dim_set);
     ctx.db.insert(lt, r)?;
     detailed(ctx, side, txn.no, entry_no, "Initial Entry", e.posting_date, e.doc_type, e.doc_no, e.party_no, e.amount, 0, 0)?;
     Ok(entry_no)
@@ -348,4 +351,15 @@ pub fn party_gl_account(ctx: &Ctx, side: &Side, party_no: &str) -> Result<(Strin
         .filter(|s| !s.is_empty())
         .ok_or_else(|| EngineError::refused(format!("{} must have a value in {}: No.={party_no}.", side.posting_group, side.party_caption)))?;
     Ok((acc, group))
+}
+
+/// An entry's Dimension Set ID and Global Dimension 1 / 2 Code from `set`.
+pub fn stamp_dims(ctx: &Ctx, t: &TableDef, r: &mut Record, set: i64) {
+    if set == 0 || t.field("Dimension Set ID").is_none() {
+        return;
+    }
+    r.set("Dimension Set ID", Value::Int(set));
+    let (d1, d2) = crate::dimensions::globals(ctx, set);
+    r.set("Global Dimension 1 Code", Value::text(d1));
+    r.set("Global Dimension 2 Code", Value::text(d2));
 }

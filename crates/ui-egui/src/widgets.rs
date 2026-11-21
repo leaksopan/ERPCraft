@@ -40,6 +40,7 @@ pub fn glyph(icon: &str) -> &'static str {
         "preview" => "◎",
         "report" => "▤",
         "list" => "☰",
+        "dimensions" => "▦",
         // BC gives every action an icon.
         _ => "▸",
     }

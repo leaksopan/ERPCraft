@@ -82,6 +82,7 @@ pub fn extend(m: &mut Metadata) {
             ("Reversed", "Reversed", "Specifies if the entry has been part of a reverse transaction.", 0),
             ("Reversed by Entry No.", "Reversed by Entry No.", "Specifies the number of the correcting entry that replaced the original entry in the reverse transaction.", 0),
             ("Reversed Entry No.", "Reversed Entry No.", "Specifies the number of the original entry that was undone by the reverse transaction.", 0),
+            ("Dimension Set ID", "Dimension Set ID", "Specifies a reference to a combination of dimension values. The actual values are stored in the Dimension Set Entry table.", 0),
         ],
     );
     fields(
@@ -95,6 +96,12 @@ pub fn extend(m: &mut Metadata) {
             F::decimal("Credit Amount").auto_format(1).tooltip("Specifies the total of the ledger entries that represent credits."),
             F::decimal("Debit Amount (LCY)").auto_format(1),
             F::decimal("Credit Amount (LCY)").auto_format(1),
+            F::code("Shortcut Dimension 3 Code", 20).calc(CalcFormula::new(CalcFunc::Lookup, "Dimension Set Entry", "Dimension Value Code", &[("Dimension Set ID", "Dimension Set ID")], &[("Global Dimension No.", "3")])).tooltip("Specifies the code for Shortcut Dimension 3, which is one of dimension codes that you set up in the General Ledger Setup window."),
+            F::code("Shortcut Dimension 4 Code", 20).calc(CalcFormula::new(CalcFunc::Lookup, "Dimension Set Entry", "Dimension Value Code", &[("Dimension Set ID", "Dimension Set ID")], &[("Global Dimension No.", "4")])).tooltip("Specifies the code for Shortcut Dimension 4, which is one of dimension codes that you set up in the General Ledger Setup window."),
+            F::code("Shortcut Dimension 5 Code", 20).calc(CalcFormula::new(CalcFunc::Lookup, "Dimension Set Entry", "Dimension Value Code", &[("Dimension Set ID", "Dimension Set ID")], &[("Global Dimension No.", "5")])).tooltip("Specifies the code for Shortcut Dimension 5, which is one of dimension codes that you set up in the General Ledger Setup window."),
+            F::code("Shortcut Dimension 6 Code", 20).calc(CalcFormula::new(CalcFunc::Lookup, "Dimension Set Entry", "Dimension Value Code", &[("Dimension Set ID", "Dimension Set ID")], &[("Global Dimension No.", "6")])).tooltip("Specifies the code for Shortcut Dimension 6, which is one of dimension codes that you set up in the General Ledger Setup window."),
+            F::code("Shortcut Dimension 7 Code", 20).calc(CalcFormula::new(CalcFunc::Lookup, "Dimension Set Entry", "Dimension Value Code", &[("Dimension Set ID", "Dimension Set ID")], &[("Global Dimension No.", "7")])).tooltip("Specifies the code for Shortcut Dimension 7, which is one of dimension codes that you set up in the General Ledger Setup window."),
+            F::code("Shortcut Dimension 8 Code", 20).calc(CalcFormula::new(CalcFunc::Lookup, "Dimension Set Entry", "Dimension Value Code", &[("Dimension Set ID", "Dimension Set ID")], &[("Global Dimension No.", "8")])).tooltip("Specifies the code for Shortcut Dimension 8, which is one of dimension codes that you set up in the General Ledger Setup window."),
         ],
     );
     relabel(
@@ -221,6 +228,7 @@ pub fn extend(m: &mut Metadata) {
             ("Reversed", "Reversed", "Specifies if the entry has been part of a reverse transaction.", 0),
             ("Reversed by Entry No.", "Reversed by Entry No.", "Specifies the number of the correcting entry that replaced the original entry in the reverse transaction.", 0),
             ("Reversed Entry No.", "Reversed Entry No.", "Specifies the number of the original entry that was undone by the reverse transaction.", 0),
+            ("Dimension Set ID", "Dimension Set ID", "Specifies a reference to a combination of dimension values. The actual values are stored in the Dimension Set Entry table.", 0),
         ],
     );
     fields(
@@ -247,6 +255,12 @@ pub fn extend(m: &mut Metadata) {
             F::code("Recipient Bank Account", 20).tooltip("Specifies the bank account to transfer the amount to."),
             F::text("Message to Recipient", 140).tooltip("Specifies the message exported to the payment file when you use the Export Payments to File function in the Payment Journal window."),
             F::boolean("Exported to Payment File").read_only().tooltip("Specifies that the entry was created as a result of exporting a payment journal line."),
+            F::code("Shortcut Dimension 3 Code", 20).calc(CalcFormula::new(CalcFunc::Lookup, "Dimension Set Entry", "Dimension Value Code", &[("Dimension Set ID", "Dimension Set ID")], &[("Global Dimension No.", "3")])).tooltip("Specifies the code for Shortcut Dimension 3, which is one of dimension codes that you set up in the General Ledger Setup window."),
+            F::code("Shortcut Dimension 4 Code", 20).calc(CalcFormula::new(CalcFunc::Lookup, "Dimension Set Entry", "Dimension Value Code", &[("Dimension Set ID", "Dimension Set ID")], &[("Global Dimension No.", "4")])).tooltip("Specifies the code for Shortcut Dimension 4, which is one of dimension codes that you set up in the General Ledger Setup window."),
+            F::code("Shortcut Dimension 5 Code", 20).calc(CalcFormula::new(CalcFunc::Lookup, "Dimension Set Entry", "Dimension Value Code", &[("Dimension Set ID", "Dimension Set ID")], &[("Global Dimension No.", "5")])).tooltip("Specifies the code for Shortcut Dimension 5, which is one of dimension codes that you set up in the General Ledger Setup window."),
+            F::code("Shortcut Dimension 6 Code", 20).calc(CalcFormula::new(CalcFunc::Lookup, "Dimension Set Entry", "Dimension Value Code", &[("Dimension Set ID", "Dimension Set ID")], &[("Global Dimension No.", "6")])).tooltip("Specifies the code for Shortcut Dimension 6, which is one of dimension codes that you set up in the General Ledger Setup window."),
+            F::code("Shortcut Dimension 7 Code", 20).calc(CalcFormula::new(CalcFunc::Lookup, "Dimension Set Entry", "Dimension Value Code", &[("Dimension Set ID", "Dimension Set ID")], &[("Global Dimension No.", "7")])).tooltip("Specifies the code for Shortcut Dimension 7, which is one of dimension codes that you set up in the General Ledger Setup window."),
+            F::code("Shortcut Dimension 8 Code", 20).calc(CalcFormula::new(CalcFunc::Lookup, "Dimension Set Entry", "Dimension Value Code", &[("Dimension Set ID", "Dimension Set ID")], &[("Global Dimension No.", "8")])).tooltip("Specifies the code for Shortcut Dimension 8, which is one of dimension codes that you set up in the General Ledger Setup window."),
             F::code("Dispute Status", 10).tooltip("Specifies if there is an ongoing dispute for this Invoice"),
         ],
     );
@@ -371,6 +385,25 @@ pub fn extend(m: &mut Metadata) {
     );
     relabel(
         m,
+        "Default Dimension",
+        &[
+            ("Table ID", "Table ID", "Specifies a table ID for the account type if you are specifying default dimensions for an entire account type.", 0),
+            ("No.", "No.", "Specifies the account number you wish to define a default dimension for.", 0),
+            ("Dimension Code", "Dimension Code", "Specifies the code for the default dimension.", 0),
+            ("Dimension Value Code", "Dimension Value Code", "Specifies the dimension value code to suggest as the default dimension.", 0),
+            ("Value Posting", "Value Posting", "Specifies how default dimensions and their values must be used.", 0),
+        ],
+    );
+    fields(
+        m,
+        "Default Dimension",
+        vec![
+            F::text("Allowed Values Filter", 250).tooltip("Specifies the dimension values that can be used for the selected account."),
+            F::text("Dimension Value Name", 50).calc(CalcFormula::new(CalcFunc::Lookup, "Dimension Value", "Name", &[("Dimension Code", "Dimension Code"), ("Code", "Dimension Value Code")], &[])).tooltip("Specifies the name of selected dimension value."),
+        ],
+    );
+    relabel(
+        m,
         "Depreciation Book",
         &[
             ("Code", "Code", "Specifies a code that identifies the depreciation book.", 0),
@@ -445,6 +478,41 @@ pub fn extend(m: &mut Metadata) {
     );
     relabel(
         m,
+        "Dimension",
+        &[
+            ("Code", "Code", "Specifies the code for the dimension.", 0),
+            ("Name", "Name", "Specifies the dimension code you enter in the Code field.", 0),
+            ("Code Caption", "Code Caption", "Specifies the caption of the dimension. This is displayed as the name of dimension fields.", 0),
+            ("Filter Caption", "Filter Caption", "Specifies the caption of the dimension code when used as a filter. This is displayed as the name of dimension filter fields.", 0),
+            ("Description", "Description", "Specifies a description of the dimension code.", 0),
+            ("Blocked", "Blocked", "Specifies that the related record is blocked from being posted in transactions, for example a customer that is declared insolvent or an item that is placed in quarantine.", 0),
+        ],
+    );
+    relabel(
+        m,
+        "Dimension Set Entry",
+        &[
+            ("Dimension Code", "Dimension Code", "Specifies the dimension.", 0),
+            ("Dimension Value Code", "Dimension Value Code", "Specifies the dimension value.", 0),
+            ("Dimension Name", "Dimension Name", "Specifies the descriptive name of the Dimension Code field.", 0),
+            ("Dimension Value Name", "Dimension Value Name", "Specifies the descriptive name of the Dimension Value Code field.", 0),
+            ("Global Dimension No.", "Shortcut Dimension No.", "", 0),
+        ],
+    );
+    relabel(
+        m,
+        "Dimension Value",
+        &[
+            ("Dimension Code", "Dimension Code", "Specifies the dimension code for the dimension value.", 0),
+            ("Code", "Code", "Specifies the code for the dimension value.", 0),
+            ("Name", "Name", "Specifies a descriptive name for the dimension value.", 0),
+            ("Dimension Value Type", "Dimension Value Type", "Specifies the purpose of the dimension value.", 0),
+            ("Totaling", "Totaling", "Specifies an account interval or a list of account numbers. The entries of the account will be totaled to give a total balance. How entries are totaled depends on the value in the Account Type field.", 0),
+            ("Blocked", "Blocked", "Specifies that the related record is blocked from being posted in transactions, for example a customer that is declared insolvent or an item that is placed in quarantine.", 0),
+        ],
+    );
+    relabel(
+        m,
         "FA Class",
         &[
             ("Code", "Code", "Specifies a code for the class that the fixed asset belongs to.", 0),
@@ -503,6 +571,7 @@ pub fn extend(m: &mut Metadata) {
             ("FA Posting Group", "FA Posting Group", "Specifies the FA posting group of the related fixed asset transaction.", 0),
             ("User ID", "User ID", "Specifies the ID of the user who posted the entry, to be used, for example, in the change log.", 0),
             ("Source Code", "Source Code", "Specifies the source code that specifies where the entry was created.", 0),
+            ("Dimension Set ID", "Dimension Set ID", "Specifies a reference to a combination of dimension values. The actual values are stored in the Dimension Set Entry table.", 0),
         ],
     );
     fields(
@@ -514,6 +583,12 @@ pub fn extend(m: &mut Metadata) {
             F::boolean("Reclassification Entry").tooltip("Specifies whether the entry was made to reclassify a fixed asset, for example, to change the dimension the fixed asset is linked to."),
             F::code("Global Dimension 1 Code", 20).tooltip("Specifies the code for the global dimension that is linked to the record or entry for analysis purposes. Two global dimensions, typically for the company's most important activities, are available on all cards, documents, reports, and lists."),
             F::code("Global Dimension 2 Code", 20).tooltip("Specifies the code for the global dimension that is linked to the record or entry for analysis purposes. Two global dimensions, typically for the company's most important activities, are available on all cards, documents, reports, and lists."),
+            F::code("Shortcut Dimension 3 Code", 20).calc(CalcFormula::new(CalcFunc::Lookup, "Dimension Set Entry", "Dimension Value Code", &[("Dimension Set ID", "Dimension Set ID")], &[("Global Dimension No.", "3")])).tooltip("Specifies the code for Shortcut Dimension 3, which is one of dimension codes that you set up in the General Ledger Setup window."),
+            F::code("Shortcut Dimension 4 Code", 20).calc(CalcFormula::new(CalcFunc::Lookup, "Dimension Set Entry", "Dimension Value Code", &[("Dimension Set ID", "Dimension Set ID")], &[("Global Dimension No.", "4")])).tooltip("Specifies the code for Shortcut Dimension 4, which is one of dimension codes that you set up in the General Ledger Setup window."),
+            F::code("Shortcut Dimension 5 Code", 20).calc(CalcFormula::new(CalcFunc::Lookup, "Dimension Set Entry", "Dimension Value Code", &[("Dimension Set ID", "Dimension Set ID")], &[("Global Dimension No.", "5")])).tooltip("Specifies the code for Shortcut Dimension 5, which is one of dimension codes that you set up in the General Ledger Setup window."),
+            F::code("Shortcut Dimension 6 Code", 20).calc(CalcFormula::new(CalcFunc::Lookup, "Dimension Set Entry", "Dimension Value Code", &[("Dimension Set ID", "Dimension Set ID")], &[("Global Dimension No.", "6")])).tooltip("Specifies the code for Shortcut Dimension 6, which is one of dimension codes that you set up in the General Ledger Setup window."),
+            F::code("Shortcut Dimension 7 Code", 20).calc(CalcFormula::new(CalcFunc::Lookup, "Dimension Set Entry", "Dimension Value Code", &[("Dimension Set ID", "Dimension Set ID")], &[("Global Dimension No.", "7")])).tooltip("Specifies the code for Shortcut Dimension 7, which is one of dimension codes that you set up in the General Ledger Setup window."),
+            F::code("Shortcut Dimension 8 Code", 20).calc(CalcFormula::new(CalcFunc::Lookup, "Dimension Set Entry", "Dimension Value Code", &[("Dimension Set ID", "Dimension Set ID")], &[("Global Dimension No.", "8")])).tooltip("Specifies the code for Shortcut Dimension 8, which is one of dimension codes that you set up in the General Ledger Setup window."),
         ],
     );
     relabel(
@@ -685,6 +760,7 @@ pub fn extend(m: &mut Metadata) {
             ("Reversed by Entry No.", "Reversed by Entry No.", "Specifies the number of the correcting entry. If the field Specifies a number, the entry cannot be reversed again.", 0),
             ("Reversed Entry No.", "Reversed Entry No.", "Specifies the number of the original entry that was undone by the reverse transaction.", 0),
             ("G/L Account Name", "G/L Account Name", "Specifies the name of the account that the entry has been posted to.", 0),
+            ("Dimension Set ID", "Dimension Set ID", "Specifies a reference to a combination of dimension values. The actual values are stored in the Dimension Set Entry table.", 0),
         ],
     );
     fields(
@@ -702,6 +778,12 @@ pub fn extend(m: &mut Metadata) {
             F::option("Bal. Account Type", &["G/L Account", "Customer", "Vendor", "Bank Account", "Fixed Asset", "IC Partner", "Employee", "Allocation Account"]).tooltip("Specifies the type of account that a balancing entry is posted to, such as BANK for a cash account."),
             F::date("VAT Reporting Date").caption("VAT Date").read_only().tooltip("Specifies the entry's VAT date."),
             F::integer("G/L Register No.").relation("G/L Register").read_only().tooltip("Specifies the G/L register number that groups related G/L entries from the same posting."),
+            F::code("Shortcut Dimension 3 Code", 20).calc(CalcFormula::new(CalcFunc::Lookup, "Dimension Set Entry", "Dimension Value Code", &[("Dimension Set ID", "Dimension Set ID")], &[("Global Dimension No.", "3")])).tooltip("Specifies the code for Shortcut Dimension 3, which is one of dimension codes that you set up in the General Ledger Setup window."),
+            F::code("Shortcut Dimension 4 Code", 20).calc(CalcFormula::new(CalcFunc::Lookup, "Dimension Set Entry", "Dimension Value Code", &[("Dimension Set ID", "Dimension Set ID")], &[("Global Dimension No.", "4")])).tooltip("Specifies the code for Shortcut Dimension 4, which is one of dimension codes that you set up in the General Ledger Setup window."),
+            F::code("Shortcut Dimension 5 Code", 20).calc(CalcFormula::new(CalcFunc::Lookup, "Dimension Set Entry", "Dimension Value Code", &[("Dimension Set ID", "Dimension Set ID")], &[("Global Dimension No.", "5")])).tooltip("Specifies the code for Shortcut Dimension 5, which is one of dimension codes that you set up in the General Ledger Setup window."),
+            F::code("Shortcut Dimension 6 Code", 20).calc(CalcFormula::new(CalcFunc::Lookup, "Dimension Set Entry", "Dimension Value Code", &[("Dimension Set ID", "Dimension Set ID")], &[("Global Dimension No.", "6")])).tooltip("Specifies the code for Shortcut Dimension 6, which is one of dimension codes that you set up in the General Ledger Setup window."),
+            F::code("Shortcut Dimension 7 Code", 20).calc(CalcFormula::new(CalcFunc::Lookup, "Dimension Set Entry", "Dimension Value Code", &[("Dimension Set ID", "Dimension Set ID")], &[("Global Dimension No.", "7")])).tooltip("Specifies the code for Shortcut Dimension 7, which is one of dimension codes that you set up in the General Ledger Setup window."),
+            F::code("Shortcut Dimension 8 Code", 20).calc(CalcFormula::new(CalcFunc::Lookup, "Dimension Set Entry", "Dimension Value Code", &[("Dimension Set ID", "Dimension Set ID")], &[("Global Dimension No.", "8")])).tooltip("Specifies the code for Shortcut Dimension 8, which is one of dimension codes that you set up in the General Ledger Setup window."),
             F::decimal("Src. Curr. Non-Ded. VAT Amount").caption("Source Currency Non-Deductible VAT Amount").auto_format(1).tooltip("Specifies the amount in source currency of the transaction for which VAT is not applied, due to the type of goods or services purchased."),
         ],
     );
@@ -882,6 +964,16 @@ pub fn extend(m: &mut Metadata) {
             ("Allow Posting To", "Allow Posting To", "Specifies the last date on which posting to the company books is allowed.", 0),
             ("LCY Code", "LCY Code", "Specifies the ISO 3 letter currency code for the local currency.", 0),
             ("Amount Rounding Precision", "Amount Rounding Precision", "Specifies the size of the interval to be used when rounding amounts in LCY. This covers amounts created with all types of transactions and is useful to avoid inconsistencies when viewing or summing different amounts. Amounts will be rounded to the nearest digit. Example: To have amounts rounded to whole numbers, enter 1.00 in this field. In this case, amounts less than 0.5 will be rounded down and amounts greater than or equal to 0.5 will be rounded up. On the Currencies page, you specify how amounts in foreign currencies are rounded.", 0),
+            ("Global Dimension 1 Code", "Global Dimension 1 Code", "Specifies the code for a global dimension that is linked to the record or entry for analysis purposes. Two global dimensions, typically for the company's most important activities, are available on all cards, documents, reports, and lists.", 0),
+            ("Global Dimension 2 Code", "Global Dimension 2 Code", "Specifies the code for a global dimension that is linked to the record or entry for analysis purposes. Two global dimensions, typically for the company's most important activities, are available on all cards, documents, reports, and lists.", 0),
+            ("Shortcut Dimension 1 Code", "Shortcut Dimension 1 Code", "Specifies the code for Shortcut Dimension 1, whose dimension values you can then enter directly on journals and sales or purchase lines.", 0),
+            ("Shortcut Dimension 2 Code", "Shortcut Dimension 2 Code", "Specifies the code for Shortcut Dimension 2, which is one of two global dimension codes that you set up in the General Ledger Setup window.", 0),
+            ("Shortcut Dimension 3 Code", "Shortcut Dimension 3 Code", "Specifies the code for Shortcut Dimension 3, whose dimension values you can then enter directly on journals and sales or purchase lines.", 0),
+            ("Shortcut Dimension 4 Code", "Shortcut Dimension 4 Code", "Specifies the code for Shortcut Dimension 4, whose dimension values you can then enter directly on journals and sales or purchase lines.", 0),
+            ("Shortcut Dimension 5 Code", "Shortcut Dimension 5 Code", "Specifies the code for Shortcut Dimension 5, whose dimension values you can then enter directly on journals and sales or purchase lines.", 0),
+            ("Shortcut Dimension 6 Code", "Shortcut Dimension 6 Code", "Specifies the code for Shortcut Dimension 6, whose dimension values you can then enter directly on journals and sales or purchase lines.", 0),
+            ("Shortcut Dimension 7 Code", "Shortcut Dimension 7 Code", "Specifies the code for Shortcut Dimension 7, whose dimension values you can then enter directly on journals and sales or purchase lines.", 0),
+            ("Shortcut Dimension 8 Code", "Shortcut Dimension 8 Code", "Specifies the code for Shortcut Dimension 8, whose dimension values you can then enter directly on journals and sales or purchase lines.", 0),
             ("Local Currency Description", "Local Currency Description", "Specifies the description of the local currency.", 0),
         ],
     );
@@ -916,16 +1008,6 @@ pub fn extend(m: &mut Metadata) {
             F::option("VAT Exchange Rate Adjustment", &["No Adjustment", "Adjust Amount", "Adjust Additional-Currency Amount"]).tooltip("Specifies how the accounts set up for VAT posting in the VAT Posting Setup window will be adjusted for exchange rate fluctuations."),
             F::decimal("Unit-Amount Rounding Precision").tooltip("Specifies the size of the interval to be used when rounding unit amounts, item or resource prices per unit, in LCY. Amounts will be rounded to the nearest digit. Example: To have unit amounts rounded to whole numbers, enter 1.00 in this field. In this case, amounts less than 0.5 will be rounded down and amounts greater than or equal to 0.5 will be rounded up. On the Currencies page, you specify how unit amounts in foreign currencies are rounded."),
             F::decimal("Appln. Rounding Precision").tooltip("Specifies the rounding difference that will be allowed when you apply entries in LCY to entries in a different currency."),
-            F::code("Global Dimension 1 Code", 20).read_only().tooltip("Specifies the code for a global dimension that is linked to the record or entry for analysis purposes. Two global dimensions, typically for the company's most important activities, are available on all cards, documents, reports, and lists."),
-            F::code("Global Dimension 2 Code", 20).read_only().tooltip("Specifies the code for a global dimension that is linked to the record or entry for analysis purposes. Two global dimensions, typically for the company's most important activities, are available on all cards, documents, reports, and lists."),
-            F::code("Shortcut Dimension 1 Code", 20).read_only().tooltip("Specifies the code for Shortcut Dimension 1, whose dimension values you can then enter directly on journals and sales or purchase lines."),
-            F::code("Shortcut Dimension 2 Code", 20).read_only().tooltip("Specifies the code for Shortcut Dimension 2, which is one of two global dimension codes that you set up in the General Ledger Setup window."),
-            F::code("Shortcut Dimension 3 Code", 20).tooltip("Specifies the code for Shortcut Dimension 3, whose dimension values you can then enter directly on journals and sales or purchase lines."),
-            F::code("Shortcut Dimension 4 Code", 20).tooltip("Specifies the code for Shortcut Dimension 4, whose dimension values you can then enter directly on journals and sales or purchase lines."),
-            F::code("Shortcut Dimension 5 Code", 20).tooltip("Specifies the code for Shortcut Dimension 5, whose dimension values you can then enter directly on journals and sales or purchase lines."),
-            F::code("Shortcut Dimension 6 Code", 20).tooltip("Specifies the code for Shortcut Dimension 6, whose dimension values you can then enter directly on journals and sales or purchase lines."),
-            F::code("Shortcut Dimension 7 Code", 20).tooltip("Specifies the code for Shortcut Dimension 7, whose dimension values you can then enter directly on journals and sales or purchase lines."),
-            F::code("Shortcut Dimension 8 Code", 20).tooltip("Specifies the code for Shortcut Dimension 8, whose dimension values you can then enter directly on journals and sales or purchase lines."),
             F::decimal("Max. VAT Difference Allowed").auto_format(1).tooltip("Specifies the maximum VAT correction amount allowed for the local currency. For example, if you enter 5 in this field for British Pounds, then you can correct VAT amounts by up to five pounds."),
             F::option("VAT Rounding Type", &["Nearest", "Up", "Down"]).tooltip("Specifies how the program will round VAT when calculated for the local currency. When you enter an Amount Including VAT in a document, the system first calculates and rounds the Amount Excluding VAT, and then calculates by subtraction the VAT Amount because the total amount has to match the Amount Including VAT entered manually. In that case, the VAT Rounding Type does not apply as the Amount Excluding VAT is already rounded using the Amount Rounding Precision."),
             F::option("Pmt. Disc. Tolerance Posting", &["Payment Tolerance Accounts", "Payment Discount Accounts"]).tooltip("Specifies the posting method that is used when posting a payment tolerance. Payment Tolerance Accounts: The payment discount tolerance is posted to a special general ledger account set up for payment tolerance. Payment Discount Amount: The payment discount tolerance is posted as a payment discount."),
@@ -1101,7 +1183,7 @@ pub fn extend(m: &mut Metadata) {
             F::code("Phys. Invt. Order Nos.", 20).tooltip("Specifies the number series that will be used to assign numbers to physical inventory orders."),
             F::code("Posted Phys. Invt. Order Nos.", 20).tooltip("Specifies the number series that will be used to assign numbers to physical inventory orders when they are posted."),
             F::text("Package Caption", 30).tooltip("Specifies the alternative caption of Package tracking dimension that you want to use for captions for this dimension. For example, Size."),
-            F::code("Item Group Dimension Code", 20).tooltip("Specifies the dimension code that you want to use for product groups in analysis reports."),
+            F::code("Item Group Dimension Code", 20).relation("Dimension").tooltip("Specifies the dimension code that you want to use for product groups in analysis reports."),
         ],
     );
     relabel(
@@ -1263,6 +1345,7 @@ pub fn extend(m: &mut Metadata) {
             ("Open", "Open", "Specifies whether the entry has been fully applied to.", 0),
             ("Source Type", "Source Type", "Specifies the source type that applies to the source number, shown in the Source No. field.", 0),
             ("Document Type", "Document Type", "Specifies what type of document was posted to create the item ledger entry.", 0),
+            ("Dimension Set ID", "Dimension Set ID", "Specifies a reference to a combination of dimension values. The actual values are stored in the Dimension Set Entry table.", 0),
             ("Unit of Measure Code", "Unit of Measure Code", "Specifies how each unit of the item or resource is measured, such as in pieces or hours. By default, the value in the Base Unit of Measure field on the item or resource card is inserted.", 0),
             ("Cost Amount (Actual)", "Cost Amount (Actual)", "", 1),
             ("Sales Amount (Actual)", "Sales Amount (Actual)", "", 1),
@@ -1276,6 +1359,12 @@ pub fn extend(m: &mut Metadata) {
             F::code("Global Dimension 1 Code", 20).tooltip("Specifies the code for the global dimension that is linked to the record or entry for analysis purposes. Two global dimensions, typically for the company's most important activities, are available on all cards, documents, reports, and lists."),
             F::code("Global Dimension 2 Code", 20).tooltip("Specifies the code for the global dimension that is linked to the record or entry for analysis purposes. Two global dimensions, typically for the company's most important activities, are available on all cards, documents, reports, and lists."),
             F::option("Order Type", &["", "Production", "Transfer", "Service", "Assembly"]).read_only().tooltip("Specifies which type of order that the entry was created in."),
+            F::code("Shortcut Dimension 3 Code", 20).calc(CalcFormula::new(CalcFunc::Lookup, "Dimension Set Entry", "Dimension Value Code", &[("Dimension Set ID", "Dimension Set ID")], &[("Global Dimension No.", "3")])).tooltip("Specifies the code for Shortcut Dimension 3, which is one of dimension codes that you set up in the General Ledger Setup window."),
+            F::code("Shortcut Dimension 4 Code", 20).calc(CalcFormula::new(CalcFunc::Lookup, "Dimension Set Entry", "Dimension Value Code", &[("Dimension Set ID", "Dimension Set ID")], &[("Global Dimension No.", "4")])).tooltip("Specifies the code for Shortcut Dimension 4, which is one of dimension codes that you set up in the General Ledger Setup window."),
+            F::code("Shortcut Dimension 5 Code", 20).calc(CalcFormula::new(CalcFunc::Lookup, "Dimension Set Entry", "Dimension Value Code", &[("Dimension Set ID", "Dimension Set ID")], &[("Global Dimension No.", "5")])).tooltip("Specifies the code for Shortcut Dimension 5, which is one of dimension codes that you set up in the General Ledger Setup window."),
+            F::code("Shortcut Dimension 6 Code", 20).calc(CalcFormula::new(CalcFunc::Lookup, "Dimension Set Entry", "Dimension Value Code", &[("Dimension Set ID", "Dimension Set ID")], &[("Global Dimension No.", "6")])).tooltip("Specifies the code for Shortcut Dimension 6, which is one of dimension codes that you set up in the General Ledger Setup window."),
+            F::code("Shortcut Dimension 7 Code", 20).calc(CalcFormula::new(CalcFunc::Lookup, "Dimension Set Entry", "Dimension Value Code", &[("Dimension Set ID", "Dimension Set ID")], &[("Global Dimension No.", "7")])).tooltip("Specifies the code for Shortcut Dimension 7, which is one of dimension codes that you set up in the General Ledger Setup window."),
+            F::code("Shortcut Dimension 8 Code", 20).calc(CalcFormula::new(CalcFunc::Lookup, "Dimension Set Entry", "Dimension Value Code", &[("Dimension Set ID", "Dimension Set ID")], &[("Global Dimension No.", "8")])).tooltip("Specifies the code for Shortcut Dimension 8, which is one of dimension codes that you set up in the General Ledger Setup window."),
             F::boolean("Applied Entry to Adjust").tooltip("Specifies whether there is one or more applied entries, which need to be adjusted."),
         ],
     );
@@ -1916,8 +2005,8 @@ pub fn extend(m: &mut Metadata) {
             F::boolean("Allow Editing Active Price").tooltip("Specifies it the existing active sales price line can be modified or removed, or a new price line can be added to the active price list."),
             F::code("Default Price List Code", 20).tooltip("Specifies the code of the existing sales price list that stores all new price lines created in the price worksheet page."),
             F::boolean("Use Customized Lookup").caption("Use Your Custom Lookup").tooltip("Specifies whether the Assign-to Parent No., Assign-to No., and Product No. fields on price list pages use standard lookups to find records. If you have customized these fields and prefer your implementation, turn on this toggle."),
-            F::code("Customer Group Dimension Code", 20).tooltip("Specifies the dimension code for customer groups in your analysis report."),
-            F::code("Salesperson Dimension Code", 20).tooltip("Specifies the dimension code for salespeople in your analysis report"),
+            F::code("Customer Group Dimension Code", 20).relation("Dimension").tooltip("Specifies the dimension code for customer groups in your analysis report."),
+            F::code("Salesperson Dimension Code", 20).relation("Dimension").tooltip("Specifies the dimension code for salespeople in your analysis report"),
             F::boolean("Link Doc. Date To Posting Date").caption("Link Doc. Date to Posting Date").tooltip("Specifies whether the document date changes when the posting date is modified."),
             F::boolean("Posting Date Check on Posting").tooltip("Specifies if you want the program to warn you when you post a sales document with a posting date that is different from the Work Date."),
         ],
@@ -2565,6 +2654,7 @@ pub fn extend(m: &mut Metadata) {
             ("Reversed", "Reversed", "Specifies if the entry has been part of a reverse transaction.", 0),
             ("Reversed by Entry No.", "Reversed by Entry No.", "Specifies the number of the correcting entry that replaced the original entry in the reverse transaction.", 0),
             ("Reversed Entry No.", "Reversed Entry No.", "Specifies the number of the original entry that was undone by the reverse transaction.", 0),
+            ("Dimension Set ID", "Dimension Set ID", "Specifies a reference to a combination of dimension values. The actual values are stored in the Dimension Set Entry table.", 0),
         ],
     );
     fields(
@@ -2592,6 +2682,12 @@ pub fn extend(m: &mut Metadata) {
             F::code("Payment Method Code", 10).tooltip("Specifies how to make payment, such as with bank transfer, cash, or check."),
             F::code("Recipient Bank Account", 20).tooltip("Specifies the bank account to transfer the amount to."),
             F::boolean("Exported to Payment File").read_only().tooltip("Specifies that the entry was created as a result of exporting a payment journal line."),
+            F::code("Shortcut Dimension 3 Code", 20).calc(CalcFormula::new(CalcFunc::Lookup, "Dimension Set Entry", "Dimension Value Code", &[("Dimension Set ID", "Dimension Set ID")], &[("Global Dimension No.", "3")])).tooltip("Specifies the code for Shortcut Dimension 3, which is one of dimension codes that you set up in the General Ledger Setup window."),
+            F::code("Shortcut Dimension 4 Code", 20).calc(CalcFormula::new(CalcFunc::Lookup, "Dimension Set Entry", "Dimension Value Code", &[("Dimension Set ID", "Dimension Set ID")], &[("Global Dimension No.", "4")])).tooltip("Specifies the code for Shortcut Dimension 4, which is one of dimension codes that you set up in the General Ledger Setup window."),
+            F::code("Shortcut Dimension 5 Code", 20).calc(CalcFormula::new(CalcFunc::Lookup, "Dimension Set Entry", "Dimension Value Code", &[("Dimension Set ID", "Dimension Set ID")], &[("Global Dimension No.", "5")])).tooltip("Specifies the code for Shortcut Dimension 5, which is one of dimension codes that you set up in the General Ledger Setup window."),
+            F::code("Shortcut Dimension 6 Code", 20).calc(CalcFormula::new(CalcFunc::Lookup, "Dimension Set Entry", "Dimension Value Code", &[("Dimension Set ID", "Dimension Set ID")], &[("Global Dimension No.", "6")])).tooltip("Specifies the code for Shortcut Dimension 6, which is one of dimension codes that you set up in the General Ledger Setup window."),
+            F::code("Shortcut Dimension 7 Code", 20).calc(CalcFormula::new(CalcFunc::Lookup, "Dimension Set Entry", "Dimension Value Code", &[("Dimension Set ID", "Dimension Set ID")], &[("Global Dimension No.", "7")])).tooltip("Specifies the code for Shortcut Dimension 7, which is one of dimension codes that you set up in the General Ledger Setup window."),
+            F::code("Shortcut Dimension 8 Code", 20).calc(CalcFormula::new(CalcFunc::Lookup, "Dimension Set Entry", "Dimension Value Code", &[("Dimension Set ID", "Dimension Set ID")], &[("Global Dimension No.", "8")])).tooltip("Specifies the code for Shortcut Dimension 8, which is one of dimension codes that you set up in the General Ledger Setup window."),
             F::code("Remit-to Code", 20).tooltip("Specifies the address for the remit-to code."),
         ],
     );
@@ -2655,7 +2751,7 @@ pub fn extend(m: &mut Metadata) {
             },
         ],
     );
-    columns(m, "bank-account-ledger-entries", &["Posting Date", "Document Type", "Document No.", "Bank Account No.", "Description", "Global Dimension 1 Code", "Global Dimension 2 Code", "Amount", "Debit Amount", "Credit Amount", "Amount (LCY)", "Debit Amount (LCY)", "Credit Amount (LCY)", "Open", "Entry No."]);
+    columns(m, "bank-account-ledger-entries", &["Posting Date", "Document Type", "Document No.", "Bank Account No.", "Description", "Global Dimension 1 Code", "Global Dimension 2 Code", "Amount", "Debit Amount", "Credit Amount", "Amount (LCY)", "Debit Amount (LCY)", "Credit Amount (LCY)", "Open", "Entry No.", "Shortcut Dimension 3 Code", "Shortcut Dimension 4 Code", "Shortcut Dimension 5 Code", "Shortcut Dimension 6 Code", "Shortcut Dimension 7 Code", "Shortcut Dimension 8 Code"]);
     columns(m, "bank-account-list", &["No.", "Name", "Phone No.", "Contact", "Balance", "Balance (LCY)"]);
     columns(m, "bank-posting-groups", &["Code", "G/L Account No."]);
     columns(m, "cash-receipt-journal", &["Posting Date", "Document Type", "Document No.", "Account Type", "Account No.", "Description", "Posting Group", "Amount", "Amount (LCY)", "Debit Amount", "Credit Amount", "Bal. Account Type", "Bal. Account No.", "Selected Alloc. Account No.", "Applies-to Doc. Type", "Applies-to Doc. No.", "Correction", "Shortcut Dimension 1 Code", "Shortcut Dimension 2 Code"]);
@@ -2762,16 +2858,20 @@ pub fn extend(m: &mut Metadata) {
             },
         ],
     );
-    columns(m, "customer-ledger-entries", &["Posting Date", "Document Date", "Document Type", "Document No.", "Customer No.", "Customer Name", "Description", "Global Dimension 1 Code", "Global Dimension 2 Code", "Currency Code", "Original Amount", "Amount", "Amount (LCY)", "Debit Amount", "Debit Amount (LCY)", "Credit Amount", "Credit Amount (LCY)", "Remaining Amount", "Remaining Amt. (LCY)", "Sales (LCY)", "Due Date", "Pmt. Discount Date", "Pmt. Disc. Tolerance Date", "Original Pmt. Disc. Possible", "Remaining Pmt. Disc. Possible", "Max. Payment Tolerance", "Payment Method Code", "Open", "Dispute Status", "On Hold", "Entry No.", "G/L Register No.", "Transaction No.", "Exported to Payment File", "Message to Recipient", "Recipient Bank Account"]);
+    columns(m, "customer-ledger-entries", &["Posting Date", "Document Date", "Document Type", "Document No.", "Customer No.", "Customer Name", "Description", "Global Dimension 1 Code", "Global Dimension 2 Code", "Currency Code", "Original Amount", "Amount", "Amount (LCY)", "Debit Amount", "Debit Amount (LCY)", "Credit Amount", "Credit Amount (LCY)", "Remaining Amount", "Remaining Amt. (LCY)", "Sales (LCY)", "Due Date", "Pmt. Discount Date", "Pmt. Disc. Tolerance Date", "Original Pmt. Disc. Possible", "Remaining Pmt. Disc. Possible", "Max. Payment Tolerance", "Payment Method Code", "Open", "Dispute Status", "On Hold", "Entry No.", "G/L Register No.", "Transaction No.", "Exported to Payment File", "Message to Recipient", "Recipient Bank Account", "Shortcut Dimension 3 Code", "Shortcut Dimension 4 Code", "Shortcut Dimension 5 Code", "Shortcut Dimension 6 Code", "Shortcut Dimension 7 Code", "Shortcut Dimension 8 Code"]);
     columns(m, "customer-list", &["No.", "Name", "Responsibility Center", "Location Code", "Phone No.", "Contact", "Allow Multiple Posting Groups", "Balance (LCY)", "Balance Due (LCY)", "Sales (LCY)", "Payments (LCY)"]);
     columns(m, "customer-posting-groups", &["Code", "Description", "View All Accounts on Lookup", "Receivables Account", "Service Charge Acc.", "Payment Disc. Debit Acc.", "Payment Disc. Credit Acc.", "Interest Account", "Additional Fee Account", "Add. Fee per Line Account", "Invoice Rounding Account", "Debit Curr. Appln. Rndg. Acc.", "Credit Curr. Appln. Rndg. Acc.", "Debit Rounding Account", "Credit Rounding Account", "Payment Tolerance Debit Acc.", "Payment Tolerance Credit Acc."]);
+    columns(m, "default-dimensions", &["Dimension Code", "Dimension Value Code", "Dimension Value Name", "Value Posting", "Allowed Values Filter"]);
     columns(m, "depreciation-books", &["Code", "Description"]);
     columns(m, "detailed-cust-ledger-entries", &["Posting Date", "Entry Type", "Document Type", "Document No.", "Customer No.", "Currency Code", "Amount", "Amount (LCY)", "Debit Amount", "Debit Amount (LCY)", "Credit Amount", "Credit Amount (LCY)", "Initial Entry Due Date", "Entry No."]);
     columns(m, "detailed-vendor-ledger-entries", &["Posting Date", "Entry Type", "Document Type", "Document No.", "Vendor No.", "Currency Code", "Amount", "Amount (LCY)", "Debit Amount", "Debit Amount (LCY)", "Credit Amount", "Credit Amount (LCY)", "Initial Entry Due Date", "Entry No."]);
+    columns(m, "dimension-set-entries", &["Dimension Code", "Dimension Value Code", "Dimension Value Name"]);
+    columns(m, "dimension-values", &["Code", "Name", "Dimension Value Type", "Totaling", "Blocked"]);
+    columns(m, "dimensions", &["Code", "Name", "Code Caption", "Filter Caption", "Description", "Blocked"]);
     columns(m, "fa-classes", &["Code", "Name"]);
     columns(m, "fa-depreciation-books", &["FA No.", "Depreciation Book Code", "FA Posting Group", "Depreciation Method", "No. of Depreciation Years", "Depreciation Starting Date", "Depreciation Ending Date", "Default FA Depreciation Book", "Use Bonus Depreciation", "Bonus Depreciation %", "Acquisition Cost", "Bonus Depr. Applied Amount", "Depreciation"]);
     columns(m, "fa-gl-journal", &["Posting Date", "Document Type", "Document No.", "Account Type", "Account No.", "Depreciation Book Code", "FA Posting Type", "Description", "Gen. Posting Type", "Gen. Bus. Posting Group", "Gen. Prod. Posting Group", "Amount", "Bal. Account Type", "Bal. Account No.", "Bal. Gen. Posting Type", "Bal. Gen. Prod. Posting Group", "Bal. Gen. Bus. Posting Group", "No. of Depreciation Days", "Depr. until FA Posting Date", "Depr. Acquisition Cost", "Budgeted FA No.", "FA Reclassification Entry", "FA Error Entry No.", "Shortcut Dimension 1 Code", "Shortcut Dimension 2 Code"]);
-    columns(m, "fa-ledger-entries", &["FA Posting Date", "Document Type", "Document No.", "FA No.", "Depreciation Book Code", "FA Posting Category", "FA Posting Type", "Description", "Global Dimension 1 Code", "Global Dimension 2 Code", "Amount", "Reclassification Entry", "No. of Depreciation Days", "Posting Date", "G/L Entry No.", "Entry No."]);
+    columns(m, "fa-ledger-entries", &["FA Posting Date", "Document Type", "Document No.", "FA No.", "Depreciation Book Code", "FA Posting Category", "FA Posting Type", "Description", "Global Dimension 1 Code", "Global Dimension 2 Code", "Amount", "Reclassification Entry", "No. of Depreciation Days", "Posting Date", "G/L Entry No.", "Entry No.", "Shortcut Dimension 3 Code", "Shortcut Dimension 4 Code", "Shortcut Dimension 5 Code", "Shortcut Dimension 6 Code", "Shortcut Dimension 7 Code", "Shortcut Dimension 8 Code"]);
     columns(m, "fa-locations", &["Code", "Name"]);
     columns(m, "fa-posting-groups", &["Code", "Acquisition Cost Account", "Accum. Depreciation Account", "Acq. Cost Acc. on Disposal", "Accum. Depr. Acc. on Disposal", "Gains Acc. on Disposal", "Losses Acc. on Disposal", "Maintenance Expense Account", "Acquisition Cost Bal. Acc.", "Depreciation Expense Acc."]);
     layout(
@@ -2818,7 +2918,7 @@ pub fn extend(m: &mut Metadata) {
     columns(m, "general-journal", &["Posting Date", "VAT Reporting Date", "Document Type", "Document No.", "Account Type", "Account No.", "Description", "Currency Code", "EU 3-Party Trade", "Gen. Posting Type", "Gen. Bus. Posting Group", "Gen. Prod. Posting Group", "Posting Group", "Amount", "Amount (LCY)", "Debit Amount", "Credit Amount", "Bal. Account Type", "Bal. Account No.", "Bal. Gen. Posting Type", "Bal. Gen. Bus. Posting Group", "Bal. Gen. Prod. Posting Group", "Selected Alloc. Account No.", "Deferral Code", "Correction", "Comment", "Shortcut Dimension 1 Code", "Shortcut Dimension 2 Code"]);
     columns(m, "general-journal-batches", &["Name", "Description", "Bal. Account Type", "Bal. Account No.", "No. Series", "Posting No. Series", "Reason Code", "Copy VAT Setup to Jnl. Lines", "Allow VAT Difference", "Allow Payment Export", "Suggest Balancing Amount", "Copy to Posted Jnl. Lines"]);
     columns(m, "general-journal-templates", &["Name", "Description", "Type", "Recurring", "Bal. Account Type", "Bal. Account No.", "No. Series", "Posting No. Series", "Source Code", "Reason Code", "Force Doc. Balance", "Copy VAT Setup to Jnl. Lines", "Increment Batch Name", "Allow VAT Difference", "Allow Posting Date From", "Allow Posting Date To", "Copy to Posted Jnl. Lines", "Unlink Inc. Doc On Posting"]);
-    columns(m, "general-ledger-entries", &["Posting Date", "Document Type", "Document No.", "G/L Account No.", "Description", "Global Dimension 1 Code", "Global Dimension 2 Code", "Gen. Posting Type", "Gen. Bus. Posting Group", "Gen. Prod. Posting Group", "Amount", "Source Currency Code", "Source Currency Amount", "Source Currency VAT Amount", "Src. Curr. Non-Ded. VAT Amount", "Debit Amount", "Credit Amount", "Bal. Account Type", "Bal. Account No.", "VAT Reporting Date", "Entry No.", "G/L Register No.", "Transaction No.", "External Document No."]);
+    columns(m, "general-ledger-entries", &["Posting Date", "Document Type", "Document No.", "G/L Account No.", "Description", "Global Dimension 1 Code", "Global Dimension 2 Code", "Gen. Posting Type", "Gen. Bus. Posting Group", "Gen. Prod. Posting Group", "Amount", "Source Currency Code", "Source Currency Amount", "Source Currency VAT Amount", "Src. Curr. Non-Ded. VAT Amount", "Debit Amount", "Credit Amount", "Bal. Account Type", "Bal. Account No.", "VAT Reporting Date", "Entry No.", "G/L Register No.", "Transaction No.", "External Document No.", "Shortcut Dimension 3 Code", "Shortcut Dimension 4 Code", "Shortcut Dimension 5 Code", "Shortcut Dimension 6 Code", "Shortcut Dimension 7 Code", "Shortcut Dimension 8 Code"]);
     layout(
         m,
         "general-ledger-setup",
@@ -3008,7 +3108,7 @@ pub fn extend(m: &mut Metadata) {
     columns(m, "item-categories", &["Code", "Description"]);
     columns(m, "item-journal", &["Posting Date", "Price Calculation Method", "Document No.", "Item No.", "Description", "Location Code", "Quantity", "Unit of Measure Code", "Unit Amount", "Amount", "Discount Amount", "Unit Cost", "Applies-to Entry", "Serial No.", "Lot No.", "Package No.", "Expiration Date", "Warranty Date", "Shortcut Dimension 1 Code", "Shortcut Dimension 2 Code"]);
     columns(m, "item-journal-templates", &["Name", "Description", "Type", "Recurring", "No. Series", "Posting No. Series", "Source Code", "Reason Code", "Increment Batch Name"]);
-    columns(m, "item-ledger-entries", &["Posting Date", "Entry Type", "Document Type", "Document No.", "Item No.", "Description", "Global Dimension 1 Code", "Global Dimension 2 Code", "Location Code", "Quantity", "Invoiced Quantity", "Remaining Quantity", "Sales Amount (Actual)", "Cost Amount (Actual)", "Open", "Applied Entry to Adjust", "Order Type", "Entry No."]);
+    columns(m, "item-ledger-entries", &["Posting Date", "Entry Type", "Document Type", "Document No.", "Item No.", "Description", "Global Dimension 1 Code", "Global Dimension 2 Code", "Location Code", "Quantity", "Invoiced Quantity", "Remaining Quantity", "Sales Amount (Actual)", "Cost Amount (Actual)", "Open", "Applied Entry to Adjust", "Order Type", "Entry No.", "Shortcut Dimension 3 Code", "Shortcut Dimension 4 Code", "Shortcut Dimension 5 Code", "Shortcut Dimension 6 Code", "Shortcut Dimension 7 Code", "Shortcut Dimension 8 Code"]);
     columns(m, "item-list", &["No.", "Description", "Type", "Inventory", "Base Unit of Measure", "Cost is Adjusted", "Unit Cost", "Unit Price", "Vendor No.", "Default Deferral Template Code"]);
     columns(m, "item-reclass-journal", &["Posting Date", "Document No.", "Item No.", "Description", "Location Code", "New Location Code", "Quantity", "Unit of Measure Code", "Applies-to Entry", "Shortcut Dimension 1 Code", "New Shortcut Dimension 1 Code", "Shortcut Dimension 2 Code", "New Shortcut Dimension 2 Code"]);
     columns(m, "locations", &["Code", "Name"]);
@@ -3696,7 +3796,7 @@ pub fn extend(m: &mut Metadata) {
             },
         ],
     );
-    columns(m, "vendor-ledger-entries", &["Posting Date", "Document Date", "Document Type", "Document No.", "External Document No.", "Vendor No.", "Vendor Name", "Description", "Global Dimension 1 Code", "Global Dimension 2 Code", "Currency Code", "Payment Method Code", "Payment Reference", "Creditor No.", "Original Amount", "Amount", "Amount (LCY)", "Debit Amount", "Debit Amount (LCY)", "Credit Amount", "Credit Amount (LCY)", "Remaining Amount", "Remaining Amt. (LCY)", "Due Date", "Pmt. Discount Date", "Pmt. Disc. Tolerance Date", "Original Pmt. Disc. Possible", "Remaining Pmt. Disc. Possible", "Max. Payment Tolerance", "Open", "On Hold", "Entry No.", "G/L Register No.", "Transaction No.", "Exported to Payment File", "Recipient Bank Account", "Remit-to Code"]);
+    columns(m, "vendor-ledger-entries", &["Posting Date", "Document Date", "Document Type", "Document No.", "External Document No.", "Vendor No.", "Vendor Name", "Description", "Global Dimension 1 Code", "Global Dimension 2 Code", "Currency Code", "Payment Method Code", "Payment Reference", "Creditor No.", "Original Amount", "Amount", "Amount (LCY)", "Debit Amount", "Debit Amount (LCY)", "Credit Amount", "Credit Amount (LCY)", "Remaining Amount", "Remaining Amt. (LCY)", "Due Date", "Pmt. Discount Date", "Pmt. Disc. Tolerance Date", "Original Pmt. Disc. Possible", "Remaining Pmt. Disc. Possible", "Max. Payment Tolerance", "Open", "On Hold", "Entry No.", "G/L Register No.", "Transaction No.", "Exported to Payment File", "Recipient Bank Account", "Shortcut Dimension 3 Code", "Shortcut Dimension 4 Code", "Shortcut Dimension 5 Code", "Shortcut Dimension 6 Code", "Shortcut Dimension 7 Code", "Shortcut Dimension 8 Code", "Remit-to Code"]);
     columns(m, "vendor-list", &["No.", "Name", "Responsibility Center", "Location Code", "Phone No.", "Contact", "Allow Multiple Posting Groups", "Search Name", "Balance (LCY)", "Balance Due (LCY)", "Payments (LCY)"]);
     columns(m, "vendor-posting-groups", &["Code", "Description", "View All Accounts on Lookup", "Payables Account", "Service Charge Acc.", "Payment Disc. Debit Acc.", "Payment Disc. Credit Acc.", "Invoice Rounding Account", "Debit Curr. Appln. Rndg. Acc.", "Credit Curr. Appln. Rndg. Acc.", "Debit Rounding Account", "Credit Rounding Account", "Payment Tolerance Debit Acc.", "Payment Tolerance Credit Acc."]);
     actions(
@@ -3711,15 +3811,29 @@ pub fn extend(m: &mut Metadata) {
         m,
         "bank-account-card",
         &[
-            ("Bank Account", &["Ledger E&ntries"]),
+            ("Bank Account", &["Dimensions", "Ledger E&ntries"]),
             ("Navigate", &["Cash Receipt Journals", "Payment Journals"]),
+        ],
+    );
+    categories(
+        m,
+        "bank-account-ledger-entries",
+        &[
+            ("Process", &["Dimensions"]),
+        ],
+    );
+    actions(
+        m,
+        "bank-account-list",
+        &[
+            Nav { caption: "Dimensions-Single", page: "default-dimensions", link: &[("No.", "No.")], shortcut: "Alt+D" },
         ],
     );
     categories(
         m,
         "bank-account-list",
         &[
-            ("Bank Account", &["Ledger E&ntries"]),
+            ("Bank Account", &["Dimensions-Single", "Ledger E&ntries"]),
         ],
     );
     categories(
@@ -3727,6 +3841,7 @@ pub fn extend(m: &mut Metadata) {
         "cash-receipt-journal",
         &[
             ("Process", &["P&ost"]),
+            ("Line", &["Dimensions"]),
         ],
     );
     actions(
@@ -3734,6 +3849,7 @@ pub fn extend(m: &mut Metadata) {
         "chart-of-accounts",
         &[
             Nav { caption: "Ledger E&ntries", page: "general-ledger-entries", link: &[("G/L Account No.", "No.")], shortcut: "Ctrl+F7" },
+            Nav { caption: "Dimensions-Single", page: "default-dimensions", link: &[("No.", "No.")], shortcut: "Alt+D" },
             Nav { caption: "G/L Register", page: "gl-registers", link: &[], shortcut: "" },
             Nav { caption: "General Journal", page: "general-journal", link: &[], shortcut: "" },
         ],
@@ -3742,7 +3858,7 @@ pub fn extend(m: &mut Metadata) {
         m,
         "chart-of-accounts",
         &[
-            ("Account", &["Ledger E&ntries"]),
+            ("Account", &["Dimensions-Single", "Ledger E&ntries"]),
             ("Navigate", &["G/L Register", "General Journal"]),
             ("Report", &["G/L Register"]),
         ],
@@ -3762,7 +3878,7 @@ pub fn extend(m: &mut Metadata) {
         "customer-card",
         &[
             ("New Document", &["Sales Quote", "Sales Order", "Sales Invoice", "Sales Credit Memo"]),
-            ("Customer", &["Ledger E&ntries", "Statistics"]),
+            ("Customer", &["Ledger E&ntries", "Dimensions", "Statistics"]),
         ],
     );
     actions(
@@ -3777,13 +3893,14 @@ pub fn extend(m: &mut Metadata) {
         "customer-ledger-entries",
         &[
             ("Process", &["Apply Entries", "Unapply Entries", "Reverse Transaction"]),
-            ("Entry", &["Detailed &Ledger Entries", "Customer"]),
+            ("Entry", &["Dimensions", "Detailed &Ledger Entries", "Customer"]),
         ],
     );
     actions(
         m,
         "customer-list",
         &[
+            Nav { caption: "Dimensions-Single", page: "default-dimensions", link: &[("No.", "No.")], shortcut: "Alt+D" },
             Nav { caption: "Quotes", page: "sales-quotes", link: &[("Sell-to Customer No.", "No.")], shortcut: "" },
             Nav { caption: "Orders", page: "sales-order-list", link: &[("Sell-to Customer No.", "No.")], shortcut: "" },
             Nav { caption: "Cash Receipt Journal", page: "cash-receipt-journal", link: &[], shortcut: "" },
@@ -3794,7 +3911,14 @@ pub fn extend(m: &mut Metadata) {
         "customer-list",
         &[
             ("New Document", &["Sales Quote", "Sales Order", "Sales Invoice", "Sales Credit Memo"]),
-            ("Customer", &["Ledger E&ntries", "Statistics", "Quotes", "Orders"]),
+            ("Customer", &["Ledger E&ntries", "Statistics", "Dimensions-Single", "Quotes", "Orders"]),
+        ],
+    );
+    categories(
+        m,
+        "dimensions",
+        &[
+            ("Dimension", &["Dimension &Values"]),
         ],
     );
     actions(
@@ -3809,6 +3933,7 @@ pub fn extend(m: &mut Metadata) {
         "fa-gl-journal",
         &[
             ("Process", &["P&ost"]),
+            ("Line", &["Dimensions"]),
         ],
     );
     actions(
@@ -3842,7 +3967,7 @@ pub fn extend(m: &mut Metadata) {
         m,
         "fixed-asset-card",
         &[
-            ("Fixed Asset", &["Depreciation &Books"]),
+            ("Fixed Asset", &["Dimensions", "Depreciation &Books"]),
         ],
     );
     actions(
@@ -3850,6 +3975,7 @@ pub fn extend(m: &mut Metadata) {
         "fixed-assets",
         &[
             Nav { caption: "Depreciation &Books", page: "fa-depreciation-books", link: &[("FA No.", "No.")], shortcut: "" },
+            Nav { caption: "Dimensions-Single", page: "default-dimensions", link: &[("No.", "No.")], shortcut: "Alt+D" },
             Nav { caption: "Fixed Asset G/L Journal", page: "fa-gl-journal", link: &[], shortcut: "" },
         ],
     );
@@ -3858,6 +3984,7 @@ pub fn extend(m: &mut Metadata) {
         "fixed-assets",
         &[
             ("Process", &["Calculate Depreciation"]),
+            ("Fixed Asset", &["Dimensions-Single"]),
         ],
     );
     actions(
@@ -3893,6 +4020,7 @@ pub fn extend(m: &mut Metadata) {
         "general-journal",
         &[
             ("Process", &["P&ost"]),
+            ("Line", &["Dimensions"]),
         ],
     );
     actions(
@@ -3920,13 +4048,14 @@ pub fn extend(m: &mut Metadata) {
         m,
         "general-ledger-entries",
         &[
-            ("Process", &["Reverse Transaction"]),
+            ("Process", &["Reverse Transaction", "Dimensions"]),
         ],
     );
     actions(
         m,
         "general-ledger-setup",
         &[
+            Nav { caption: "Dimensions", page: "dimensions", link: &[], shortcut: "" },
             Nav { caption: "General Posting Setup", page: "general-posting-setup", link: &[], shortcut: "" },
             Nav { caption: "Gen. Business Posting Groups", page: "gen-bus-posting-groups", link: &[], shortcut: "" },
             Nav { caption: "Gen. Product Posting Groups", page: "gen-prod-posting-groups", link: &[], shortcut: "" },
@@ -3942,6 +4071,7 @@ pub fn extend(m: &mut Metadata) {
         "general-ledger-setup",
         &[
             ("Posting", &["General Posting Setup", "Gen. Business Posting Groups", "Gen. Product Posting Groups"]),
+            ("General", &["Dimensions"]),
             ("VAT", &["VAT Posting Setup", "VAT Business Posting Groups", "VAT Product Posting Groups"]),
             ("Bank", &["Bank Account Posting Groups"]),
             ("Journal Templates", &["General Journal Templates"]),
@@ -3961,7 +4091,7 @@ pub fn extend(m: &mut Metadata) {
         m,
         "gl-account-card",
         &[
-            ("Account", &["Ledger E&ntries"]),
+            ("Account", &["Dimensions", "Ledger E&ntries"]),
         ],
     );
     categories(
@@ -4016,6 +4146,7 @@ pub fn extend(m: &mut Metadata) {
         "item-card",
         &[
             ("Process", &["Copy Item", "Adjust Inventory"]),
+            ("Item", &["Dimensions"]),
         ],
     );
     actions(
@@ -4031,6 +4162,14 @@ pub fn extend(m: &mut Metadata) {
         "item-journal",
         &[
             ("Process", &["P&ost"]),
+            ("Line", &["Dimensions"]),
+        ],
+    );
+    categories(
+        m,
+        "item-ledger-entries",
+        &[
+            ("Process", &["Dimensions"]),
         ],
     );
     actions(
@@ -4038,6 +4177,7 @@ pub fn extend(m: &mut Metadata) {
         "item-list",
         &[
             Nav { caption: "Physical Inventory Journal", page: "phys-inventory-journal", link: &[], shortcut: "" },
+            Nav { caption: "Dimensions-Single", page: "default-dimensions", link: &[("No.", "No.")], shortcut: "Alt+D" },
         ],
     );
     categories(
@@ -4045,6 +4185,7 @@ pub fn extend(m: &mut Metadata) {
         "item-list",
         &[
             ("Process", &["Adjust Inventory", "Copy Item"]),
+            ("Item", &["Dimensions-Single"]),
         ],
     );
     actions(
@@ -4060,6 +4201,21 @@ pub fn extend(m: &mut Metadata) {
         "item-reclass-journal",
         &[
             ("Process", &["P&ost"]),
+            ("Line", &["Dimensions"]),
+        ],
+    );
+    actions(
+        m,
+        "locations",
+        &[
+            Nav { caption: "Dimensions-Single", page: "default-dimensions", link: &[("No.", "Code")], shortcut: "Alt+D" },
+        ],
+    );
+    categories(
+        m,
+        "locations",
+        &[
+            ("Location", &["Dimensions-Single"]),
         ],
     );
     categories(
@@ -4067,6 +4223,7 @@ pub fn extend(m: &mut Metadata) {
         "payment-journal",
         &[
             ("Process", &["P&ost"]),
+            ("Line", &["Dimensions"]),
         ],
     );
     actions(
@@ -4083,6 +4240,7 @@ pub fn extend(m: &mut Metadata) {
         &[
             ("Process", &["P&ost"]),
             ("Prepare", &["Calculate &Inventory"]),
+            ("Line", &["Dimensions"]),
             ("Item", &["Card", "Ledger E&ntries"]),
         ],
     );
@@ -4091,7 +4249,7 @@ pub fn extend(m: &mut Metadata) {
         "posted-purchase-credit-memo",
         &[
             ("Print/Send", &["&Print"]),
-            ("Credit Memo", &["Vendor"]),
+            ("Credit Memo", &["Dimensions", "Vendor"]),
         ],
     );
     actions(
@@ -4106,7 +4264,7 @@ pub fn extend(m: &mut Metadata) {
         "posted-purchase-credit-memos",
         &[
             ("Print/Send", &["&Print"]),
-            ("Credit Memo", &["Vendor"]),
+            ("Credit Memo", &["Dimensions", "Vendor"]),
         ],
     );
     categories(
@@ -4114,7 +4272,7 @@ pub fn extend(m: &mut Metadata) {
         "posted-purchase-invoice",
         &[
             ("Print/Send", &["&Print"]),
-            ("Invoice", &["Vendor"]),
+            ("Invoice", &["Dimensions", "Vendor"]),
         ],
     );
     actions(
@@ -4129,7 +4287,7 @@ pub fn extend(m: &mut Metadata) {
         "posted-purchase-invoices",
         &[
             ("Print/Send", &["&Print"]),
-            ("Invoice", &["Vendor"]),
+            ("Invoice", &["Dimensions", "Vendor"]),
         ],
     );
     categories(
@@ -4137,6 +4295,14 @@ pub fn extend(m: &mut Metadata) {
         "posted-purchase-receipt",
         &[
             ("Process", &["&Print"]),
+            ("Receipt", &["Dimensions"]),
+        ],
+    );
+    categories(
+        m,
+        "posted-purchase-receipts",
+        &[
+            ("Process", &["Dimensions"]),
         ],
     );
     categories(
@@ -4144,7 +4310,7 @@ pub fn extend(m: &mut Metadata) {
         "posted-sales-credit-memo",
         &[
             ("Print/Send", &["&Print"]),
-            ("Credit Memo", &["Customer"]),
+            ("Credit Memo", &["Dimensions", "Customer"]),
         ],
     );
     actions(
@@ -4159,7 +4325,7 @@ pub fn extend(m: &mut Metadata) {
         "posted-sales-credit-memos",
         &[
             ("Print/Send", &["&Print"]),
-            ("Credit Memo", &["Customer"]),
+            ("Credit Memo", &["Dimensions", "Customer"]),
         ],
     );
     categories(
@@ -4167,7 +4333,7 @@ pub fn extend(m: &mut Metadata) {
         "posted-sales-invoice",
         &[
             ("Print/Send", &["&Print"]),
-            ("Invoice", &["Customer"]),
+            ("Invoice", &["Dimensions", "Customer"]),
         ],
     );
     actions(
@@ -4182,7 +4348,7 @@ pub fn extend(m: &mut Metadata) {
         "posted-sales-invoices",
         &[
             ("Print/Send", &["&Print"]),
-            ("Invoice", &["Customer"]),
+            ("Invoice", &["Dimensions", "Customer"]),
         ],
     );
     categories(
@@ -4191,6 +4357,14 @@ pub fn extend(m: &mut Metadata) {
         &[
             ("Process", &["&Print"]),
             ("Print/Send", &["&Print"]),
+            ("Shipment", &["Dimensions"]),
+        ],
+    );
+    categories(
+        m,
+        "posted-sales-shipments",
+        &[
+            ("Process", &["Dimensions"]),
         ],
     );
     categories(
@@ -4199,7 +4373,7 @@ pub fn extend(m: &mut Metadata) {
         &[
             ("Process", &["P&ost", "Preview Posting", "Post and New", "Re&lease", "Re&open"]),
             ("Prepare", &["Copy Document"]),
-            ("Credit Memo", &["Statistics", "Vendor"]),
+            ("Credit Memo", &["Statistics", "Dimensions", "Vendor"]),
         ],
     );
     categories(
@@ -4208,7 +4382,7 @@ pub fn extend(m: &mut Metadata) {
         &[
             ("Release", &["Re&lease", "Re&open"]),
             ("Posting", &["P&ost", "Preview Posting"]),
-            ("Credit Memo", &["Statistics", "Vendor"]),
+            ("Credit Memo", &["Dimensions", "Statistics", "Vendor"]),
         ],
     );
     categories(
@@ -4217,7 +4391,7 @@ pub fn extend(m: &mut Metadata) {
         &[
             ("Process", &["P&ost", "Preview Posting", "Post and New", "Re&lease", "Re&open"]),
             ("Prepare", &["Copy Document"]),
-            ("Invoice", &["Statistics", "Vendor"]),
+            ("Invoice", &["Dimensions", "Statistics", "Vendor"]),
         ],
     );
     categories(
@@ -4226,7 +4400,7 @@ pub fn extend(m: &mut Metadata) {
         &[
             ("Release", &["Re&lease", "Re&open"]),
             ("Posting", &["P&ost", "Preview Posting"]),
-            ("Invoice", &["Statistics", "Vendor"]),
+            ("Invoice", &["Dimensions", "Statistics", "Vendor"]),
         ],
     );
     actions(
@@ -4243,7 +4417,7 @@ pub fn extend(m: &mut Metadata) {
             ("Process", &["P&ost", "Preview Posting", "Post and New", "Re&lease", "Re&open"]),
             ("Prepare", &["Copy Document"]),
             ("Print/Send", &["&Print"]),
-            ("Order", &["Statistics", "Vendor", "Receipts"]),
+            ("Order", &["Dimensions", "Statistics", "Vendor", "Receipts"]),
         ],
     );
     actions(
@@ -4260,7 +4434,7 @@ pub fn extend(m: &mut Metadata) {
             ("Release", &["Re&lease", "Re&open"]),
             ("Posting", &["P&ost", "Preview Posting"]),
             ("Print/Send", &["&Print"]),
-            ("Order", &["Statistics", "Receipts"]),
+            ("Order", &["Dimensions", "Statistics", "Receipts"]),
         ],
     );
     categories(
@@ -4270,7 +4444,7 @@ pub fn extend(m: &mut Metadata) {
             ("Process", &["Make &Order", "Re&lease", "Re&open"]),
             ("Prepare", &["Copy Document"]),
             ("Print/Send", &["&Print"]),
-            ("Quote", &["Statistics", "Vendor"]),
+            ("Quote", &["Dimensions", "Statistics", "Vendor"]),
         ],
     );
     categories(
@@ -4280,7 +4454,7 @@ pub fn extend(m: &mut Metadata) {
             ("Process", &["Make &Order"]),
             ("Release", &["Re&lease", "Re&open"]),
             ("Print/Send", &["&Print"]),
-            ("Quote", &["Statistics"]),
+            ("Quote", &["Dimensions", "Statistics"]),
         ],
     );
     actions(
@@ -4303,7 +4477,7 @@ pub fn extend(m: &mut Metadata) {
         &[
             ("Process", &["P&ost", "Preview Posting", "Re&lease", "Re&open"]),
             ("Prepare", &["Copy Document"]),
-            ("Credit Memo", &["Statistics", "Customer"]),
+            ("Credit Memo", &["Statistics", "Dimensions", "Customer"]),
         ],
     );
     categories(
@@ -4312,7 +4486,7 @@ pub fn extend(m: &mut Metadata) {
         &[
             ("Release", &["Re&lease", "Re&open"]),
             ("Posting", &["P&ost", "Preview Posting"]),
-            ("Credit Memo", &["Statistics", "Customer"]),
+            ("Credit Memo", &["Dimensions", "Statistics", "Customer"]),
         ],
     );
     categories(
@@ -4322,7 +4496,7 @@ pub fn extend(m: &mut Metadata) {
             ("Process", &["P&ost", "Preview Posting", "Post and New", "Re&lease", "Re&open"]),
             ("Prepare", &["Copy Document"]),
             ("Print/Send", &["Pro Forma Invoice"]),
-            ("Invoice", &["Statistics", "Customer"]),
+            ("Invoice", &["Dimensions", "Statistics", "Customer"]),
         ],
     );
     actions(
@@ -4338,7 +4512,7 @@ pub fn extend(m: &mut Metadata) {
         &[
             ("Release", &["Re&lease", "Re&open"]),
             ("Posting", &["P&ost", "Preview Posting"]),
-            ("Invoice", &["Statistics", "Customer", "Posted Sales Invoices"]),
+            ("Invoice", &["Dimensions", "Statistics", "Customer", "Posted Sales Invoices"]),
         ],
     );
     actions(
@@ -4355,7 +4529,7 @@ pub fn extend(m: &mut Metadata) {
             ("Process", &["P&ost", "Preview Posting", "Post and New", "Re&lease", "Re&open"]),
             ("Prepare", &["Copy Document"]),
             ("Print/Send", &["Print Confirmation", "Work Order", "Pro Forma Invoice"]),
-            ("Order", &["Statistics", "Customer", "S&hipments"]),
+            ("Order", &["Dimensions", "Statistics", "Customer", "S&hipments"]),
         ],
     );
     actions(
@@ -4372,7 +4546,7 @@ pub fn extend(m: &mut Metadata) {
             ("Release", &["Re&lease", "Re&open"]),
             ("Posting", &["P&ost", "Preview Posting"]),
             ("Print/Send", &["Print Confirmation", "Work Order"]),
-            ("Order", &["Statistics", "S&hipments"]),
+            ("Order", &["Dimensions", "Statistics", "S&hipments"]),
         ],
     );
     categories(
@@ -4382,7 +4556,7 @@ pub fn extend(m: &mut Metadata) {
             ("Process", &["Make &Order", "Re&lease", "Re&open"]),
             ("Prepare", &["Copy Document"]),
             ("Print/Send", &["&Print"]),
-            ("Quote", &["Statistics", "Customer"]),
+            ("Quote", &["Dimensions", "Statistics", "Customer"]),
         ],
     );
     categories(
@@ -4392,7 +4566,7 @@ pub fn extend(m: &mut Metadata) {
             ("Process", &["Make &Order"]),
             ("Release", &["Re&lease", "Re&open"]),
             ("Print/Send", &["&Print"]),
-            ("Quote", &["Statistics", "Customer"]),
+            ("Quote", &["Dimensions", "Statistics", "Customer"]),
         ],
     );
     actions(
@@ -4409,6 +4583,20 @@ pub fn extend(m: &mut Metadata) {
         &[
             ("Customer Groups", &["Customer Posting Groups"]),
             ("Payments", &["Payment Terms"]),
+        ],
+    );
+    actions(
+        m,
+        "salespersons",
+        &[
+            Nav { caption: "Dimensions-Single", page: "default-dimensions", link: &[("No.", "Code")], shortcut: "Alt+D" },
+        ],
+    );
+    categories(
+        m,
+        "salespersons",
+        &[
+            ("Salesperson", &["Dimensions-Single"]),
         ],
     );
     actions(
@@ -4455,7 +4643,7 @@ pub fn extend(m: &mut Metadata) {
         &[
             ("Process", &["Pay Vendor"]),
             ("New Document", &["Purchase Invoice", "Purchase Order", "Purchase Credit Memo"]),
-            ("Vendor", &["Ledger E&ntries", "Statistics"]),
+            ("Vendor", &["Ledger E&ntries", "Dimensions", "Statistics"]),
         ],
     );
     categories(
@@ -4463,13 +4651,14 @@ pub fn extend(m: &mut Metadata) {
         "vendor-ledger-entries",
         &[
             ("Process", &["Apply Entries", "Unapply Entries", "Reverse Transaction"]),
-            ("Entry", &["Detailed &Ledger Entries"]),
+            ("Entry", &["Dimensions", "Detailed &Ledger Entries"]),
         ],
     );
     actions(
         m,
         "vendor-list",
         &[
+            Nav { caption: "Dimensions-Single", page: "default-dimensions", link: &[("No.", "No.")], shortcut: "Alt+D" },
             Nav { caption: "Quotes", page: "purchase-quotes", link: &[("Buy-from Vendor No.", "No.")], shortcut: "" },
             Nav { caption: "Orders", page: "purchase-order-list", link: &[("Buy-from Vendor No.", "No.")], shortcut: "" },
             Nav { caption: "Payment Journal", page: "payment-journal", link: &[], shortcut: "" },
@@ -4482,7 +4671,7 @@ pub fn extend(m: &mut Metadata) {
         &[
             ("Process", &["Pay Vendor"]),
             ("New Document", &["Purchase Invoice", "Purchase Order", "Purchase Credit Memo"]),
-            ("Vendor", &["Ledger E&ntries", "Statistics", "Orders", "Quotes"]),
+            ("Vendor", &["Ledger E&ntries", "Statistics", "Dimensions-Single", "Orders", "Quotes"]),
         ],
     );
     calcs(
@@ -4502,6 +4691,18 @@ pub fn extend(m: &mut Metadata) {
     );
     drilldowns(
         m,
+        "Bank Account Ledger Entry",
+        &[
+            ("Shortcut Dimension 3 Code", "dimension-set-entries", &[("Dimension Set ID", "Dimension Set ID")], &[("Global Dimension No.", "3")]),
+            ("Shortcut Dimension 4 Code", "dimension-set-entries", &[("Dimension Set ID", "Dimension Set ID")], &[("Global Dimension No.", "4")]),
+            ("Shortcut Dimension 5 Code", "dimension-set-entries", &[("Dimension Set ID", "Dimension Set ID")], &[("Global Dimension No.", "5")]),
+            ("Shortcut Dimension 6 Code", "dimension-set-entries", &[("Dimension Set ID", "Dimension Set ID")], &[("Global Dimension No.", "6")]),
+            ("Shortcut Dimension 7 Code", "dimension-set-entries", &[("Dimension Set ID", "Dimension Set ID")], &[("Global Dimension No.", "7")]),
+            ("Shortcut Dimension 8 Code", "dimension-set-entries", &[("Dimension Set ID", "Dimension Set ID")], &[("Global Dimension No.", "8")]),
+        ],
+    );
+    drilldowns(
+        m,
         "Cust. Ledger Entry",
         &[
             ("Remaining Amt. (LCY)", "detailed-cust-ledger-entries", &[("Cust. Ledger Entry No.", "Entry No.")], &[]),
@@ -4510,6 +4711,12 @@ pub fn extend(m: &mut Metadata) {
             ("Debit Amount (LCY)", "detailed-cust-ledger-entries", &[("Cust. Ledger Entry No.", "Entry No.")], &[("Ledger Entry Amount", "true")]),
             ("Credit Amount (LCY)", "detailed-cust-ledger-entries", &[("Cust. Ledger Entry No.", "Entry No.")], &[("Ledger Entry Amount", "true")]),
             ("Original Amount", "detailed-cust-ledger-entries", &[("Cust. Ledger Entry No.", "Entry No.")], &[("Entry Type", "Initial Entry")]),
+            ("Shortcut Dimension 3 Code", "dimension-set-entries", &[("Dimension Set ID", "Dimension Set ID")], &[("Global Dimension No.", "3")]),
+            ("Shortcut Dimension 4 Code", "dimension-set-entries", &[("Dimension Set ID", "Dimension Set ID")], &[("Global Dimension No.", "4")]),
+            ("Shortcut Dimension 5 Code", "dimension-set-entries", &[("Dimension Set ID", "Dimension Set ID")], &[("Global Dimension No.", "5")]),
+            ("Shortcut Dimension 6 Code", "dimension-set-entries", &[("Dimension Set ID", "Dimension Set ID")], &[("Global Dimension No.", "6")]),
+            ("Shortcut Dimension 7 Code", "dimension-set-entries", &[("Dimension Set ID", "Dimension Set ID")], &[("Global Dimension No.", "7")]),
+            ("Shortcut Dimension 8 Code", "dimension-set-entries", &[("Dimension Set ID", "Dimension Set ID")], &[("Global Dimension No.", "8")]),
         ],
     );
     calcs(
@@ -4529,6 +4736,13 @@ pub fn extend(m: &mut Metadata) {
             ("Sales (LCY)", "customer-ledger-entries", &[("Customer No.", "No.")], &[]),
             ("Payments (LCY)", "detailed-cust-ledger-entries", &[("Customer No.", "No.")], &[("Entry Type", "Initial Entry")]),
             ("First Transaction Date", "customer-ledger-entries", &[("Customer No.", "No.")], &[]),
+        ],
+    );
+    drilldowns(
+        m,
+        "Default Dimension",
+        &[
+            ("Dimension Value Name", "dimension-values", &[("Dimension Code", "Dimension Code"), ("Code", "Dimension Value Code")], &[]),
         ],
     );
     calcs(
@@ -4556,10 +4770,34 @@ pub fn extend(m: &mut Metadata) {
     );
     drilldowns(
         m,
+        "FA Ledger Entry",
+        &[
+            ("Shortcut Dimension 3 Code", "dimension-set-entries", &[("Dimension Set ID", "Dimension Set ID")], &[("Global Dimension No.", "3")]),
+            ("Shortcut Dimension 4 Code", "dimension-set-entries", &[("Dimension Set ID", "Dimension Set ID")], &[("Global Dimension No.", "4")]),
+            ("Shortcut Dimension 5 Code", "dimension-set-entries", &[("Dimension Set ID", "Dimension Set ID")], &[("Global Dimension No.", "5")]),
+            ("Shortcut Dimension 6 Code", "dimension-set-entries", &[("Dimension Set ID", "Dimension Set ID")], &[("Global Dimension No.", "6")]),
+            ("Shortcut Dimension 7 Code", "dimension-set-entries", &[("Dimension Set ID", "Dimension Set ID")], &[("Global Dimension No.", "7")]),
+            ("Shortcut Dimension 8 Code", "dimension-set-entries", &[("Dimension Set ID", "Dimension Set ID")], &[("Global Dimension No.", "8")]),
+        ],
+    );
+    drilldowns(
+        m,
         "G/L Account",
         &[
             ("Net Change", "general-ledger-entries", &[("G/L Account No.", "No.")], &[]),
             ("Balance", "general-ledger-entries", &[("G/L Account No.", "No.")], &[]),
+        ],
+    );
+    drilldowns(
+        m,
+        "G/L Entry",
+        &[
+            ("Shortcut Dimension 3 Code", "dimension-set-entries", &[("Dimension Set ID", "Dimension Set ID")], &[("Global Dimension No.", "3")]),
+            ("Shortcut Dimension 4 Code", "dimension-set-entries", &[("Dimension Set ID", "Dimension Set ID")], &[("Global Dimension No.", "4")]),
+            ("Shortcut Dimension 5 Code", "dimension-set-entries", &[("Dimension Set ID", "Dimension Set ID")], &[("Global Dimension No.", "5")]),
+            ("Shortcut Dimension 6 Code", "dimension-set-entries", &[("Dimension Set ID", "Dimension Set ID")], &[("Global Dimension No.", "6")]),
+            ("Shortcut Dimension 7 Code", "dimension-set-entries", &[("Dimension Set ID", "Dimension Set ID")], &[("Global Dimension No.", "7")]),
+            ("Shortcut Dimension 8 Code", "dimension-set-entries", &[("Dimension Set ID", "Dimension Set ID")], &[("Global Dimension No.", "8")]),
         ],
     );
     calcs(
@@ -4575,6 +4813,18 @@ pub fn extend(m: &mut Metadata) {
         &[
             ("Inventory", "item-ledger-entries", &[("Item No.", "No.")], &[]),
             ("Net Invoiced Qty.", "item-ledger-entries", &[("Item No.", "No.")], &[]),
+        ],
+    );
+    drilldowns(
+        m,
+        "Item Ledger Entry",
+        &[
+            ("Shortcut Dimension 3 Code", "dimension-set-entries", &[("Dimension Set ID", "Dimension Set ID")], &[("Global Dimension No.", "3")]),
+            ("Shortcut Dimension 4 Code", "dimension-set-entries", &[("Dimension Set ID", "Dimension Set ID")], &[("Global Dimension No.", "4")]),
+            ("Shortcut Dimension 5 Code", "dimension-set-entries", &[("Dimension Set ID", "Dimension Set ID")], &[("Global Dimension No.", "5")]),
+            ("Shortcut Dimension 6 Code", "dimension-set-entries", &[("Dimension Set ID", "Dimension Set ID")], &[("Global Dimension No.", "6")]),
+            ("Shortcut Dimension 7 Code", "dimension-set-entries", &[("Dimension Set ID", "Dimension Set ID")], &[("Global Dimension No.", "7")]),
+            ("Shortcut Dimension 8 Code", "dimension-set-entries", &[("Dimension Set ID", "Dimension Set ID")], &[("Global Dimension No.", "8")]),
         ],
     );
     calcs(
@@ -4675,6 +4925,12 @@ pub fn extend(m: &mut Metadata) {
             ("Debit Amount (LCY)", "detailed-vendor-ledger-entries", &[("Vendor Ledger Entry No.", "Entry No.")], &[("Ledger Entry Amount", "true")]),
             ("Credit Amount (LCY)", "detailed-vendor-ledger-entries", &[("Vendor Ledger Entry No.", "Entry No.")], &[("Ledger Entry Amount", "true")]),
             ("Original Amount", "detailed-vendor-ledger-entries", &[("Vendor Ledger Entry No.", "Entry No.")], &[("Entry Type", "Initial Entry")]),
+            ("Shortcut Dimension 3 Code", "dimension-set-entries", &[("Dimension Set ID", "Dimension Set ID")], &[("Global Dimension No.", "3")]),
+            ("Shortcut Dimension 4 Code", "dimension-set-entries", &[("Dimension Set ID", "Dimension Set ID")], &[("Global Dimension No.", "4")]),
+            ("Shortcut Dimension 5 Code", "dimension-set-entries", &[("Dimension Set ID", "Dimension Set ID")], &[("Global Dimension No.", "5")]),
+            ("Shortcut Dimension 6 Code", "dimension-set-entries", &[("Dimension Set ID", "Dimension Set ID")], &[("Global Dimension No.", "6")]),
+            ("Shortcut Dimension 7 Code", "dimension-set-entries", &[("Dimension Set ID", "Dimension Set ID")], &[("Global Dimension No.", "7")]),
+            ("Shortcut Dimension 8 Code", "dimension-set-entries", &[("Dimension Set ID", "Dimension Set ID")], &[("Global Dimension No.", "8")]),
         ],
     );
 }

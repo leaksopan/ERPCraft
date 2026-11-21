@@ -368,6 +368,56 @@ pub fn master_data(ctx: &mut Ctx) -> Result<()> {
         let key = erpcraft_meta::Key(vec![r.get("No.").clone(), erpcraft_meta::Value::text("COMPANY")]);
         crate::records::update(ctx, bk, &key, &obj(json!({"Depreciation Method": "Straight-Line", "No. of Depreciation Years": years})))?;
     }
+    demo_dimensions(ctx)
+}
+
+/// Department and area as the global dimensions, project as shortcut dimension 3, and default
+/// dimensions on customers, vendors and items, set the way a user would: through the card's
+/// Global Dimension fields, which BC turns into default dimensions.
+fn demo_dimensions(ctx: &mut Ctx) -> Result<()> {
+    let dims: &[(&str, &str, &str, &[(&str, &str)])] = &[
+        ("DEPARTMENT", "Department", "Department Code", &[("ADM", "Administration"), ("SALES", "Sales"), ("SERVICE", "Workshop Service")]),
+        ("AREA", "Area", "Area Code", &[("JKT", "Jakarta"), ("BDG", "Bandung"), ("SBY", "Surabaya"), ("YOG", "Yogyakarta")]),
+        ("PROJECT", "Project", "Project Code", &[("FLEET", "Fleet Contracts"), ("RETAIL", "Retail Workshops")]),
+    ];
+    for (n, (code, name, caption, values)) in dims.iter().enumerate() {
+        raw(ctx, "Dimension", json!({"Code": code, "Name": name, "Code Caption": caption, "Filter Caption": format!("{name} Filter"), "Description": name}))?;
+        for (v, vname) in *values {
+            raw(ctx, "Dimension Value", json!({"Dimension Code": code, "Code": v, "Name": vname, "Global Dimension No.": n + 1}))?;
+        }
+    }
+    let gl = ctx.table("General Ledger Setup")?;
+    let key = erpcraft_meta::Key(vec![erpcraft_meta::Value::text("")]);
+    if let Some(mut setup) = ctx.db.get("General Ledger Setup", &key).cloned() {
+        for (f, v) in [
+            ("Global Dimension 1 Code", "DEPARTMENT"),
+            ("Global Dimension 2 Code", "AREA"),
+            ("Shortcut Dimension 1 Code", "DEPARTMENT"),
+            ("Shortcut Dimension 2 Code", "AREA"),
+            ("Shortcut Dimension 3 Code", "PROJECT"),
+        ] {
+            setup.set(f, erpcraft_meta::Value::text(v));
+        }
+        ctx.db.modify(gl, setup)?;
+    }
+    let ct = ctx.table(CUSTOMER)?;
+    for (no, area) in [("10000", "JKT"), ("20000", "BDG"), ("30000", "SBY"), ("40000", "JKT"), ("50000", "YOG")] {
+        let key = erpcraft_meta::Key(vec![erpcraft_meta::Value::text(no)]);
+        crate::records::update(ctx, ct, &key, &obj(json!({"Global Dimension 1 Code": "SALES", "Global Dimension 2 Code": area})))?;
+    }
+    let vt = ctx.table("Vendor")?;
+    let vendor_nos: Vec<String> = ctx.db.rows("Vendor").map(|v| v.str("No.").to_string()).collect();
+    for no in vendor_nos {
+        let key = erpcraft_meta::Key(vec![erpcraft_meta::Value::text(&no)]);
+        crate::records::update(ctx, vt, &key, &obj(json!({"Global Dimension 1 Code": "ADM"})))?;
+    }
+    let it = ctx.table("Item")?;
+    let items: Vec<(String, String)> = ctx.db.rows("Item").map(|i| (i.str("No.").to_string(), i.str("Type").to_string())).collect();
+    for (no, ty) in items {
+        let key = erpcraft_meta::Key(vec![erpcraft_meta::Value::text(&no)]);
+        let dept = if ty == "Service" { "SERVICE" } else { "SALES" };
+        crate::records::update(ctx, it, &key, &obj(json!({"Global Dimension 1 Code": dept})))?;
+    }
     Ok(())
 }
 

@@ -312,6 +312,31 @@ impl ErpApp {
     }
 
     /// Runs a command and shows its outcome (navigation, report, message or error).
+    /// A field's caption as BC shows it: "(LCY)" as the currency symbol, and a dimension field
+    /// (Global / Shortcut Dimension N Code) named after its dimension (CaptionClass 1,1,N / 1,2,N).
+    pub fn field_caption(&self, f: &erpcraft_engine::meta::FieldDef, caption: &str) -> String {
+        let slot = f
+            .name
+            .strip_prefix("Shortcut Dimension ")
+            .or_else(|| f.name.strip_prefix("Global Dimension "))
+            .and_then(|r| r.strip_suffix(" Code"))
+            .and_then(|n| n.parse::<usize>().ok());
+        if let Some(n) = slot
+            && f.name.ends_with(" Code")
+            && let Some(setup) = self.session.db().rows("General Ledger Setup").next()
+            && caption.contains("Dimension")
+        {
+            let field = if n <= 2 { format!("Global Dimension {n} Code") } else { format!("Shortcut Dimension {n} Code") };
+            let dim = setup.str(&field);
+            if let Some(d) = self.session.db().get_code("Dimension", dim)
+                && !d.str("Code Caption").is_empty()
+            {
+                return d.str("Code Caption").to_string();
+            }
+        }
+        widgets::lcy_caption(caption, &self.lcy_symbol())
+    }
+
     /// G/L Setup's Local Currency Symbol, shown in place of "LCY" in captions.
     pub fn lcy_symbol(&self) -> String {
         self.session.db().rows("General Ledger Setup").next().map(|r| r.str("Local Currency Symbol").trim().to_string()).unwrap_or_default()
@@ -364,8 +389,18 @@ impl ErpApp {
     pub fn run_action(&mut self, a: &ActionDef, context: Option<(&str, &Key)>) {
         if let Some(page) = &a.open_page {
             let rec = context.and_then(|(t, k)| self.session.record(t, k));
-            let filters: Vec<(String, String)> =
-                a.link.iter().map(|(target, source)| (target.clone(), rec.as_ref().map(|r| r.get(source).to_string()).unwrap_or_default())).collect();
+            // A source starting with "=" is a constant (Default Dimensions: Table ID = 18).
+            let filters: Vec<(String, String)> = a
+                .link
+                .iter()
+                .map(|(target, source)| {
+                    let v = match source.strip_prefix('=') {
+                        Some(constant) => constant.to_string(),
+                        None => rec.as_ref().map(|r| r.get(source).to_string()).unwrap_or_default(),
+                    };
+                    (target.clone(), v)
+                })
+                .collect();
             let target = self.session.page(page);
             let is_card = target.is_some_and(|p| matches!(p.kind, PageKind::Card | PageKind::Document));
             if is_card {

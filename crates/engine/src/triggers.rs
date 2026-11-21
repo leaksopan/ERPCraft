@@ -167,6 +167,7 @@ pub fn on_delete(ctx: &mut Ctx, t: &TableDef, r: &Record) -> Result<()> {
 
 /// Field `OnValidate`: runs after the new value is set; `old` is the previous value.
 pub fn on_validate(ctx: &mut Ctx, t: &TableDef, r: &mut Record, field: &str, old: &Value) -> Result<()> {
+    crate::dimensions::on_validate(ctx, t, r, field)?;
     if matches!(t.name.as_str(), CUSTOMER | VENDOR) && field == "Name" {
         r.set("Search Name", Value::text(r.str("Name").to_uppercase()));
     }
@@ -186,10 +187,12 @@ pub fn on_validate(ctx: &mut Ctx, t: &TableDef, r: &mut Record, field: &str, old
         return crate::fa::on_validate_book(ctx, r, field);
     }
     if let Some(side) = Side::for_header(&t.name) {
-        return validate_header(ctx, side, t, r, field, old);
+        validate_header(ctx, side, t, r, field, old)?;
+        return crate::dimensions::after_header_validate(ctx, side, t, r, field);
     }
     if let Some(side) = Side::for_line(&t.name) {
-        return validate_line(ctx, side, r, field, old);
+        validate_line(ctx, side, r, field, old)?;
+        return crate::dimensions::after_line_validate(ctx, side, r, field);
     }
     Ok(())
 }

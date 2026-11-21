@@ -117,6 +117,7 @@ pub fn post_gl(ctx: &mut Ctx, doc: &GlDoc, lines: Vec<GlLine>) -> Result<Option<
         e.set("Transaction No.", Value::Int(doc.txn.no));
         e.set("Source Code", Value::text(&doc.txn.source_code));
         e.set("User ID", Value::text(ctx.user.to_uppercase()));
+        crate::ledger::stamp_dims(ctx, t, &mut e, doc.txn.dim_set);
         ctx.db.insert(t, e)?;
         entry_no = entry_no.saturating_add(1);
     }
@@ -408,7 +409,8 @@ pub fn post_document(ctx: &mut Ctx, side: &Side, doc_type: &str, no: &str, mode:
         let gen_type = if side.sales { "Sale" } else { "Purchase" };
         let ext_doc_no =
             if side.sales { header.str("External Document No.").to_string() } else { header.str(Side::vendor_doc_no_field(doc_type)).to_string() };
-        let txn = Txn::new(ctx, if side.sales { "SALES" } else { "PURCHASES" }, "", "");
+        let mut txn = Txn::new(ctx, if side.sales { "SALES" } else { "PURCHASES" }, "", "");
+        txn.dim_set = header.get("Dimension Set ID").as_int();
         let mut gl: Vec<GlLine> = Vec::new();
         let mut fa_specs: Vec<crate::fa::FaEntrySpec> = Vec::new();
         let (mut total_amount, mut total_incl) = (Decimal::ZERO, Decimal::ZERO);

@@ -114,7 +114,7 @@ fn action_bar(app: &mut ErpApp, ui: &mut Ui, page: &PageDef, table: &TableDef, s
                 if let Some(card) = &page.card_page {
                     app.new_record_on(card);
                 } else if inline_edit {
-                    app.dialog = Some(Dialog::new_record(page, table));
+                    app.dialog = Some(Dialog::new_record(page, table, &state.filters));
                 }
             }
             if widgets::action_button(ui, "🗑", "Delete").clicked()
@@ -219,7 +219,7 @@ fn grid(app: &mut ErpApp, ui: &mut Ui, page: &PageDef, table: &TableDef, rows: &
     }
     let chosen = app.columns.get(&page.id).cloned().unwrap_or_else(|| page.columns.clone());
     let cols: Vec<&erpcraft_engine::meta::FieldDef> = chosen.iter().filter_map(|c| table.field(c)).collect();
-    let lcy = app.lcy_symbol();
+    let captions: Vec<String> = cols.iter().map(|f| app.field_caption(f, &f.caption)).collect();
     let mut open: Option<(Key, bool)> = None;
     let mut commit: Option<(Key, String, serde_json::Value)> = None;
     let mut row_act: Option<(Key, RowAct)> = None;
@@ -284,7 +284,8 @@ fn grid(app: &mut ErpApp, ui: &mut Ui, page: &PageDef, table: &TableDef, rows: &
     builder
         .header(58.0, |mut h| {
             for (i, f) in cols.iter().enumerate() {
-                h.col(|ui| header_cell(ui, f, &lcy, &key_col, state, filter_value.as_ref()));
+                let caption = captions.get(i).cloned().unwrap_or_default();
+                h.col(|ui| header_cell(ui, f, &caption, &key_col, state, filter_value.as_ref()));
                 if i == 0 {
                     h.col(|_| {});
                 }
@@ -392,7 +393,7 @@ fn grid(app: &mut ErpApp, ui: &mut Ui, page: &PageDef, table: &TableDef, rows: &
 
 /// One header cell: the caption (wrapping up to three lines, at the bottom), BC's sort arrow, a
 /// grey background and ⌄ on hover, and a menu on click.
-fn header_cell(ui: &mut Ui, f: &erpcraft_engine::meta::FieldDef, lcy: &str, key_col: &str, state: &mut ListState, row: Option<&Record>) {
+fn header_cell(ui: &mut Ui, f: &erpcraft_engine::meta::FieldDef, caption: &str, key_col: &str, state: &mut ListState, row: Option<&Record>) {
     let rect = ui.max_rect();
     let id = ui.scope_id().with(("header", &f.name));
     let hovered = ui.rect_contains_pointer(rect);
@@ -404,7 +405,7 @@ fn header_cell(ui: &mut Ui, f: &erpcraft_engine::meta::FieldDef, lcy: &str, key_
         None if f.name == key_col => " ↑",
         _ => "",
     };
-    let caption = widgets::lcy_caption(&f.caption, lcy);
+    let caption = caption.to_string();
     let text = format!("{caption}{arrow}{}", if hovered { "  ⌄" } else { "" });
     let layout = if f.ty.is_numeric() { Layout::bottom_up(Align::Max) } else { Layout::bottom_up(Align::Min) };
     ui.with_layout(layout, |ui| {

@@ -4,3 +4,4 @@
 /apps/erpcraft-web/www/pkg
 /target-web
 /.audit
+/target-tests

@@ -357,12 +357,41 @@ pub fn lookups<'a>(app: &ErpApp, t: &TableDef, fields: impl Iterator<Item = &'a 
     let mut out = HashMap::new();
     for name in fields {
         let Some(f) = t.field(name) else { continue };
+        // A dimension field looks up the values of the dimension in its slot.
+        if let Some(values) = dimension_values(app, &f.name) {
+            out.insert(f.name.clone(), values);
+            continue;
+        }
         let Some(rel) = &f.relation else { continue };
         if let Some(values) = table_values(app, rel) {
             out.insert(f.name.clone(), values);
         }
     }
     out
+}
+
+/// The values of the dimension in a Global / Shortcut Dimension N Code field's slot.
+fn dimension_values(app: &ErpApp, field: &str) -> Option<Lookup> {
+    let n: usize = field
+        .strip_prefix("Shortcut Dimension ")
+        .or_else(|| field.strip_prefix("Global Dimension "))?
+        .strip_suffix(" Code")?
+        .parse()
+        .ok()?;
+    let setup = app.session.db().rows("General Ledger Setup").next()?;
+    let slot = if n <= 2 { format!("Global Dimension {n} Code") } else { format!("Shortcut Dimension {n} Code") };
+    let dim = setup.str(&slot).to_string();
+    if dim.is_empty() {
+        return None;
+    }
+    Some(
+        app.session
+            .db()
+            .rows("Dimension Value")
+            .filter(|v| v.str("Dimension Code") == dim && !v.get("Blocked").as_bool())
+            .map(|v| (v.str("Code").to_string(), v.str("Name").to_string()))
+            .collect(),
+    )
 }
 
 /// (code, description) of the first 500 records of a one-key table.
@@ -463,7 +492,8 @@ fn fasttab(app: &mut ErpApp, ui: &mut Ui, page: &PageDef, table: &TableDef, rec:
     let key = rec.key(table);
     let is_editing = *editing;
     let editable_page = page.editable;
-    let lcy = app.lcy_symbol();
+    let captions: HashMap<String, String> =
+        fields.iter().map(|f| (f.name.clone(), app.field_caption(f, g.caption_of(&f.name).unwrap_or(&f.caption)))).collect();
     ui.columns(ncols, |cols| {
         for (ci, col) in cols.iter_mut().enumerate() {
             let slice = if ci == 0 { fields.get(..half) } else { fields.get(half..) };
@@ -477,7 +507,8 @@ fn fasttab(app: &mut ErpApp, ui: &mut Ui, page: &PageDef, table: &TableDef, rec:
                         ui.end_row();
                     }
                     let text = g.caption_of(&f.name).unwrap_or(&f.caption);
-                    widgets::caption_leader(ui, &widgets::lcy_caption(text, &lcy), &f.tooltip, 170.0);
+                    let shown = captions.get(&f.name).cloned().unwrap_or_else(|| text.to_string());
+                    widgets::caption_leader(ui, &shown, &f.tooltip, 170.0);
                     let can_change = editable_page && f.editable && !f.is_flow() && !table.primary_key.contains(&f.name);
                     let wid = format!("card|{}|{}|{}|{}", table.name, key.display(), g.caption, f.name);
                     let width = value_width;
@@ -824,12 +855,11 @@ pub fn factboxes(app: &ErpApp, ui: &mut Ui, page: &PageDef, rec: Option<&Record>
                 (tt, r)
             }
         };
-        let lcy = app.lcy_symbol();
         let fields: Vec<&erpcraft_engine::meta::FieldDef> = target_table.map(|t| fb.fields.iter().filter_map(|f| t.field(f)).collect()).unwrap_or_default();
         let rows: Vec<(String, String, bool, bool)> = match &target {
             Some(r) if !fields.is_empty() => fields
                 .iter()
-                .map(|f| (widgets::lcy_caption(&f.caption, &lcy), widgets::display_field(r.get(&f.name), f), f.ty.is_numeric(), f.is_flow() && f.drilldown.is_some()))
+                .map(|f| (app.field_caption(f, &f.caption), widgets::display_field(r.get(&f.name), f), f.ty.is_numeric(), f.is_flow() && f.drilldown.is_some()))
                 .collect(),
             _ => vec![("".into(), "(no record selected)".into(), false, false)],
         };

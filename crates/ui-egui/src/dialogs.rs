@@ -21,7 +21,9 @@ pub enum Submit {
     /// Run `command` with `base` params plus the form's fields.
     Command { command: String, base: Json },
     /// `record.new` for `table` with the form's fields as values.
-    NewRecord { table: String },
+    /// `defaults` come from the list's filters (BC fills a new record from the filters it was
+    /// created under).
+    NewRecord { table: String, defaults: Map<String, Json> },
 }
 
 pub struct FormField {
@@ -85,7 +87,13 @@ impl Dialog {
     }
 
     /// "+ New" on an editable list: the list's columns as a form.
-    pub fn new_record(page: &PageDef, table: &TableDef) -> Self {
+    pub fn new_record(page: &PageDef, table: &TableDef, filters: &[(String, String)]) -> Self {
+        // A filter on one plain value (no ranges, alternatives or wildcards) becomes the default.
+        let defaults: Map<String, Json> = filters
+            .iter()
+            .filter(|(_, v)| !v.is_empty() && !v.contains(['.', '|', '<', '>', '*', '&', '@', '\'', '=']))
+            .map(|(f, v)| (f.clone(), json!(v)))
+            .collect();
         let fields = page
             .columns
             .iter()
@@ -96,10 +104,11 @@ impl Dialog {
                     erpcraft_engine::meta::FieldType::Option(o) => o.clone(),
                     _ => Vec::new(),
                 };
-                FormField { name: f.name.clone(), caption: f.caption.clone(), hint: f.ty.name(), value: options.first().cloned().unwrap_or_default(), options }
+                let value = defaults.get(&f.name).and_then(Json::as_str).map(str::to_string).or_else(|| options.first().cloned()).unwrap_or_default();
+                FormField { name: f.name.clone(), caption: f.caption.clone(), hint: f.ty.name(), value, options }
             })
             .collect();
-        Dialog::Form { title: format!("New - {}", page.caption), submit: Submit::NewRecord { table: table.name.clone() }, fields }
+        Dialog::Form { title: format!("New - {}", page.caption), submit: Submit::NewRecord { table: table.name.clone(), defaults }, fields }
     }
 }
 
@@ -232,7 +241,11 @@ pub fn show(app: &mut ErpApp, ctx: &egui::Context) {
                                 p.extend(values);
                                 (command.clone(), Json::Object(p))
                             }
-                            Submit::NewRecord { table } => ("record.new".to_string(), json!({"table": table, "values": values})),
+                            Submit::NewRecord { table, defaults } => {
+                                let mut all = defaults.clone();
+                                all.extend(values);
+                                ("record.new".to_string(), json!({"table": table, "values": all}))
+                            }
                         });
                     }
                 });

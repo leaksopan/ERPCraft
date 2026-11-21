@@ -250,7 +250,8 @@ pub fn post(ctx: &mut Ctx, template: &str, batch: &str) -> Result<Json> {
         if !series.is_empty() && noseries::peek(ctx, &series).ok().as_deref() == Some(doc_no.as_str()) {
             noseries::next(ctx, &series)?;
         }
-        let txn = Txn::new(ctx, &source_code, template, batch);
+        let mut txn = Txn::new(ctx, &source_code, template, batch);
+        txn.dim_set = doc_lines.first().map_or(0, |l| l.get("Dimension Set ID").as_int());
         let mut gl: Vec<GlLine> = Vec::new();
         let mut party_effects: Vec<(&Record, Effect)> = Vec::new();
         let mut fa_specs: Vec<crate::fa::FaEntrySpec> = Vec::new();

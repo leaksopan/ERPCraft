@@ -51,8 +51,8 @@ impl CommandDef {
 }
 
 /// Modules that add commands of their own (each a `static` slice of [`CommandDef`]).
-fn module_commands() -> [&'static [CommandDef]; 5] {
-    [crate::print::COMMANDS, crate::bc::COMMANDS, crate::doc_tools::COMMANDS, crate::item_tools::COMMANDS, crate::navigate::COMMANDS]
+fn module_commands() -> [&'static [CommandDef]; 6] {
+    [crate::print::COMMANDS, crate::bc::COMMANDS, crate::doc_tools::COMMANDS, crate::item_tools::COMMANDS, crate::navigate::COMMANDS, crate::approvals::COMMANDS]
 }
 
 pub fn find(id: &str) -> Option<&'static CommandDef> {

@@ -270,6 +270,7 @@ pub fn post_document(ctx: &mut Ctx, side: &Side, doc_type: &str, no: &str, mode:
     if matches!(doc_type, "Quote" | "Blanket Order") {
         refuse!("A {doc_type} cannot be posted. Convert it to an order first (Make Order).");
     }
+    crate::approvals::check_post(ctx, side, doc_type, no, header.str("Status"))?;
     let credit = matches!(doc_type, "Credit Memo" | "Return Order");
     let is_order = doc_type == "Order";
     let mode = if is_order { mode } else { PostMode::BOTH };

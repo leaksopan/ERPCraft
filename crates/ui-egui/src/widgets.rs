@@ -43,6 +43,9 @@ pub fn glyph(icon: &str) -> &'static str {
         "dimensions" => "▦",
         "comment" => "💬",
         "navigate" => "⌕",
+        "approve" => "✔",
+        "reject" => "✖",
+        "delegate" => "➜",
         // BC gives every action an icon.
         _ => "▸",
     }

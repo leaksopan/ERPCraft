@@ -8,6 +8,23 @@ use super::gen_support::{Nav, Tab, actions, calcs, categories, columns, drilldow
 pub fn extend(m: &mut Metadata) {
     relabel(
         m,
+        "Approval Entry",
+        &[
+            ("Due Date", "Approval Due Date", "", 0),
+        ],
+    );
+    fields(
+        m,
+        "Approval Entry",
+        vec![
+            F::code("Salespers./Purch. Code", 20),
+            F::option("Approval Type", &["Workflow User Group", "Sales Pers./Purchaser", "Approver"]),
+            F::option("Limit Type", &["Approval Limits", "Credit Limits", "Request Limits", "No Limits"]),
+            F::decimal("Available Credit Limit (LCY)").auto_format(1),
+        ],
+    );
+    relabel(
+        m,
         "Bank Account",
         &[
             ("No.", "No.", "Specifies the number of the involved entry or record, according to the specified number series.", 0),
@@ -2530,6 +2547,32 @@ pub fn extend(m: &mut Metadata) {
     );
     relabel(
         m,
+        "User Setup",
+        &[
+            ("E-Mail", "E-Mail", "", 0),
+        ],
+    );
+    fields(
+        m,
+        "User Setup",
+        vec![
+            F::date("Allow Posting From"),
+            F::date("Allow Posting To"),
+            F::boolean("Register Time"),
+            F::date("Allow Deferral Posting From"),
+            F::date("Allow Deferral Posting To"),
+            F::text("Phone No.", 30),
+            F::date("Allow VAT Date From"),
+            F::date("Allow VAT Date To"),
+            F::option("Sales Invoice Posting Policy", &["Allowed", "Prohibited", "Mandatory"]),
+            F::option("Purch. Invoice Posting Policy", &["Allowed", "Prohibited", "Mandatory"]),
+            F::boolean("Time Sheet Admin."),
+            F::code("Sales Resp. Ctr. Filter", 10),
+            F::code("Purchase Resp. Ctr. Filter", 10),
+        ],
+    );
+    relabel(
+        m,
         "VAT Business Posting Group",
         &[
             ("Code", "Code", "Specifies a code for the posting group that determines how to calculate and post VAT for customers and vendors. The number of VAT posting groups that you set up can depend on local legislation and whether you trade both domestically and internationally.", 0),
@@ -2747,6 +2790,7 @@ pub fn extend(m: &mut Metadata) {
             F::boolean("View All Accounts on Lookup").tooltip("Specifies that all possible accounts are shown when you look up from a field. If the check box is not selected, then only accounts related to the involved account category are shown."),
         ],
     );
+    columns(m, "approval-entries", &["Limit Type", "Approval Type", "Sequence No.", "Status", "Sender ID", "Salespers./Purch. Code", "Approver ID", "Currency Code", "Amount (LCY)", "Available Credit Limit (LCY)", "Date-Time Sent for Approval", "Last Date-Time Modified", "Last Modified By User ID", "Due Date"]);
     layout(
         m,
         "bank-account-card",
@@ -3571,6 +3615,7 @@ pub fn extend(m: &mut Metadata) {
             },
         ],
     );
+    columns(m, "requests-to-approve", &["Sender ID", "Due Date", "Status", "Amount", "Amount (LCY)", "Currency Code"]);
     columns(m, "sales-comment-sheet", &["Date", "Comment"]);
     layout(
         m,
@@ -3779,6 +3824,7 @@ pub fn extend(m: &mut Metadata) {
     );
     columns(m, "salespersons", &["Code", "Name", "Commission %", "Phone No."]);
     columns(m, "units-of-measure", &["Code", "Description", "International Standard Code"]);
+    columns(m, "user-setup", &["User ID", "Allow Posting From", "Allow Posting To", "Allow VAT Date From", "Allow VAT Date To", "Allow Deferral Posting From", "Allow Deferral Posting To", "Sales Invoice Posting Policy", "Purch. Invoice Posting Policy", "Register Time", "Salespers./Purch. Code", "Sales Resp. Ctr. Filter", "Purchase Resp. Ctr. Filter", "Time Sheet Admin.", "E-Mail", "Phone No."]);
     columns(m, "users", &["User Name", "Full Name", "State"]);
     columns(m, "vat-bus-posting-groups", &["Code", "Description"]);
     columns(m, "vat-posting-setup", &["VAT Bus. Posting Group", "VAT Prod. Posting Group", "Description", "Blocked", "VAT Identifier", "VAT %", "Allow Non-Deductible VAT", "Non-Deductible VAT %", "VAT Calculation Type", "Unrealized VAT Type", "Adjust for Payment Discount", "Sales VAT Account", "Sales VAT Unreal. Account", "Purchase VAT Account", "Purch. VAT Unreal. Account", "Non-Ded. Purchase VAT Account", "Reverse Chrg. VAT Acc.", "Reverse Chrg. VAT Unreal. Acc.", "VAT Clause Code", "EU Service", "Tax Category"]);
@@ -3832,6 +3878,7 @@ pub fn extend(m: &mut Metadata) {
     columns(m, "vendor-ledger-entries", &["Posting Date", "Document Date", "Document Type", "Document No.", "External Document No.", "Vendor No.", "Vendor Name", "Description", "Global Dimension 1 Code", "Global Dimension 2 Code", "Currency Code", "Payment Method Code", "Payment Reference", "Creditor No.", "Original Amount", "Amount", "Amount (LCY)", "Debit Amount", "Debit Amount (LCY)", "Credit Amount", "Credit Amount (LCY)", "Remaining Amount", "Remaining Amt. (LCY)", "Due Date", "Pmt. Discount Date", "Pmt. Disc. Tolerance Date", "Original Pmt. Disc. Possible", "Remaining Pmt. Disc. Possible", "Max. Payment Tolerance", "Open", "On Hold", "Entry No.", "G/L Register No.", "Transaction No.", "Exported to Payment File", "Recipient Bank Account", "Shortcut Dimension 3 Code", "Shortcut Dimension 4 Code", "Shortcut Dimension 5 Code", "Shortcut Dimension 6 Code", "Shortcut Dimension 7 Code", "Shortcut Dimension 8 Code", "Remit-to Code"]);
     columns(m, "vendor-list", &["No.", "Name", "Responsibility Center", "Location Code", "Phone No.", "Contact", "Allow Multiple Posting Groups", "Search Name", "Balance (LCY)", "Balance Due (LCY)", "Payments (LCY)"]);
     columns(m, "vendor-posting-groups", &["Code", "Description", "View All Accounts on Lookup", "Payables Account", "Service Charge Acc.", "Payment Disc. Debit Acc.", "Payment Disc. Credit Acc.", "Invoice Rounding Account", "Debit Curr. Appln. Rndg. Acc.", "Credit Curr. Appln. Rndg. Acc.", "Debit Rounding Account", "Credit Rounding Account", "Payment Tolerance Debit Acc.", "Payment Tolerance Credit Acc."]);
+    columns(m, "workflows", &["Description", "Enabled"]);
     actions(
         m,
         "bank-account-card",
@@ -4114,6 +4161,7 @@ pub fn extend(m: &mut Metadata) {
         "general-ledger-setup",
         &[
             Nav { caption: "Dimensions", page: "dimensions", link: &[], shortcut: "" },
+            Nav { caption: "User Setup", page: "user-setup", link: &[], shortcut: "" },
             Nav { caption: "General Posting Setup", page: "general-posting-setup", link: &[], shortcut: "" },
             Nav { caption: "Gen. Business Posting Groups", page: "gen-bus-posting-groups", link: &[], shortcut: "" },
             Nav { caption: "Gen. Product Posting Groups", page: "gen-prod-posting-groups", link: &[], shortcut: "" },
@@ -4129,7 +4177,7 @@ pub fn extend(m: &mut Metadata) {
         "general-ledger-setup",
         &[
             ("Posting", &["General Posting Setup", "Gen. Business Posting Groups", "Gen. Product Posting Groups"]),
-            ("General", &["Dimensions"]),
+            ("General", &["Dimensions", "User Setup"]),
             ("VAT", &["VAT Posting Setup", "VAT Business Posting Groups", "VAT Product Posting Groups"]),
             ("Bank", &["Bank Account Posting Groups"]),
             ("Journal Templates", &["General Journal Templates"]),
@@ -4458,7 +4506,8 @@ pub fn extend(m: &mut Metadata) {
         &[
             ("Process", &["P&ost", "Preview Posting", "Post and New", "Re&lease", "Re&open"]),
             ("Prepare", &["Copy Document"]),
-            ("Credit Memo", &["Statistics", "Dimensions", "Co&mments", "Vendor"]),
+            ("Request Approval", &["Send A&pproval Request", "Cancel Approval Re&quest"]),
+            ("Credit Memo", &["Statistics", "Dimensions", "Approvals", "Co&mments", "Vendor"]),
         ],
     );
     actions(
@@ -4483,7 +4532,8 @@ pub fn extend(m: &mut Metadata) {
         &[
             ("Process", &["P&ost", "Preview Posting", "Post and New", "Re&lease", "Re&open"]),
             ("Prepare", &["Copy Document"]),
-            ("Invoice", &["Dimensions", "Statistics", "Co&mments", "Vendor"]),
+            ("Request Approval", &["Send A&pproval Request", "Cancel Approval Re&quest"]),
+            ("Invoice", &["Dimensions", "Statistics", "Co&mments", "Approvals", "Vendor"]),
         ],
     );
     actions(
@@ -4516,7 +4566,8 @@ pub fn extend(m: &mut Metadata) {
             ("Process", &["P&ost", "Preview Posting", "Post and New", "Re&lease", "Re&open"]),
             ("Prepare", &["Copy Document"]),
             ("Print/Send", &["&Print"]),
-            ("Order", &["Dimensions", "Statistics", "Co&mments", "Vendor", "Receipts"]),
+            ("Request Approval", &["Send A&pproval Request", "Cancel Approval Re&quest"]),
+            ("Order", &["Dimensions", "Statistics", "Co&mments", "Approvals", "Vendor", "Receipts"]),
         ],
     );
     actions(
@@ -4544,7 +4595,8 @@ pub fn extend(m: &mut Metadata) {
             ("Process", &["Make &Order", "Re&lease", "Re&open"]),
             ("Prepare", &["Copy Document"]),
             ("Print/Send", &["&Print"]),
-            ("Quote", &["Dimensions", "Statistics", "Co&mments", "Vendor"]),
+            ("Request Approval", &["Send A&pproval Request", "Cancel Approval Re&quest"]),
+            ("Quote", &["Dimensions", "Statistics", "Co&mments", "Approvals", "Vendor"]),
         ],
     );
     actions(
@@ -4580,11 +4632,19 @@ pub fn extend(m: &mut Metadata) {
     );
     categories(
         m,
+        "requests-to-approve",
+        &[
+            ("Process", &["Approve", "Reject", "Delegate"]),
+        ],
+    );
+    categories(
+        m,
         "sales-credit-memo",
         &[
             ("Process", &["P&ost", "Preview Posting", "Re&lease", "Re&open"]),
             ("Prepare", &["Copy Document"]),
-            ("Credit Memo", &["Statistics", "Dimensions", "Co&mments", "Customer"]),
+            ("Request Approval", &["Send A&pproval Request", "Cancel Approval Re&quest"]),
+            ("Credit Memo", &["Statistics", "Dimensions", "Approvals", "Co&mments", "Customer"]),
         ],
     );
     actions(
@@ -4610,7 +4670,8 @@ pub fn extend(m: &mut Metadata) {
             ("Process", &["P&ost", "Preview Posting", "Post and New", "Re&lease", "Re&open"]),
             ("Prepare", &["Copy Document"]),
             ("Print/Send", &["Pro Forma Invoice"]),
-            ("Invoice", &["Dimensions", "Statistics", "Co&mments", "Customer"]),
+            ("Request Approval", &["Send A&pproval Request", "Cancel Approval Re&quest"]),
+            ("Invoice", &["Dimensions", "Statistics", "Co&mments", "Approvals", "Customer"]),
         ],
     );
     actions(
@@ -4644,7 +4705,8 @@ pub fn extend(m: &mut Metadata) {
             ("Process", &["P&ost", "Preview Posting", "Post and New", "Re&lease", "Re&open"]),
             ("Prepare", &["Copy Document"]),
             ("Print/Send", &["Print Confirmation", "Work Order", "Pro Forma Invoice"]),
-            ("Order", &["Dimensions", "Statistics", "Co&mments", "Customer", "S&hipments"]),
+            ("Request Approval", &["Send A&pproval Request", "Cancel Approval Re&quest"]),
+            ("Order", &["Dimensions", "Statistics", "Co&mments", "Approvals", "Customer", "S&hipments"]),
         ],
     );
     actions(
@@ -4672,7 +4734,8 @@ pub fn extend(m: &mut Metadata) {
             ("Process", &["Make &Order", "Re&lease", "Re&open"]),
             ("Prepare", &["Copy Document"]),
             ("Print/Send", &["&Print"]),
-            ("Quote", &["Dimensions", "Statistics", "Co&mments", "Customer"]),
+            ("Request Approval", &["Send A&pproval Request", "Cancel Approval Re&quest"]),
+            ("Quote", &["Dimensions", "Statistics", "Co&mments", "Approvals", "Customer"]),
         ],
     );
     actions(

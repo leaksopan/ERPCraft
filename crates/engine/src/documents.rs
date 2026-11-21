@@ -85,6 +85,14 @@ pub fn add_line(ctx: &mut Ctx, side: &Side, doc_type: &str, doc_no: &str, spec: 
 }
 
 pub fn release(ctx: &mut Ctx, side: &Side, doc_type: &str, no: &str) -> Result<Json> {
+    if ctx.get(side.header, &header_key(doc_type, no))?.str("Status") != "Released" {
+        crate::approvals::check_release(ctx, side, doc_type)?;
+    }
+    release_approved(ctx, side, doc_type, no)
+}
+
+/// Release without the approval check: the last approval of a request releases this way.
+pub fn release_approved(ctx: &mut Ctx, side: &Side, doc_type: &str, no: &str) -> Result<Json> {
     let ht = ctx.table(side.header)?;
     let mut h = ctx.get(side.header, &header_key(doc_type, no))?;
     if h.str("Status") == "Released" {

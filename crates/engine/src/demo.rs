@@ -374,7 +374,16 @@ pub fn master_data(ctx: &mut Ctx) -> Result<()> {
 /// Department and area as the global dimensions, project as shortcut dimension 3, and default
 /// dimensions on customers, vendors and items, set the way a user would: through the card's
 /// Global Dimension fields, which BC turns into default dimensions.
+/// BC's approval workflow templates, disabled until someone enables one (as in a new company).
+fn demo_workflows(ctx: &mut Ctx) -> Result<()> {
+    for (_, _, code, description) in crate::schema::approvals::WORKFLOWS {
+        raw(ctx, "Workflow", json!({"Code": code, "Description": description, "Enabled": false, "Category": "APPROVAL"}))?;
+    }
+    Ok(())
+}
+
 fn demo_dimensions(ctx: &mut Ctx) -> Result<()> {
+    demo_workflows(ctx)?;
     let dims: &[(&str, &str, &str, &[(&str, &str)])] = &[
         ("DEPARTMENT", "Department", "Department Code", &[("ADM", "Administration"), ("SALES", "Sales"), ("SERVICE", "Workshop Service")]),
         ("AREA", "Area", "Area Code", &[("JKT", "Jakarta"), ("BDG", "Bandung"), ("SBY", "Surabaya"), ("YOG", "Yogyakarta")]),

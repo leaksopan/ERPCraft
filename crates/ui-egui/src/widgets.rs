@@ -433,3 +433,14 @@ pub fn caption_leader(ui: &mut Ui, text: &str, tooltip: &str, width: f32) -> egu
 pub fn lcy_caption(caption: &str, symbol: &str) -> String {
     if symbol.is_empty() { caption.to_string() } else { caption.replace("(LCY)", &format!("({symbol})")) }
 }
+
+/// BC's style for a document Status (the page's StatusStyleTxt): Open is Favorable (green, bold),
+/// Released is Strong, pending states are Ambiguous (amber).
+pub fn status_style(status: &str) -> (Color32, bool) {
+    match status {
+        "Open" => (Color32::from_rgb(0x10, 0x7C, 0x10), true),
+        "Released" => (TOKENS.text, true),
+        s if s.starts_with("Pending") => (Color32::from_rgb(0x8A, 0x67, 0x00), true),
+        _ => (TOKENS.text, false),
+    }
+}

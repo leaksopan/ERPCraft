@@ -144,12 +144,6 @@ pub fn show(app: &mut ErpApp, ui: &mut Ui, idx: usize, mut state: CardState, lay
             ui.horizontal(|ui| {
                 ui.add_space(40.0);
                 ui.label(RichText::new(&title).size(22.0).color(TOKENS.text));
-                if let Some(status) = table.field("Status").map(|_| rec.str("Status").to_string()) {
-                    let fill = if status == "Open" { TOKENS.accent_soft } else { egui::Color32::from_rgb(0xFF, 0xF4, 0xCE) };
-                    egui::Frame::new().fill(fill).corner_radius(10).inner_margin(egui::Margin::symmetric(10, 2)).show(ui, |ui| {
-                        ui.label(RichText::new(status).size(theme::SMALL));
-                    });
-                }
             });
             ui.add_space(2.0);
             // Main navigation (action categories) and the secondary row (their actions).
@@ -386,14 +380,15 @@ pub fn table_values(app: &ErpApp, table: &str) -> Option<Lookup> {
     )
 }
 
-/// Where the second column starts: at the sub-group boundary nearest the middle (BC flows
-/// sub-groups into columns), or halfway when the tab has no sub-groups.
+/// Where the second column starts: halfway through the shown fields, moved to a sub-group
+/// boundary when one is next to the middle (BC balances the columns and keeps sub-groups whole
+/// when that costs at most a field).
 fn column_break(g: &GroupDef, fields: &[&FieldDef]) -> usize {
     let half = fields.len().div_ceil(2);
     fields
         .iter()
         .enumerate()
-        .filter(|(i, f)| *i > 0 && g.breaks.contains(&f.name))
+        .filter(|(i, f)| *i > 0 && g.breaks.contains(&f.name) && i.abs_diff(half) <= 1)
         .map(|(i, _)| i)
         .min_by_key(|i| i.abs_diff(half))
         .unwrap_or(half)
@@ -486,7 +481,15 @@ fn fasttab(app: &mut ErpApp, ui: &mut Ui, page: &PageDef, table: &TableDef, rec:
                     let can_change = editable_page && f.editable && !f.is_flow() && !table.primary_key.contains(&f.name);
                     let wid = format!("card|{}|{}|{}|{}", table.name, key.display(), g.caption, f.name);
                     let width = value_width;
-                    if f.is_flow() && f.drilldown.is_some() {
+                    if f.name == "Status" && !(is_editing && can_change) {
+                        let v = rec.str("Status").to_string();
+                        let (color, strong) = widgets::status_style(&v);
+                        ui.allocate_ui_with_layout(vec2(width, 24.0), Layout::left_to_right(Align::Center), |ui| {
+                            ui.add_space(8.0);
+                            let t = RichText::new(v).color(color);
+                            ui.label(if strong { t.strong() } else { t });
+                        });
+                    } else if f.is_flow() && f.drilldown.is_some() {
                         let text = widgets::display_field(rec.get(&f.name), f);
                         ui.allocate_ui_with_layout(vec2(width, 24.0), Layout::right_to_left(Align::Center), |ui| {
                             ui.add_space(8.0);
@@ -530,11 +533,19 @@ fn lines_part(app: &mut ErpApp, ui: &mut Ui, host: &PageDef, header: &Record, pa
     let lines = app.session.page_records(page, &filters, "");
     let editable = page.editable && host.editable && state.editing;
     ui.add_space(14.0);
+    // BC's part header: the caption and a "Manage" tab, its actions on the row below; New Line
+    // and Delete Line are greyed out until the document is in edit mode.
     ui.horizontal(|ui| {
         widgets::flat(ui);
         ui.label(RichText::new(&part.caption).font(theme::bold(theme::SUBTITLE)).color(TOKENS.text));
-        ui.add_space(12.0);
-        if editable {
+        ui.add_space(16.0);
+        let r = ui.label(RichText::new("Manage").color(TOKENS.accent));
+        ui.painter().line_segment([r.rect.left_bottom() + vec2(0.0, 2.0), r.rect.right_bottom() + vec2(0.0, 2.0)], egui::Stroke::new(2.0, TOKENS.accent));
+    });
+    ui.add_space(4.0);
+    ui.horizontal(|ui| {
+        widgets::flat(ui);
+        ui.add_enabled_ui(editable, |ui| {
             if widgets::action_button(ui, "+", "New Line").clicked() {
                 let mut values = serde_json::Map::new();
                 values.insert("Type".into(), json!("Item"));
@@ -559,16 +570,21 @@ fn lines_part(app: &mut ErpApp, ui: &mut Ui, host: &PageDef, header: &Record, pa
                     app.error("Select a line to delete.");
                 }
             }
-        }
+        });
     });
-    widgets::divider(ui);
     let cols: Vec<&FieldDef> = page.columns.iter().filter_map(|c| lt.field(c)).collect();
     let items = table_values(app, "Item").unwrap_or_default();
     let accounts = table_values(app, "G/L Account").unwrap_or_default();
     let mut commit: Option<(Key, String, Json)> = None;
-    let height = (lines.len() as f32 * 32.0 + 34.0).clamp(80.0, 420.0);
+    let height = (lines.len() as f32 * 34.0 + 72.0).clamp(110.0, 460.0);
+    let mut row_tops: Vec<f32> = Vec::new();
+    let mut span = (f32::MAX, f32::MIN);
+    let mut body_clip = egui::Rect::NOTHING;
     egui::ScrollArea::horizontal().id_salt(("lines_scroll", &part.page)).show(ui, |ui| {
         ui.set_height(height);
+        // The same grid as list pages: no column lines, one line between rows.
+        ui.spacing_mut().item_spacing.y = 0.0;
+        ui.visuals_mut().widgets.noninteractive.bg_stroke = egui::Stroke::NONE;
         let mut b = TableBuilder::new(ui)
             .id_salt(("lines", &part.page, header.str("No.")))
             .resizable(true)
@@ -587,21 +603,31 @@ fn lines_part(app: &mut ErpApp, ui: &mut Ui, host: &PageDef, header: &Record, pa
             };
             b = b.column(Column::initial(w).at_least(50.0).clip(true));
         }
-        b.header(26.0, |mut h| {
+        b.header(58.0, |mut h| {
             for f in &cols {
                 h.col(|ui| {
-                    let layout = if f.ty.is_numeric() { Layout::right_to_left(Align::Center) } else { Layout::left_to_right(Align::Center) };
-                    ui.with_layout(layout, |ui| ui.label(RichText::new(&f.caption).size(theme::SMALL).color(TOKENS.text_dim).strong()));
+                    let layout = if f.ty.is_numeric() { Layout::bottom_up(Align::Max) } else { Layout::bottom_up(Align::Min) };
+                    ui.with_layout(layout, |ui| {
+                        ui.add_space(8.0);
+                        ui.add(egui::Label::new(RichText::new(&f.caption).size(theme::SMALL).color(TOKENS.grid_header)).wrap());
+                    });
                 });
             }
         })
         .body(|body| {
-            body.rows(32.0, lines.len(), |mut row| {
+            body.rows(34.0, lines.len(), |mut row| {
                 let Some(l) = lines.get(row.index()) else { return };
                 let key = l.key(lt);
                 row.set_selected(state.selected_line.as_ref() == Some(&key));
-                for f in &cols {
+                for (i, f) in cols.iter().enumerate() {
                     row.col(|ui| {
+                        let cell = ui.max_rect();
+                        span.0 = span.0.min(cell.left());
+                        span.1 = span.1.max(cell.right());
+                        body_clip = body_clip.union(ui.clip_rect());
+                        if i == 0 {
+                            row_tops.push(cell.top());
+                        }
                         let wid = format!("line|{}|{}|{}", lt.name, key.display(), f.name);
                         let can_edit = editable && f.editable && !lt.primary_key.contains(&f.name);
                         let lookup = if f.name == "No." {
@@ -625,6 +651,12 @@ fn lines_part(app: &mut ErpApp, ui: &mut Ui, host: &PageDef, header: &Record, pa
             });
         });
     });
+    if span.0 < span.1 {
+        let painter = ui.painter().with_clip_rect(body_clip);
+        for y in row_tops.iter().copied().chain(row_tops.last().map(|y| y + 34.0)) {
+            painter.hline(egui::Rangef::new(span.0, span.1), y, egui::Stroke::new(1.0, TOKENS.grid_line));
+        }
+    }
     if lines.is_empty() {
         ui.label(RichText::new("No lines yet. Use + New Line.").italics().color(TOKENS.text_dim));
     }

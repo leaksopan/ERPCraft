@@ -42,7 +42,6 @@ pub fn extend(m: &mut Metadata) {
             F::decimal("Balance (LCY)").calc(CalcFormula::new(CalcFunc::Sum, "Bank Account Ledger Entry", "Amount (LCY)", &[("Bank Account No.", "No.")], &[])).auto_format(1),
             F::boolean("Use as Default for Currency").tooltip("Specifies whether this is the default company account for payments in sales and service documents in the currency specified for this account. Each currency can have only one default bank account."),
             F::text("Fax No.", 30).tooltip("Specifies the fax number associated with the address."),
-            F::text("County", 30).tooltip("Specifies the state, province or county as a part of the address."),
             F::code("Last Check No.", 20).tooltip("Specifies the check number of the last check issued from the bank account."),
             F::decimal("Balance Last Statement").auto_format(1).tooltip("Specifies the balance amount of the last statement reconciliation on the bank account."),
             F::text("E-Mail", 80).caption("Email").tooltip("Specifies the email address associated with the bank account."),
@@ -143,7 +142,6 @@ pub fn extend(m: &mut Metadata) {
             F::code("Location Code", 10).tooltip("Specifies the location code that corresponds to the company's ship-to address."),
             F::text("County", 30).tooltip("Specifies the state, province or county of the company's address."),
             F::code("Ship-to Post Code", 20).tooltip("Specifies the postal code of the address that the items are shipped to."),
-            F::text("Ship-to County", 30).tooltip("Specifies the county of the company's shipping address."),
             F::code("Ship-to Country/Region Code", 10).tooltip("Specifies the country/region code of the address that the items are shipped to."),
             F::text("Industrial Classification", 30).tooltip("Specifies the company's industrial classification code."),
             F::option("System Indicator", &["None", "Custom"]).tooltip("Specifies how you want to use the Company Badge when you are working with different companies of Business Central."),
@@ -813,7 +811,6 @@ pub fn extend(m: &mut Metadata) {
             F::option("Bank Payment Type", &["", "Computer Check", "Manual Check", "Electronic Payment", "Electronic Payment-IAT"]).tooltip("Specifies the code for the payment type to be used for the entry on the journal line."),
             F::boolean("Correction").tooltip("Specifies the entry as a corrective entry. You can use the field if you need to post a corrective entry to an account."),
             F::date("VAT Reporting Date").caption("VAT Date").tooltip("Specifies the VAT date for the entry."),
-            F::option("Job Queue Status", &["", "Scheduled for Posting", "Error", "Posting"]).read_only().tooltip("Specifies the status of a job queue entry or task that handles the posting of general journals."),
             F::code("Creditor No.", 20).tooltip("Specifies the vendor who sent the purchase invoice."),
             F::code("Payment Reference", 50).tooltip("Specifies the payment of the purchase invoice."),
             F::code("Payment Method Code", 10).tooltip("Specifies how to make payment, such as with bank transfer, cash, or check."),
@@ -1359,18 +1356,14 @@ pub fn extend(m: &mut Metadata) {
             F::text("Buy-from Address 2", 50).tooltip("Specifies additional address information."),
             F::text("Buy-from Contact", 100).tooltip("Specifies the name of the contact person at the vendor who delivered the items."),
             F::code("Pay-to Post Code", 20).tooltip("Specifies the post code of the vendor that you received the invoice from."),
-            F::text("Pay-to County", 30).tooltip("Specifies the state, province or county as a part of the address."),
             F::code("Pay-to Country/Region Code", 10).tooltip("Specifies the country or region of the ship-to address."),
             F::code("Buy-from Post Code", 20).tooltip("Specifies the post code of the vendor who delivered the items."),
-            F::text("Buy-from County", 30).tooltip("Specifies the state, province or county as a part of the address."),
             F::code("Buy-from Country/Region Code", 10).tooltip("Specifies the country or region of the ship-to address."),
             F::code("Ship-to Post Code", 20).tooltip("Specifies the postal code of the address that the items are shipped to."),
-            F::text("Ship-to County", 30).tooltip("Specifies the state, province or county as a part of the address."),
             F::code("Ship-to Country/Region Code", 10).tooltip("Specifies the country or region of the ship-to address."),
             F::code("Order Address Code", 10).tooltip("Specifies the order address of the related vendor."),
             F::boolean("Correction").tooltip("Specifies the entry was posted as a corrective entry."),
             F::code("Spend Request No.", 20).tooltip("Specifies the spend request that this purchase document relates to."),
-            F::date("VAT Reporting Date").caption("VAT Date").read_only().tooltip("Specifies the VAT date on the invoice."),
             F::text("Ship-to Phone No.", 30).tooltip("Specifies the telephone number of the company's shipping address."),
             F::code("Buy-from Contact No.", 20).tooltip("Specifies the number of the contact who you sent the purchase credit memo to."),
             F::code("Pay-to Contact No.", 20).tooltip("Specifies the number of the contact at the vendor who handles the credit memo."),
@@ -1462,13 +1455,10 @@ pub fn extend(m: &mut Metadata) {
             F::text("Buy-from Address 2", 50).tooltip("Specifies additional address information."),
             F::text("Buy-from Contact", 100).tooltip("Specifies the name of the contact person at the vendor who delivered the items."),
             F::code("Pay-to Post Code", 20).tooltip("Specifies the post code of the vendor that you received the invoice from."),
-            F::text("Pay-to County", 30).tooltip("Specifies the state, province or county as a part of the address."),
             F::code("Pay-to Country/Region Code", 10).tooltip("Specifies the country or region of the ship-to address."),
             F::code("Buy-from Post Code", 20).tooltip("Specifies the post code of the vendor who delivered the items."),
-            F::text("Buy-from County", 30).tooltip("Specifies the state, province or county as a part of the address."),
             F::code("Buy-from Country/Region Code", 10).tooltip("Specifies the country or region of the ship-to address."),
             F::code("Ship-to Post Code", 20).tooltip("Specifies the postal code of the address that the items are shipped to."),
-            F::text("Ship-to County", 30).tooltip("Specifies the state, province or county as a part of the address."),
             F::code("Ship-to Country/Region Code", 10).tooltip("Specifies the country or region of the ship-to address."),
             F::code("Order Address Code", 10).tooltip("Specifies the order address of the related vendor."),
             F::code("Payment Method Code", 10).tooltip("Specifies how to make payment, such as with bank transfer, cash, or check."),
@@ -1478,7 +1468,6 @@ pub fn extend(m: &mut Metadata) {
             F::code("Quote No.", 20).read_only().tooltip("Specifies the number of the purchase quote document if a quote was used to start the purchase process."),
             F::code("Creditor No.", 20).tooltip("Specifies the number of the vendor."),
             F::code("Payment Reference", 50).tooltip("Specifies the payment of the purchase invoice."),
-            F::date("VAT Reporting Date").caption("VAT Date").read_only().tooltip("Specifies the VAT date on the invoice."),
             F::text("Ship-to Phone No.", 30).tooltip("Specifies the telephone number of the company's shipping address."),
             F::code("Remit-to Code", 20).read_only().tooltip("Specifies the code for the vendor's remit address for this invoice."),
             F::code("Buy-from Contact No.", 20).tooltip("Specifies the number of the contact you bought the items from."),
@@ -1564,13 +1553,10 @@ pub fn extend(m: &mut Metadata) {
             F::text("Buy-from City", 30).tooltip("Specifies the city of the vendor who delivered the items."),
             F::text("Buy-from Contact", 100).tooltip("Specifies the name of the contact person at the vendor who delivered the items."),
             F::code("Pay-to Post Code", 20).tooltip("Specifies the post code of the vendor that you received the invoice from."),
-            F::text("Pay-to County", 30).tooltip("Specifies the state, province or county related to the posted purchase order."),
             F::code("Pay-to Country/Region Code", 10).tooltip("Specifies the country or region of the vendor on the purchase document."),
             F::code("Buy-from Post Code", 20).tooltip("Specifies the post code of the vendor who delivered the items."),
-            F::text("Buy-from County", 30).tooltip("Specifies the state, province or county related to the posted purchase order."),
             F::code("Buy-from Country/Region Code", 10).tooltip("Specifies the country or region of the address."),
             F::code("Ship-to Post Code", 20).tooltip("Specifies the post code that items on the purchase order were shipped to, as a drop shipment."),
-            F::text("Ship-to County", 30).tooltip("Specifies the state, province or county related to the posted purchase order."),
             F::code("Ship-to Country/Region Code", 10).tooltip("Specifies the country or region of the ship-to address."),
             F::code("Order Address Code", 10).tooltip("Specifies the order address of the related vendor."),
             F::code("Quote No.", 20).read_only().tooltip("Specifies the quote number for the posted purchase receipt."),
@@ -1679,11 +1665,8 @@ pub fn extend(m: &mut Metadata) {
             F::code("Transaction Type", 10).tooltip("Specifies the type of transaction that the document represents, for the purpose of reporting to INTRASTAT."),
             F::code("Transport Method", 10).tooltip("Specifies the transport method, for the purpose of reporting to INTRASTAT."),
             F::code("Pay-to Post Code", 20).tooltip("Specifies the post code of the vendor that you received the invoice from."),
-            F::text("Pay-to County", 30).tooltip("Specifies the state, province or county of the address."),
             F::code("Pay-to Country/Region Code", 10).tooltip("Specifies the country/region code of the address."),
-            F::text("Buy-from County", 30).tooltip("Specifies the state, province or county of the address."),
             F::code("Ship-to Post Code", 20).tooltip("Specifies the postal code of the address that the items are shipped to."),
-            F::text("Ship-to County", 30).tooltip("Specifies the state, province or county of the address."),
             F::code("Ship-to Country/Region Code", 10).tooltip("Specifies the country/region code of the address that the items are shipped to."),
             F::code("Order Address Code", 10).tooltip("Specifies the order address of the related vendor."),
             F::code("Entry Point", 10).tooltip("Specifies the code of the port of entry where the items pass into your country/region, for reporting to Intrastat."),
@@ -1705,7 +1688,6 @@ pub fn extend(m: &mut Metadata) {
             F::code("Payment Reference", 50).tooltip("Specifies the payment of the purchase invoice."),
             F::date("Invoice Received Date").tooltip("Specifies the date when the related document was received."),
             F::code("Journal Templ. Name", 10).caption("Journal Template Name").tooltip("Specifies the name of the journal template in which the purchase header is to be posted."),
-            F::date("VAT Reporting Date").caption("VAT Date").read_only().tooltip("Specifies the date used to include entries on VAT reports in a VAT period. This is either the date that the document was created or posted, depending on your setting on the General Ledger Setup page."),
             F::text("Ship-to Phone No.", 30).tooltip("Specifies the telephone number of the company's shipping address."),
             F::code("Remit-to Code", 20).tooltip("Specifies the code for the vendor's remit address for this invoice."),
             F::code("Campaign No.", 20).tooltip("Specifies the campaign number the document is linked to."),
@@ -1925,8 +1907,6 @@ pub fn extend(m: &mut Metadata) {
             F::code("Fin. Charge Jnl. Batch Name", 10).caption("Finance Charge Journal Batch Name").tooltip("Specifies which general journal batch to use for finance charges."),
             F::code("Canceled Issued Reminder Nos.", 20).tooltip("Specifies the code for the number series that will be used to assign numbers to canceled issued reminders."),
             F::code("Canc. Iss. Fin. Ch. Mem. Nos.", 20).caption("Canceled Issued Fin. Charge Memo Nos.").tooltip("Specifies the code for the number series that will be used to assign numbers to canceled issued finance charge memos."),
-            F::option("Write-in Product Type", &["Item", "Resource"]).tooltip("Specifies the sales line type that will be used for write-in products in Dynamics 365 Sales."),
-            F::code("Write-in Product No.", 20).tooltip("Specifies the number of the item or resource depending on the write-in product type that will be used for Dynamics 365 Sales."),
             F::code("Posted Return Receipt Nos.", 20).tooltip("Specifies the code for the number series that will be used to assign numbers to posted return receipts."),
             F::boolean("Copy Cmts Ret.Ord. to Ret.Rcpt").tooltip("Specifies that comments are copied from the sales return order to the posted return receipt."),
             F::boolean("Copy Cmts Ret.Ord. to Cr. Memo").tooltip("Specifies whether to copy comments from sales return orders to sales credit memos."),
@@ -1938,7 +1918,6 @@ pub fn extend(m: &mut Metadata) {
             F::boolean("Use Customized Lookup").caption("Use Your Custom Lookup").tooltip("Specifies whether the Assign-to Parent No., Assign-to No., and Product No. fields on price list pages use standard lookups to find records. If you have customized these fields and prefer your implementation, turn on this toggle."),
             F::code("Customer Group Dimension Code", 20).tooltip("Specifies the dimension code for customer groups in your analysis report."),
             F::code("Salesperson Dimension Code", 20).tooltip("Specifies the dimension code for salespeople in your analysis report"),
-            F::code("Freight G/L Acc. No.", 20).caption("Freight G/L Account No.").relation("G/L Account").tooltip("Specifies the general ledger account that must be used to handle freight charges from Dynamics 365 Sales."),
             F::boolean("Link Doc. Date To Posting Date").caption("Link Doc. Date to Posting Date").tooltip("Specifies whether the document date changes when the posting date is modified."),
             F::boolean("Posting Date Check on Posting").tooltip("Specifies if you want the program to warn you when you post a sales document with a posting date that is different from the Work Date."),
         ],
@@ -1993,13 +1972,10 @@ pub fn extend(m: &mut Metadata) {
             F::text("Sell-to Address 2", 50).tooltip("Specifies additional address information."),
             F::text("Sell-to Contact", 100).tooltip("Specifies the name of the contact person at the customer's main address."),
             F::code("Bill-to Post Code", 20).tooltip("Specifies the postal code of the customer's billing address."),
-            F::text("Bill-to County", 30).tooltip("Specifies the state, province or county as a part of the address."),
             F::code("Bill-to Country/Region Code", 10).tooltip("Specifies the country or region of the address."),
             F::code("Sell-to Post Code", 20).tooltip("Specifies the postal code of the customer's main address."),
-            F::text("Sell-to County", 30).tooltip("Specifies the state, province or county as a part of the address."),
             F::code("Sell-to Country/Region Code", 10).tooltip("Specifies the country or region of the address."),
             F::code("Ship-to Post Code", 20).tooltip("Specifies the postal code of the address that the items are shipped to."),
-            F::text("Ship-to County", 30).tooltip("Specifies the state, province or county as a part of the address."),
             F::code("Ship-to Country/Region Code", 10).tooltip("Specifies the country or region of the address."),
             F::boolean("Correction").tooltip("Specifies the entry was posted as a corrective entry."),
             F::code("Payment Method Code", 10).tooltip("Specifies the customer's method of payment. The program has copied the code from the Payment Method Code field on the sales header."),
@@ -2008,7 +1984,6 @@ pub fn extend(m: &mut Metadata) {
             F::code("Tax Area Code", 20).tooltip("Specifies the tax area that is used to calculate and post sales tax."),
             F::boolean("Tax Liable").tooltip("Specifies if the customer or vendor is liable for sales tax."),
             F::code("Company Bank Account Code", 20).tooltip("Specifies the bank account to use for bank information when the document is printed."),
-            F::date("VAT Reporting Date").caption("VAT Date").read_only().tooltip("Specifies the VAT date on the invoice."),
             F::text("Ship-to Phone No.", 30).tooltip("Specifies the telephone number of the company's shipping address."),
             F::option("Document Exchange Status", &["Not Sent", "Sent to Document Exchange Service", "Delivered to Recipient", "Delivery Failed", "Pending Connection to Recipient"]).tooltip("Specifies the status of the document if you are using a document exchange service to send it as an electronic document. The status values are reported by the document exchange service."),
             F::code("Sell-to Contact No.", 20).tooltip("Specifies the number of the contact at the customer who handles the credit memo."),
@@ -2121,11 +2096,8 @@ pub fn extend(m: &mut Metadata) {
             F::code("Transport Method", 10).tooltip("Specifies the transport method, for the purpose of reporting to INTRASTAT."),
             F::code("VAT Country/Region Code", 10).tooltip("Specifies the country or region code for the VAT."),
             F::code("Bill-to Post Code", 20).tooltip("Specifies the postal code of the customer's billing address."),
-            F::text("Bill-to County", 30).tooltip("Specifies the state, province or county of the address."),
             F::code("Bill-to Country/Region Code", 10).tooltip("Specifies the country/region code of the customer's billing address."),
-            F::text("Sell-to County", 30).tooltip("Specifies the state, province or county of the address."),
             F::code("Ship-to Post Code", 20).tooltip("Specifies the postal code of the address that the items are shipped to."),
-            F::text("Ship-to County", 30).tooltip("Specifies the state, province or county of the address."),
             F::code("Ship-to Country/Region Code", 10).tooltip("Specifies the country/region code of the address that the items are shipped to."),
             F::code("Exit Point", 10).tooltip("Specifies the point of exit through which you ship the items out of your country/region, for reporting to Intrastat."),
             F::boolean("Correction").tooltip("Specifies the entry as a corrective entry. You can use the field if you need to post a corrective entry to a customer account. If you place a check mark in this field when posting a corrective entry, the system will post a negative debit instead of a credit or a negative credit instead of a debit. Correction flag does not affect how inventory reconciled with general ledger."),
@@ -2147,8 +2119,6 @@ pub fn extend(m: &mut Metadata) {
             F::date("Quote Accepted Date").read_only().tooltip("Specifies when the quote was accepted by the customer."),
             F::option("Job Queue Status", &["", "Scheduled for Posting", "Error", "Posting"]).read_only().tooltip("Specifies the status of a job queue entry or task that handles the posting of sales orders."),
             F::code("Company Bank Account Code", 20).tooltip("Specifies the bank account to use for bank information when the document is printed."),
-            F::code("Journal Templ. Name", 10).caption("Journal Template Name").tooltip("Specifies the name of the journal template in which the sales header is to be posted."),
-            F::date("VAT Reporting Date").caption("VAT Date").read_only().tooltip("Specifies the date used to include entries on VAT reports in a VAT period. This is either the date that the document was created or posted, depending on your setting on the General Ledger Setup page."),
             F::code("Rcvd.-from Count./Region Code", 10).caption("Received-from Country/Region Code").tooltip("Specifies the country or region from which the items are returned for the purpose of Intrastat reporting."),
             F::text("Ship-to Phone No.", 30).tooltip("Specifies the telephone number of the company's shipping address."),
             F::code("Direct Debit Mandate ID", 35).tooltip("Specifies the direct-debit mandate that the customer has signed to allow direct debit collection of payments."),
@@ -2220,10 +2190,8 @@ pub fn extend(m: &mut Metadata) {
             F::text("Sell-to Address 2", 50).tooltip("Specifies additional address information."),
             F::text("Sell-to Contact", 100).tooltip("Specifies the name of the contact person at the customer's main address."),
             F::code("Bill-to Post Code", 20).tooltip("Specifies the postal code of the customer's billing address."),
-            F::text("Bill-to County", 30).tooltip("Specifies the state, province or county as a part of the address."),
             F::code("Bill-to Country/Region Code", 10).tooltip("Specifies the country or region of the address."),
             F::code("Sell-to Post Code", 20).tooltip("Specifies the postal code of the customer's main address."),
-            F::text("Sell-to County", 30).tooltip("Specifies the state, province or county as a part of the address."),
             F::code("Sell-to Country/Region Code", 10).tooltip("Specifies the country or region of the address."),
             F::code("Ship-to Post Code", 20).tooltip("Specifies the postal code of the address that the items are shipped to."),
             F::text("Ship-to County", 30).tooltip("Specifies the state, province or county as a part of the address."),
@@ -2238,7 +2206,6 @@ pub fn extend(m: &mut Metadata) {
             F::boolean("Tax Liable").tooltip("Specifies if the customer or vendor is liable for sales tax."),
             F::code("Quote No.", 20).read_only().tooltip("Specifies the number of the sales quote document if a quote was used to start the sales process."),
             F::code("Company Bank Account Code", 20).tooltip("Specifies the bank account to use for bank information when the document is printed."),
-            F::date("VAT Reporting Date").caption("VAT Date").read_only().tooltip("Specifies the VAT date on the invoice."),
             F::text("Ship-to Phone No.", 30).tooltip("Specifies the telephone number of the company's shipping address."),
             F::option("Document Exchange Status", &["Not Sent", "Sent to Document Exchange Service", "Delivered to Recipient", "Delivery Failed", "Pending Connection to Recipient"]).tooltip("Specifies the status of the document if you are using a document exchange service to send it as an electronic document. The status values are reported by the document exchange service."),
             F::code("Direct Debit Mandate ID", 35).tooltip("Specifies the direct-debit mandate that the customer has signed to allow direct debit collection of payments."),
@@ -2371,13 +2338,10 @@ pub fn extend(m: &mut Metadata) {
             F::text("Sell-to City", 30).tooltip("Specifies the city of the customer on the sales document."),
             F::text("Sell-to Contact", 100).tooltip("Specifies the name of the contact person at the customer's main address."),
             F::code("Bill-to Post Code", 20).tooltip("Specifies the postal code of the customer's billing address."),
-            F::text("Bill-to County", 30).tooltip("Specifies the state, province or county as a part of the address."),
             F::code("Bill-to Country/Region Code", 10).tooltip("Specifies the country or region of the address."),
             F::code("Sell-to Post Code", 20).tooltip("Specifies the post code of the customer's sell-to address."),
-            F::text("Sell-to County", 30).tooltip("Specifies the state, province or county as a part of the address."),
             F::code("Sell-to Country/Region Code", 10).tooltip("Specifies the country/region code of the customer's main address."),
             F::code("Ship-to Post Code", 20).tooltip("Specifies the postal code of the address that the items are shipped to."),
-            F::text("Ship-to County", 30).tooltip("Specifies the state, province or county as a part of the address."),
             F::code("Ship-to Country/Region Code", 10).tooltip("Specifies the customer's country/region."),
             F::code("Shipping Agent Code", 10).tooltip("Specifies which shipping agent is used to transport the items on the sales document to the customer."),
             F::text("Package Tracking No.", 50).tooltip("Specifies the shipping agent's package number."),
@@ -2546,7 +2510,6 @@ pub fn extend(m: &mut Metadata) {
             F::option("Application Method", &["Manual", "Apply to Oldest"]).tooltip("Specifies how to apply payments to entries for this vendor."),
             F::text("Fax No.", 30).tooltip("Specifies the vendor's fax number."),
             F::code("GLN", 13).tooltip("Specifies the vendor in connection with electronic document receiving."),
-            F::text("County", 30).tooltip("Specifies the state, province or county as a part of the address."),
             F::code("Tax Area Code", 20).tooltip("Specifies a tax area code for the company."),
             F::boolean("Tax Liable").tooltip("Specifies if the customer is liable for sales tax."),
             F::boolean("Block Payment Tolerance").tooltip("Specifies if the vendor allows payment tolerance."),
@@ -2673,10 +2636,9 @@ pub fn extend(m: &mut Metadata) {
             },
             Tab {
                 caption: "Communication",
-                fields: &["Address", "Address 2", "Post Code", "City", "Country/Region Code", "County", "Phone No.", "Mobile Phone No.", "Contact", "Fax No.", "E-Mail", "Home Page"],
+                fields: &["Address", "Address 2", "Post Code", "City", "Country/Region Code", "Phone No.", "Mobile Phone No.", "Contact", "Fax No.", "E-Mail", "Home Page"],
                 promoted: &["E-Mail"],
                 additional: &["Fax No."],
-                breaks: &["County"],
                 ..Tab::default()
             },
             Tab {
@@ -2696,7 +2658,7 @@ pub fn extend(m: &mut Metadata) {
     columns(m, "bank-account-ledger-entries", &["Posting Date", "Document Type", "Document No.", "Bank Account No.", "Description", "Global Dimension 1 Code", "Global Dimension 2 Code", "Amount", "Debit Amount", "Credit Amount", "Amount (LCY)", "Debit Amount (LCY)", "Credit Amount (LCY)", "Open", "Entry No."]);
     columns(m, "bank-account-list", &["No.", "Name", "Phone No.", "Contact", "Balance", "Balance (LCY)"]);
     columns(m, "bank-posting-groups", &["Code", "G/L Account No."]);
-    columns(m, "cash-receipt-journal", &["Posting Date", "Document Type", "Document No.", "Account Type", "Account No.", "Description", "Posting Group", "Amount", "Amount (LCY)", "Debit Amount", "Credit Amount", "Bal. Account Type", "Bal. Account No.", "Selected Alloc. Account No.", "Applies-to Doc. Type", "Applies-to Doc. No.", "Correction", "Job Queue Status", "Shortcut Dimension 1 Code", "Shortcut Dimension 2 Code"]);
+    columns(m, "cash-receipt-journal", &["Posting Date", "Document Type", "Document No.", "Account Type", "Account No.", "Description", "Posting Group", "Amount", "Amount (LCY)", "Debit Amount", "Credit Amount", "Bal. Account Type", "Bal. Account No.", "Selected Alloc. Account No.", "Applies-to Doc. Type", "Applies-to Doc. No.", "Correction", "Shortcut Dimension 1 Code", "Shortcut Dimension 2 Code"]);
     columns(m, "chart-of-accounts", &["No.", "Name", "Net Change", "Balance", "Income/Balance", "Account Category", "Account Type", "Totaling", "Gen. Posting Type", "Gen. Bus. Posting Group", "Gen. Prod. Posting Group", "Source Currency Posting", "Source Currency Code", "Cost Type No.", "Default Deferral Template Code"]);
     layout(
         m,
@@ -2723,8 +2685,7 @@ pub fn extend(m: &mut Metadata) {
             },
             Tab {
                 caption: "Shipping",
-                fields: &["Ship-to Name", "Ship-to Address", "Ship-to Address 2", "Ship-to City", "Ship-to County", "Ship-to Post Code", "Ship-to Country/Region Code", "Ship-to Phone No.", "Ship-to Contact", "Location Code", "Responsibility Center", "Check-Avail. Period Calc.", "Base Calendar Code", "Cal. Convergence Time Frame"],
-                breaks: &["Ship-to County"],
+                fields: &["Ship-to Name", "Ship-to Address", "Ship-to Address 2", "Ship-to City", "Ship-to Post Code", "Ship-to Country/Region Code", "Ship-to Phone No.", "Ship-to Contact", "Location Code", "Responsibility Center", "Check-Avail. Period Calc.", "Base Calendar Code", "Cal. Convergence Time Frame"],
                 ..Tab::default()
             },
             Tab {
@@ -2755,7 +2716,7 @@ pub fn extend(m: &mut Metadata) {
             },
             Tab {
                 caption: "Address & Contact",
-                fields: &["Address", "Address 2", "Country/Region Code", "City", "County", "Post Code", "Phone No.", "Mobile Phone No.", "E-Mail", "Fax No.", "Home Page", "Language Code", "Format Region", "Primary Contact No.", "Contact"],
+                fields: &["Address", "Address 2", "Country/Region Code", "City", "Post Code", "Phone No.", "Mobile Phone No.", "E-Mail", "Fax No.", "Home Page", "Language Code", "Format Region", "Primary Contact No.", "Contact"],
                 promoted: &["Post Code", "E-Mail", "Contact"],
                 additional: &["Fax No.", "Language Code", "Format Region", "Primary Contact No."],
                 breaks: &["Address", "Primary Contact No."],
@@ -2854,7 +2815,7 @@ pub fn extend(m: &mut Metadata) {
     columns(m, "fixed-assets", &["No.", "Description", "Responsible Employee", "FA Class Code", "FA Subclass Code", "FA Location Code", "Acquired"]);
     columns(m, "gen-bus-posting-groups", &["Code", "Description", "Def. VAT Bus. Posting Group", "Auto Insert Default"]);
     columns(m, "gen-prod-posting-groups", &["Code", "Description", "Def. VAT Prod. Posting Group", "Auto Insert Default"]);
-    columns(m, "general-journal", &["Posting Date", "VAT Reporting Date", "Document Type", "Document No.", "Account Type", "Account No.", "Description", "Currency Code", "EU 3-Party Trade", "Gen. Posting Type", "Gen. Bus. Posting Group", "Gen. Prod. Posting Group", "Posting Group", "Amount", "Amount (LCY)", "Debit Amount", "Credit Amount", "Bal. Account Type", "Bal. Account No.", "Bal. Gen. Posting Type", "Bal. Gen. Bus. Posting Group", "Bal. Gen. Prod. Posting Group", "Selected Alloc. Account No.", "Deferral Code", "Job Queue Status", "Correction", "Comment", "Shortcut Dimension 1 Code", "Shortcut Dimension 2 Code"]);
+    columns(m, "general-journal", &["Posting Date", "VAT Reporting Date", "Document Type", "Document No.", "Account Type", "Account No.", "Description", "Currency Code", "EU 3-Party Trade", "Gen. Posting Type", "Gen. Bus. Posting Group", "Gen. Prod. Posting Group", "Posting Group", "Amount", "Amount (LCY)", "Debit Amount", "Credit Amount", "Bal. Account Type", "Bal. Account No.", "Bal. Gen. Posting Type", "Bal. Gen. Bus. Posting Group", "Bal. Gen. Prod. Posting Group", "Selected Alloc. Account No.", "Deferral Code", "Correction", "Comment", "Shortcut Dimension 1 Code", "Shortcut Dimension 2 Code"]);
     columns(m, "general-journal-batches", &["Name", "Description", "Bal. Account Type", "Bal. Account No.", "No. Series", "Posting No. Series", "Reason Code", "Copy VAT Setup to Jnl. Lines", "Allow VAT Difference", "Allow Payment Export", "Suggest Balancing Amount", "Copy to Posted Jnl. Lines"]);
     columns(m, "general-journal-templates", &["Name", "Description", "Type", "Recurring", "Bal. Account Type", "Bal. Account No.", "No. Series", "Posting No. Series", "Source Code", "Reason Code", "Force Doc. Balance", "Copy VAT Setup to Jnl. Lines", "Increment Batch Name", "Allow VAT Difference", "Allow Posting Date From", "Allow Posting Date To", "Copy to Posted Jnl. Lines", "Unlink Inc. Doc On Posting"]);
     columns(m, "general-ledger-entries", &["Posting Date", "Document Type", "Document No.", "G/L Account No.", "Description", "Global Dimension 1 Code", "Global Dimension 2 Code", "Gen. Posting Type", "Gen. Bus. Posting Group", "Gen. Prod. Posting Group", "Amount", "Source Currency Code", "Source Currency Amount", "Source Currency VAT Amount", "Src. Curr. Non-Ded. VAT Amount", "Debit Amount", "Credit Amount", "Bal. Account Type", "Bal. Account No.", "VAT Reporting Date", "Entry No.", "G/L Register No.", "Transaction No.", "External Document No."]);
@@ -3051,7 +3012,7 @@ pub fn extend(m: &mut Metadata) {
     columns(m, "item-list", &["No.", "Description", "Type", "Inventory", "Base Unit of Measure", "Cost is Adjusted", "Unit Cost", "Unit Price", "Vendor No.", "Default Deferral Template Code"]);
     columns(m, "item-reclass-journal", &["Posting Date", "Document No.", "Item No.", "Description", "Location Code", "New Location Code", "Quantity", "Unit of Measure Code", "Applies-to Entry", "Shortcut Dimension 1 Code", "New Shortcut Dimension 1 Code", "Shortcut Dimension 2 Code", "New Shortcut Dimension 2 Code"]);
     columns(m, "locations", &["Code", "Name"]);
-    columns(m, "payment-journal", &["Posting Date", "Document Type", "Document No.", "External Document No.", "Account Type", "Account No.", "Recipient Bank Account", "Message to Recipient", "Description", "Currency Code", "Posting Group", "Selected Alloc. Account No.", "Payment Method Code", "Payment Reference", "Creditor No.", "Amount", "Amount (LCY)", "Debit Amount", "Credit Amount", "Bal. Account Type", "Bal. Account No.", "Applies-to Doc. Type", "Applies-to Doc. No.", "Bank Payment Type", "Correction", "Exported to Payment File", "Job Queue Status", "Shortcut Dimension 1 Code", "Shortcut Dimension 2 Code", "Remit-to Code"]);
+    columns(m, "payment-journal", &["Posting Date", "Document Type", "Document No.", "External Document No.", "Account Type", "Account No.", "Recipient Bank Account", "Message to Recipient", "Description", "Currency Code", "Posting Group", "Selected Alloc. Account No.", "Payment Method Code", "Payment Reference", "Creditor No.", "Amount", "Amount (LCY)", "Debit Amount", "Credit Amount", "Bal. Account Type", "Bal. Account No.", "Applies-to Doc. Type", "Applies-to Doc. No.", "Bank Payment Type", "Correction", "Exported to Payment File", "Shortcut Dimension 1 Code", "Shortcut Dimension 2 Code", "Remit-to Code"]);
     columns(m, "payment-terms", &["Code", "Due Date Calculation", "Discount Date Calculation", "Discount %", "Calc. Pmt. Disc. on Cr. Memos", "Description"]);
     columns(m, "permission-sets", &["Role ID", "Name"]);
     columns(m, "phys-inventory-journal", &["Posting Date", "Document No.", "Item No.", "Description", "Location Code", "Salespers./Purch. Code", "Qty. (Calculated)", "Qty. (Phys. Inventory)", "Quantity", "Unit Amount", "Amount", "Unit Cost", "Applies-to Entry", "Shortcut Dimension 1 Code", "Shortcut Dimension 2 Code"]);
@@ -3062,9 +3023,9 @@ pub fn extend(m: &mut Metadata) {
         &[
             Tab {
                 caption: "General",
-                fields: &["No.", "Buy-from Vendor Name", "Buy-from Address", "Buy-from Address 2", "Buy-from City", "Buy-from County", "Buy-from Post Code", "Buy-from Country/Region Code", "Buy-from Contact No.", "Buy-from Contact", "Posting Date", "VAT Reporting Date", "Document Date", "Pre-Assigned No.", "Vendor Cr. Memo No.", "Spend Request No.", "Order Address Code", "Purchaser Code", "Responsibility Center", "No. Printed"],
-                promoted: &["No.", "Buy-from Vendor Name", "Posting Date", "VAT Reporting Date", "Vendor Cr. Memo No."],
-                additional: &["Buy-from Address", "Buy-from Address 2", "Buy-from City", "Buy-from County", "Buy-from Post Code", "Buy-from Country/Region Code", "Buy-from Contact No.", "Pre-Assigned No.", "Spend Request No.", "Purchaser Code", "Responsibility Center", "No. Printed"],
+                fields: &["No.", "Buy-from Vendor Name", "Buy-from Address", "Buy-from Address 2", "Buy-from City", "Buy-from Post Code", "Buy-from Country/Region Code", "Buy-from Contact No.", "Buy-from Contact", "Posting Date", "Document Date", "Pre-Assigned No.", "Vendor Cr. Memo No.", "Spend Request No.", "Order Address Code", "Purchaser Code", "Responsibility Center", "No. Printed"],
+                promoted: &["No.", "Buy-from Vendor Name", "Posting Date", "Vendor Cr. Memo No."],
+                additional: &["Buy-from Address", "Buy-from Address 2", "Buy-from City", "Buy-from Post Code", "Buy-from Country/Region Code", "Buy-from Contact No.", "Pre-Assigned No.", "Spend Request No.", "Purchaser Code", "Responsibility Center", "No. Printed"],
                 breaks: &["Buy-from Address"],
                 captions: &[("Buy-from Vendor Name", "Vendor"), ("Buy-from Address", "Address"), ("Buy-from Address 2", "Address 2"), ("Buy-from City", "City"), ("Buy-from Post Code", "Post Code"), ("Buy-from Country/Region Code", "Country/Region"), ("Buy-from Contact No.", "Contact No."), ("Buy-from Contact", "Contact")],
                 headings: &[("Buy-from Address", "Buy-from")],
@@ -3079,9 +3040,9 @@ pub fn extend(m: &mut Metadata) {
             },
             Tab {
                 caption: "Shipping and Payment",
-                fields: &["Ship-to Name", "Ship-to Address", "Ship-to Address 2", "Ship-to City", "Ship-to County", "Ship-to Post Code", "Ship-to Country/Region Code", "Ship-to Phone No.", "Ship-to Contact", "Pay-to Name", "Pay-to Address", "Pay-to Address 2", "Pay-to City", "Pay-to County", "Pay-to Post Code", "Pay-to Country/Region Code", "Pay-to Contact No.", "Pay-to Contact"],
+                fields: &["Ship-to Name", "Ship-to Address", "Ship-to Address 2", "Ship-to City", "Ship-to Post Code", "Ship-to Country/Region Code", "Ship-to Phone No.", "Ship-to Contact", "Pay-to Name", "Pay-to Address", "Pay-to Address 2", "Pay-to City", "Pay-to Post Code", "Pay-to Country/Region Code", "Pay-to Contact No.", "Pay-to Contact"],
                 promoted: &["Pay-to Name"],
-                additional: &["Pay-to Address", "Pay-to Address 2", "Pay-to City", "Pay-to County", "Pay-to Post Code", "Pay-to Country/Region Code", "Pay-to Contact No."],
+                additional: &["Pay-to Address", "Pay-to Address 2", "Pay-to City", "Pay-to Post Code", "Pay-to Country/Region Code", "Pay-to Contact No."],
                 breaks: &["Ship-to Name", "Pay-to Name"],
                 captions: &[("Ship-to Name", "Name"), ("Ship-to Address", "Address"), ("Ship-to Address 2", "Address 2"), ("Ship-to City", "City"), ("Ship-to Post Code", "Post Code"), ("Ship-to Country/Region Code", "Country/Region"), ("Ship-to Phone No.", "Phone No."), ("Ship-to Contact", "Contact"), ("Pay-to Name", "Name"), ("Pay-to Address", "Address"), ("Pay-to Address 2", "Address 2"), ("Pay-to City", "City"), ("Pay-to Post Code", "Post Code"), ("Pay-to Country/Region Code", "Country/Region"), ("Pay-to Contact No.", "Contact No."), ("Pay-to Contact", "Contact")],
                 headings: &[("Ship-to Name", "Ship-to"), ("Pay-to Name", "Pay-to")],
@@ -3096,9 +3057,9 @@ pub fn extend(m: &mut Metadata) {
         &[
             Tab {
                 caption: "General",
-                fields: &["No.", "Buy-from Vendor Name", "Buy-from Address", "Buy-from Address 2", "Buy-from City", "Buy-from County", "Buy-from Post Code", "Buy-from Country/Region Code", "Buy-from Contact No.", "Buy-from Contact", "Posting Date", "VAT Reporting Date", "Document Date", "Due Date", "Quote No.", "Order No.", "Vendor Invoice No.", "Spend Request No.", "Vendor Order No.", "Pre-Assigned No.", "No. Printed", "Order Address Code", "Purchaser Code", "Responsibility Center"],
+                fields: &["No.", "Buy-from Vendor Name", "Buy-from Address", "Buy-from Address 2", "Buy-from City", "Buy-from Post Code", "Buy-from Country/Region Code", "Buy-from Contact No.", "Buy-from Contact", "Posting Date", "Document Date", "Due Date", "Quote No.", "Order No.", "Vendor Invoice No.", "Spend Request No.", "Vendor Order No.", "Pre-Assigned No.", "No. Printed", "Order Address Code", "Purchaser Code", "Responsibility Center"],
                 promoted: &["Posting Date", "Due Date", "Vendor Invoice No."],
-                additional: &["No.", "Buy-from Address", "Buy-from Address 2", "Buy-from City", "Buy-from County", "Buy-from Post Code", "Buy-from Country/Region Code", "Buy-from Contact No.", "Document Date", "Quote No.", "Order No.", "Spend Request No.", "Vendor Order No.", "Pre-Assigned No.", "No. Printed", "Order Address Code", "Purchaser Code", "Responsibility Center"],
+                additional: &["No.", "Buy-from Address", "Buy-from Address 2", "Buy-from City", "Buy-from Post Code", "Buy-from Country/Region Code", "Buy-from Contact No.", "Document Date", "Quote No.", "Order No.", "Spend Request No.", "Vendor Order No.", "Pre-Assigned No.", "No. Printed", "Order Address Code", "Purchaser Code", "Responsibility Center"],
                 breaks: &["Buy-from Address"],
                 captions: &[("Buy-from Vendor Name", "Vendor"), ("Buy-from Address", "Address"), ("Buy-from Address 2", "Address 2"), ("Buy-from City", "City"), ("Buy-from Post Code", "Post Code"), ("Buy-from Country/Region Code", "Country/Region"), ("Buy-from Contact No.", "Contact No."), ("Buy-from Contact", "Contact")],
                 headings: &[("Buy-from Address", "Buy-from")],
@@ -3113,9 +3074,9 @@ pub fn extend(m: &mut Metadata) {
             },
             Tab {
                 caption: "Shipping and Payment",
-                fields: &["Ship-to Code", "Ship-to Name", "Ship-to Address", "Ship-to Address 2", "Ship-to City", "Ship-to County", "Ship-to Post Code", "Ship-to Country/Region Code", "Ship-to Phone No.", "Ship-to Contact", "Pay-to Name", "Pay-to Address", "Pay-to Address 2", "Pay-to City", "Pay-to County", "Pay-to Post Code", "Pay-to Country/Region Code", "Pay-to Contact No.", "Pay-to Contact", "Remit-to Code"],
+                fields: &["Ship-to Code", "Ship-to Name", "Ship-to Address", "Ship-to Address 2", "Ship-to City", "Ship-to Post Code", "Ship-to Country/Region Code", "Ship-to Phone No.", "Ship-to Contact", "Pay-to Name", "Pay-to Address", "Pay-to Address 2", "Pay-to City", "Pay-to Post Code", "Pay-to Country/Region Code", "Pay-to Contact No.", "Pay-to Contact", "Remit-to Code"],
                 promoted: &["Ship-to Code", "Pay-to Name", "Remit-to Code"],
-                additional: &["Pay-to Address", "Pay-to Address 2", "Pay-to City", "Pay-to County", "Pay-to Post Code", "Pay-to Country/Region Code", "Pay-to Contact No."],
+                additional: &["Pay-to Address", "Pay-to Address 2", "Pay-to City", "Pay-to Post Code", "Pay-to Country/Region Code", "Pay-to Contact No."],
                 breaks: &["Ship-to Code", "Pay-to Name", "Remit-to Code"],
                 captions: &[("Ship-to Code", "Address Code"), ("Ship-to Name", "Name"), ("Ship-to Address", "Address"), ("Ship-to Address 2", "Address 2"), ("Ship-to City", "City"), ("Ship-to Post Code", "Post Code"), ("Ship-to Country/Region Code", "Country/Region"), ("Ship-to Phone No.", "Phone No."), ("Ship-to Contact", "Contact"), ("Pay-to Name", "Name"), ("Pay-to Address", "Address"), ("Pay-to Address 2", "Address 2"), ("Pay-to City", "City"), ("Pay-to Post Code", "Post Code"), ("Pay-to Country/Region Code", "Country/Region"), ("Pay-to Contact No.", "Contact No."), ("Pay-to Contact", "Contact")],
                 headings: &[("Ship-to Code", "Ship-to"), ("Pay-to Name", "Pay-to")],
@@ -3131,7 +3092,7 @@ pub fn extend(m: &mut Metadata) {
         &[
             Tab {
                 caption: "General",
-                fields: &["No.", "Buy-from Vendor No.", "Buy-from Contact No.", "Buy-from Vendor Name", "Buy-from Address", "Buy-from Address 2", "Buy-from City", "Buy-from County", "Buy-from Post Code", "Buy-from Country/Region Code", "Buy-from Contact", "No. Printed", "Posting Date", "Document Date", "Requested Receipt Date", "Promised Receipt Date", "Quote No.", "Order No.", "Vendor Order No.", "Vendor Shipment No.", "Order Address Code", "Purchaser Code", "Responsibility Center"],
+                fields: &["No.", "Buy-from Vendor No.", "Buy-from Contact No.", "Buy-from Vendor Name", "Buy-from Address", "Buy-from Address 2", "Buy-from City", "Buy-from Post Code", "Buy-from Country/Region Code", "Buy-from Contact", "No. Printed", "Posting Date", "Document Date", "Requested Receipt Date", "Promised Receipt Date", "Quote No.", "Order No.", "Vendor Order No.", "Vendor Shipment No.", "Order Address Code", "Purchaser Code", "Responsibility Center"],
                 promoted: &["No.", "Buy-from Vendor No.", "Posting Date", "Vendor Order No."],
                 breaks: &["Buy-from Vendor Name"],
                 captions: &[("Buy-from Vendor Name", "Name"), ("Buy-from Address", "Address"), ("Buy-from Address 2", "Address 2"), ("Buy-from City", "City"), ("Buy-from Post Code", "Post Code"), ("Buy-from Country/Region Code", "Country/Region"), ("Buy-from Contact", "Contact")],
@@ -3140,7 +3101,7 @@ pub fn extend(m: &mut Metadata) {
             },
             Tab {
                 caption: "Invoicing",
-                fields: &["Pay-to Vendor No.", "Pay-to Contact no.", "Pay-to Name", "Pay-to Address", "Pay-to Address 2", "Pay-to City", "Pay-to County", "Pay-to Post Code", "Pay-to Country/Region Code", "Pay-to Contact", "Shortcut Dimension 1 Code", "Shortcut Dimension 2 Code"],
+                fields: &["Pay-to Vendor No.", "Pay-to Contact no.", "Pay-to Name", "Pay-to Address", "Pay-to Address 2", "Pay-to City", "Pay-to Post Code", "Pay-to Country/Region Code", "Pay-to Contact", "Shortcut Dimension 1 Code", "Shortcut Dimension 2 Code"],
                 promoted: &["Pay-to Vendor No."],
                 breaks: &["Pay-to Name"],
                 captions: &[("Pay-to Name", "Name"), ("Pay-to Address", "Address"), ("Pay-to Address 2", "Address 2"), ("Pay-to City", "City"), ("Pay-to Post Code", "Post Code"), ("Pay-to Country/Region Code", "Country/Region"), ("Pay-to Contact", "Contact")],
@@ -3149,7 +3110,7 @@ pub fn extend(m: &mut Metadata) {
             },
             Tab {
                 caption: "Shipping",
-                fields: &["Ship-to Name", "Ship-to Address", "Ship-to Address 2", "Ship-to City", "Ship-to County", "Ship-to Post Code", "Ship-to Country/Region Code", "Ship-to Phone No.", "Ship-to Contact", "Location Code", "Shipment Method Code", "Lead Time Calculation", "Expected Receipt Date"],
+                fields: &["Ship-to Name", "Ship-to Address", "Ship-to Address 2", "Ship-to City", "Ship-to Post Code", "Ship-to Country/Region Code", "Ship-to Phone No.", "Ship-to Contact", "Location Code", "Shipment Method Code", "Lead Time Calculation", "Expected Receipt Date"],
                 promoted: &["Location Code", "Expected Receipt Date"],
                 breaks: &["Ship-to Name"],
                 captions: &[("Ship-to Name", "Name"), ("Ship-to Address", "Address"), ("Ship-to Address 2", "Address 2"), ("Ship-to City", "City"), ("Ship-to Post Code", "Post Code"), ("Ship-to Country/Region Code", "Country/Region"), ("Ship-to Phone No.", "Phone No."), ("Ship-to Contact", "Contact")],
@@ -3167,9 +3128,9 @@ pub fn extend(m: &mut Metadata) {
         &[
             Tab {
                 caption: "General",
-                fields: &["No.", "Sell-to Customer Name", "Sell-to Address", "Sell-to Address 2", "Sell-to City", "Sell-to County", "Sell-to Post Code", "Sell-to Country/Region Code", "Sell-to Contact No.", "Sell-to Contact", "Posting Date", "VAT Reporting Date", "Your Reference", "Document Date", "Document Exchange Status", "Pre-Assigned No.", "External Document No.", "Salesperson Code", "Responsibility Center", "No. Printed"],
-                promoted: &["No.", "Posting Date", "VAT Reporting Date", "External Document No."],
-                additional: &["Sell-to Address", "Sell-to Address 2", "Sell-to City", "Sell-to County", "Sell-to Post Code", "Sell-to Country/Region Code", "Sell-to Contact No.", "Your Reference", "Pre-Assigned No.", "Salesperson Code", "Responsibility Center", "No. Printed"],
+                fields: &["No.", "Sell-to Customer Name", "Sell-to Address", "Sell-to Address 2", "Sell-to City", "Sell-to Post Code", "Sell-to Country/Region Code", "Sell-to Contact No.", "Sell-to Contact", "Posting Date", "Your Reference", "Document Date", "Document Exchange Status", "Pre-Assigned No.", "External Document No.", "Salesperson Code", "Responsibility Center", "No. Printed"],
+                promoted: &["No.", "Posting Date", "External Document No."],
+                additional: &["Sell-to Address", "Sell-to Address 2", "Sell-to City", "Sell-to Post Code", "Sell-to Country/Region Code", "Sell-to Contact No.", "Your Reference", "Pre-Assigned No.", "Salesperson Code", "Responsibility Center", "No. Printed"],
                 breaks: &["Sell-to Address", "Document Exchange Status"],
                 captions: &[("Sell-to Customer Name", "Customer"), ("Sell-to Address", "Address"), ("Sell-to Address 2", "Address 2"), ("Sell-to City", "City"), ("Sell-to Post Code", "Post Code"), ("Sell-to Country/Region Code", "Country/Region Code"), ("Sell-to Contact No.", "Contact No."), ("Sell-to Contact", "Contact")],
                 headings: &[("Sell-to Address", "Sell-to")],
@@ -3183,9 +3144,9 @@ pub fn extend(m: &mut Metadata) {
             },
             Tab {
                 caption: "Shipping and Billing",
-                fields: &["Ship-to Name", "Ship-to Address", "Ship-to Address 2", "Ship-to City", "Ship-to County", "Ship-to Post Code", "Ship-to Country/Region Code", "Ship-to Phone No.", "Ship-to Contact", "Bill-to Name", "Bill-to Address", "Bill-to Address 2", "Bill-to City", "Bill-to County", "Bill-to Post Code", "Bill-to Country/Region Code", "Bill-to Contact No.", "Bill-to Contact", "Shipment Method Code", "Shipping Agent Code", "Shipping Agent Service Code", "Package Tracking No."],
+                fields: &["Ship-to Name", "Ship-to Address", "Ship-to Address 2", "Ship-to City", "Ship-to Post Code", "Ship-to Country/Region Code", "Ship-to Phone No.", "Ship-to Contact", "Bill-to Name", "Bill-to Address", "Bill-to Address 2", "Bill-to City", "Bill-to Post Code", "Bill-to Country/Region Code", "Bill-to Contact No.", "Bill-to Contact", "Shipment Method Code", "Shipping Agent Code", "Shipping Agent Service Code", "Package Tracking No."],
                 promoted: &["Bill-to Name"],
-                additional: &["Bill-to Address", "Bill-to Address 2", "Bill-to City", "Bill-to County", "Bill-to Post Code", "Bill-to Country/Region Code", "Bill-to Contact No.", "Shipping Agent Code", "Shipping Agent Service Code", "Package Tracking No."],
+                additional: &["Bill-to Address", "Bill-to Address 2", "Bill-to City", "Bill-to Post Code", "Bill-to Country/Region Code", "Bill-to Contact No.", "Shipping Agent Code", "Shipping Agent Service Code", "Package Tracking No."],
                 breaks: &["Ship-to Name", "Bill-to Name", "Shipment Method Code"],
                 captions: &[("Ship-to Name", "Name"), ("Ship-to Address", "Address"), ("Ship-to Address 2", "Address 2"), ("Ship-to City", "City"), ("Ship-to Post Code", "Post Code"), ("Ship-to Country/Region Code", "Country/Region"), ("Ship-to Phone No.", "Phone No."), ("Ship-to Contact", "Contact"), ("Bill-to Name", "Name"), ("Bill-to Address", "Address"), ("Bill-to Address 2", "Address 2"), ("Bill-to City", "City"), ("Bill-to Post Code", "Post Code"), ("Bill-to Country/Region Code", "Country/Region"), ("Bill-to Contact No.", "Contact No."), ("Bill-to Contact", "Contact"), ("Shipment Method Code", "Code"), ("Shipping Agent Code", "Agent"), ("Shipping Agent Service Code", "Agent Service")],
                 headings: &[("Ship-to Name", "Ship-to"), ("Bill-to Name", "Bill-to"), ("Shipment Method Code", "Shipment Method")],
@@ -3200,9 +3161,9 @@ pub fn extend(m: &mut Metadata) {
         &[
             Tab {
                 caption: "General",
-                fields: &["No.", "Sell-to Customer Name", "Sell-to Address", "Sell-to Address 2", "Sell-to City", "Sell-to County", "Sell-to Post Code", "Sell-to Country/Region Code", "Sell-to Contact No.", "Sell-to Contact", "Your Reference", "Document Date", "Posting Date", "VAT Reporting Date", "Due Date", "Promised Pay Date", "Document Exchange Status", "Quote No.", "Order No.", "Pre-Assigned No.", "External Document No.", "Salesperson Code", "Responsibility Center", "No. Printed", "Closed", "Dispute Status"],
+                fields: &["No.", "Sell-to Customer Name", "Sell-to Address", "Sell-to Address 2", "Sell-to City", "Sell-to Post Code", "Sell-to Country/Region Code", "Sell-to Contact No.", "Sell-to Contact", "Your Reference", "Document Date", "Posting Date", "Due Date", "Promised Pay Date", "Document Exchange Status", "Quote No.", "Order No.", "Pre-Assigned No.", "External Document No.", "Salesperson Code", "Responsibility Center", "No. Printed", "Closed", "Dispute Status"],
                 promoted: &["No.", "Sell-to Customer Name", "Due Date", "Promised Pay Date", "Order No.", "Closed", "Dispute Status"],
-                additional: &["Sell-to Address", "Sell-to Address 2", "Sell-to City", "Sell-to County", "Sell-to Post Code", "Sell-to Country/Region Code", "Sell-to Contact No.", "Your Reference", "Document Date", "Document Exchange Status", "Pre-Assigned No.", "External Document No.", "Salesperson Code", "Responsibility Center", "No. Printed"],
+                additional: &["Sell-to Address", "Sell-to Address 2", "Sell-to City", "Sell-to Post Code", "Sell-to Country/Region Code", "Sell-to Contact No.", "Your Reference", "Document Date", "Document Exchange Status", "Pre-Assigned No.", "External Document No.", "Salesperson Code", "Responsibility Center", "No. Printed"],
                 breaks: &["Sell-to Address", "Document Exchange Status"],
                 captions: &[("Sell-to Customer Name", "Customer"), ("Sell-to Address", "Address"), ("Sell-to Address 2", "Address 2"), ("Sell-to City", "City"), ("Sell-to Post Code", "Post Code"), ("Sell-to Country/Region Code", "Country/Region"), ("Sell-to Contact No.", "Contact No."), ("Sell-to Contact", "Contact")],
                 headings: &[("Sell-to Address", "Sell-to")],
@@ -3217,9 +3178,9 @@ pub fn extend(m: &mut Metadata) {
             },
             Tab {
                 caption: "Shipping and Billing",
-                fields: &["Shipment Method Code", "Shipping Agent Code", "Shipping Agent Service Code", "Package Tracking No.", "Ship-to Code", "Ship-to Name", "Ship-to Address", "Ship-to Address 2", "Ship-to City", "Ship-to County", "Ship-to Post Code", "Ship-to Country/Region Code", "Ship-to Phone No.", "Ship-to Contact", "Bill-to Name", "Bill-to Address", "Bill-to Address 2", "Bill-to City", "Bill-to County", "Bill-to Post Code", "Bill-to Country/Region Code", "Bill-to Contact No.", "Bill-to Contact"],
+                fields: &["Shipment Method Code", "Shipping Agent Code", "Shipping Agent Service Code", "Package Tracking No.", "Ship-to Code", "Ship-to Name", "Ship-to Address", "Ship-to Address 2", "Ship-to City", "Ship-to County", "Ship-to Post Code", "Ship-to Country/Region Code", "Ship-to Phone No.", "Ship-to Contact", "Bill-to Name", "Bill-to Address", "Bill-to Address 2", "Bill-to City", "Bill-to Post Code", "Bill-to Country/Region Code", "Bill-to Contact No.", "Bill-to Contact"],
                 promoted: &["Ship-to Code", "Bill-to Name"],
-                additional: &["Shipment Method Code", "Shipping Agent Code", "Shipping Agent Service Code", "Package Tracking No.", "Bill-to Address", "Bill-to Address 2", "Bill-to City", "Bill-to County", "Bill-to Post Code", "Bill-to Country/Region Code", "Bill-to Contact No."],
+                additional: &["Shipment Method Code", "Shipping Agent Code", "Shipping Agent Service Code", "Package Tracking No.", "Bill-to Address", "Bill-to Address 2", "Bill-to City", "Bill-to Post Code", "Bill-to Country/Region Code", "Bill-to Contact No."],
                 breaks: &["Shipment Method Code", "Ship-to Code", "Bill-to Name"],
                 captions: &[("Shipment Method Code", "Method"), ("Shipping Agent Code", "Agent"), ("Shipping Agent Service Code", "Agent Service"), ("Ship-to Code", "Address Code"), ("Ship-to Name", "Name"), ("Ship-to Address", "Address"), ("Ship-to Address 2", "Address 2"), ("Ship-to City", "City"), ("Ship-to Post Code", "Post Code"), ("Ship-to Country/Region Code", "Country/Region"), ("Ship-to Phone No.", "Phone No."), ("Ship-to Contact", "Contact"), ("Bill-to Name", "Name"), ("Bill-to Address", "Address"), ("Bill-to Address 2", "Address 2"), ("Bill-to City", "City"), ("Bill-to Post Code", "Post Code"), ("Bill-to Country/Region Code", "Country/Region"), ("Bill-to Contact No.", "Contact No."), ("Bill-to Contact", "Contact")],
                 headings: &[("Shipment Method Code", "Shipping Details"), ("Ship-to Code", "Ship-to"), ("Bill-to Name", "Bill-to")],
@@ -3240,9 +3201,9 @@ pub fn extend(m: &mut Metadata) {
         &[
             Tab {
                 caption: "General",
-                fields: &["No.", "Sell-to Customer Name", "Sell-to Address", "Sell-to Address 2", "Sell-to City", "Sell-to County", "Sell-to Post Code", "Sell-to Country/Region Code", "Sell-to Contact No.", "Sell-to Contact", "No. Printed", "Posting Date", "Document Date", "Requested Delivery Date", "Promised Delivery Date", "Quote No.", "Order No.", "External Document No.", "Salesperson Code", "Responsibility Center"],
+                fields: &["No.", "Sell-to Customer Name", "Sell-to Address", "Sell-to Address 2", "Sell-to City", "Sell-to Post Code", "Sell-to Country/Region Code", "Sell-to Contact No.", "Sell-to Contact", "No. Printed", "Posting Date", "Document Date", "Requested Delivery Date", "Promised Delivery Date", "Quote No.", "Order No.", "External Document No.", "Salesperson Code", "Responsibility Center"],
                 promoted: &["No.", "Posting Date", "Order No."],
-                additional: &["Sell-to Address", "Sell-to Address 2", "Sell-to City", "Sell-to County", "Sell-to Post Code", "Sell-to Country/Region Code", "Sell-to Contact No.", "No. Printed", "Document Date", "External Document No.", "Salesperson Code", "Responsibility Center"],
+                additional: &["Sell-to Address", "Sell-to Address 2", "Sell-to City", "Sell-to Post Code", "Sell-to Country/Region Code", "Sell-to Contact No.", "No. Printed", "Document Date", "External Document No.", "Salesperson Code", "Responsibility Center"],
                 breaks: &["Sell-to Address"],
                 captions: &[("Sell-to Customer Name", "Customer"), ("Sell-to Address", "Address"), ("Sell-to Address 2", "Address 2"), ("Sell-to City", "City"), ("Sell-to Post Code", "Post Code"), ("Sell-to Country/Region Code", "Country/Region"), ("Sell-to Contact No.", "Contact No."), ("Sell-to Contact", "Contact")],
                 headings: &[("Sell-to Address", "Sell-to")],
@@ -3250,19 +3211,18 @@ pub fn extend(m: &mut Metadata) {
             },
             Tab {
                 caption: "Shipping",
-                fields: &["Ship-to Code", "Ship-to Name", "Ship-to Address", "Ship-to Address 2", "Ship-to City", "Ship-to County", "Ship-to Post Code", "Ship-to Country/Region Code", "Ship-to Phone No.", "Ship-to Contact", "Location Code", "Shipping Time", "Shipment Method Code", "Shipping Agent Code", "Shipping Agent Service Code", "Package Tracking No.", "Shipment Date"],
+                fields: &["Ship-to Code", "Ship-to Name", "Ship-to Address", "Ship-to Address 2", "Ship-to City", "Ship-to Post Code", "Ship-to Country/Region Code", "Ship-to Phone No.", "Ship-to Contact", "Location Code", "Shipping Time", "Shipment Method Code", "Shipping Agent Code", "Shipping Agent Service Code", "Package Tracking No.", "Shipment Date"],
                 promoted: &["Ship-to Code", "Ship-to Post Code", "Location Code", "Shipment Date"],
                 additional: &["Shipping Agent Code", "Shipping Agent Service Code", "Package Tracking No."],
-                breaks: &["Ship-to County", "Shipment Method Code"],
+                breaks: &["Shipment Method Code"],
                 captions: &[("Ship-to Code", "Address Code"), ("Ship-to Name", "Name"), ("Ship-to Address", "Address"), ("Ship-to Address 2", "Address 2"), ("Ship-to City", "City"), ("Ship-to Post Code", "Post Code"), ("Ship-to Country/Region Code", "Country/Region"), ("Ship-to Phone No.", "Phone No."), ("Ship-to Contact", "Contact"), ("Shipment Method Code", "Code"), ("Shipping Agent Code", "Agent"), ("Shipping Agent Service Code", "Agent Service")],
                 headings: &[("Shipment Method Code", "Shipment Method")],
                 ..Tab::default()
             },
             Tab {
                 caption: "Billing",
-                fields: &["Bill-to Customer No.", "Bill-to Name", "Bill-to Address", "Bill-to Address 2", "Bill-to City", "Bill-to County", "Bill-to Post Code", "Bill-to Country/Region Code", "Bill-to Contact No.", "Bill-to Contact", "Shortcut Dimension 1 Code", "Shortcut Dimension 2 Code"],
-                additional: &["Bill-to Customer No.", "Bill-to Address", "Bill-to Address 2", "Bill-to City", "Bill-to County", "Bill-to Post Code", "Bill-to Country/Region Code", "Bill-to Contact No."],
-                breaks: &["Bill-to County"],
+                fields: &["Bill-to Customer No.", "Bill-to Name", "Bill-to Address", "Bill-to Address 2", "Bill-to City", "Bill-to Post Code", "Bill-to Country/Region Code", "Bill-to Contact No.", "Bill-to Contact", "Shortcut Dimension 1 Code", "Shortcut Dimension 2 Code"],
+                additional: &["Bill-to Customer No.", "Bill-to Address", "Bill-to Address 2", "Bill-to City", "Bill-to Post Code", "Bill-to Country/Region Code", "Bill-to Contact No."],
                 captions: &[("Bill-to Customer No.", "Customer No."), ("Bill-to Name", "Name"), ("Bill-to Address", "Address"), ("Bill-to Address 2", "Address 2"), ("Bill-to City", "City"), ("Bill-to Post Code", "Post Code"), ("Bill-to Country/Region Code", "Country/Region Code"), ("Bill-to Contact No.", "Contact No."), ("Bill-to Contact", "Contact")],
                 ..Tab::default()
             },
@@ -3276,9 +3236,9 @@ pub fn extend(m: &mut Metadata) {
         &[
             Tab {
                 caption: "General",
-                fields: &["No.", "Buy-from Vendor No.", "Buy-from Vendor Name", "Buy-from Address", "Buy-from Address 2", "Buy-from City", "Buy-from County", "Buy-from Post Code", "Buy-from Country/Region Code", "Buy-from Contact No.", "Buy-from Contact", "Posting Date", "VAT Reporting Date", "Document Date", "Due Date", "Expected Receipt Date", "Vendor Authorization No.", "Vendor Cr. Memo No.", "Spend Request No.", "Purchaser Code", "Campaign No.", "Responsibility Center", "Assigned User ID", "Job Queue Status", "Status", "Doc. Amount Incl. VAT", "Doc. Amount VAT"],
+                fields: &["Buy-from Vendor No.", "Buy-from Vendor Name", "Buy-from Address", "Buy-from Address 2", "Buy-from City", "Buy-from Post Code", "Buy-from Country/Region Code", "Buy-from Contact No.", "Buy-from Contact", "Posting Date", "Document Date", "Due Date", "Expected Receipt Date", "Vendor Authorization No.", "Vendor Cr. Memo No.", "Spend Request No.", "Purchaser Code", "Campaign No.", "Responsibility Center", "Assigned User ID", "Status", "Doc. Amount Incl. VAT", "Doc. Amount VAT"],
                 promoted: &["Buy-from Vendor Name", "Due Date", "Status"],
-                additional: &["Buy-from Vendor No.", "Buy-from Address", "Buy-from Address 2", "Buy-from City", "Buy-from County", "Buy-from Post Code", "Buy-from Country/Region Code", "Buy-from Contact No.", "Posting Date", "VAT Reporting Date", "Document Date", "Spend Request No.", "Purchaser Code", "Campaign No.", "Responsibility Center", "Assigned User ID", "Job Queue Status"],
+                additional: &["Buy-from Vendor No.", "Buy-from Address", "Buy-from Address 2", "Buy-from City", "Buy-from Post Code", "Buy-from Country/Region Code", "Buy-from Contact No.", "Posting Date", "Document Date", "Spend Request No.", "Purchaser Code", "Campaign No.", "Responsibility Center", "Assigned User ID"],
                 breaks: &["Buy-from Address"],
                 captions: &[("Buy-from Vendor No.", "Vendor No."), ("Buy-from Vendor Name", "Vendor Name"), ("Buy-from Address", "Address"), ("Buy-from Address 2", "Address 2"), ("Buy-from City", "City"), ("Buy-from Post Code", "Post Code"), ("Buy-from Country/Region Code", "Country/Region"), ("Buy-from Contact No.", "Contact No."), ("Buy-from Contact", "Contact")],
                 headings: &[("Buy-from Address", "Buy-from")],
@@ -3286,16 +3246,16 @@ pub fn extend(m: &mut Metadata) {
             },
             Tab {
                 caption: "Credit Memo Details",
-                fields: &["Currency Code", "Prices Including VAT", "VAT Bus. Posting Group", "Vendor Posting Group", "Payment Terms Code", "Payment Method Code", "Shortcut Dimension 1 Code", "Shortcut Dimension 2 Code", "Payment Discount %", "Pmt. Discount Date", "Journal Templ. Name", "Tax Liable", "Tax Area Code", "Location Code", "Correction"],
+                fields: &["Currency Code", "Prices Including VAT", "VAT Bus. Posting Group", "Vendor Posting Group", "Payment Terms Code", "Payment Method Code", "Shortcut Dimension 1 Code", "Shortcut Dimension 2 Code", "Payment Discount %", "Pmt. Discount Date", "Tax Liable", "Tax Area Code", "Location Code", "Correction"],
                 promoted: &["Currency Code", "Payment Terms Code"],
                 additional: &["Vendor Posting Group", "Payment Method Code", "Pmt. Discount Date", "Location Code"],
                 ..Tab::default()
             },
             Tab {
                 caption: "Shipping and Payment",
-                fields: &["Order Address Code", "Ship-to Name", "Ship-to Address", "Ship-to Address 2", "Ship-to City", "Ship-to County", "Ship-to Post Code", "Ship-to Country/Region Code", "Ship-to Phone No.", "Ship-to Contact", "Pay-to Name", "Pay-to Address", "Pay-to Address 2", "Pay-to City", "Pay-to County", "Pay-to Post Code", "Pay-to Country/Region Code", "Pay-to Contact No.", "Pay-to Contact"],
+                fields: &["Order Address Code", "Ship-to Name", "Ship-to Address", "Ship-to Address 2", "Ship-to City", "Ship-to Post Code", "Ship-to Country/Region Code", "Ship-to Phone No.", "Ship-to Contact", "Pay-to Name", "Pay-to Address", "Pay-to Address 2", "Pay-to City", "Pay-to Post Code", "Pay-to Country/Region Code", "Pay-to Contact No.", "Pay-to Contact"],
                 promoted: &["Pay-to Name"],
-                additional: &["Ship-to Name", "Ship-to Address", "Ship-to Address 2", "Ship-to City", "Ship-to County", "Ship-to Post Code", "Ship-to Country/Region Code", "Ship-to Phone No.", "Ship-to Contact", "Pay-to Address", "Pay-to Address 2", "Pay-to City", "Pay-to County", "Pay-to Post Code", "Pay-to Country/Region Code", "Pay-to Contact No."],
+                additional: &["Ship-to Name", "Ship-to Address", "Ship-to Address 2", "Ship-to City", "Ship-to Post Code", "Ship-to Country/Region Code", "Ship-to Phone No.", "Ship-to Contact", "Pay-to Address", "Pay-to Address 2", "Pay-to City", "Pay-to Post Code", "Pay-to Country/Region Code", "Pay-to Contact No."],
                 breaks: &["Order Address Code", "Ship-to Name", "Pay-to Name"],
                 captions: &[("Ship-to Name", "Name"), ("Ship-to Address", "Address"), ("Ship-to Address 2", "Address 2"), ("Ship-to City", "City"), ("Ship-to Post Code", "Post Code"), ("Ship-to Country/Region Code", "Country/Region"), ("Ship-to Phone No.", "Phone No."), ("Ship-to Contact", "Contact"), ("Pay-to Name", "Name"), ("Pay-to Address", "Address"), ("Pay-to Address 2", "Address 2"), ("Pay-to City", "City"), ("Pay-to Post Code", "Post Code"), ("Pay-to Country/Region Code", "Country/Region"), ("Pay-to Contact No.", "Contact No."), ("Pay-to Contact", "Contact")],
                 headings: &[("Ship-to Name", "Ship-to"), ("Pay-to Name", "Pay-to")],
@@ -3320,9 +3280,9 @@ pub fn extend(m: &mut Metadata) {
         &[
             Tab {
                 caption: "General",
-                fields: &["No.", "Buy-from Vendor No.", "Buy-from Vendor Name", "Buy-from Address", "Buy-from Address 2", "Buy-from City", "Buy-from County", "Buy-from Post Code", "Buy-from Country/Region Code", "Buy-from Contact No.", "Buy-from Contact", "Document Date", "Invoice Received Date", "Posting Date", "VAT Reporting Date", "Due Date", "Vendor Invoice No.", "Spend Request No.", "Purchaser Code", "Campaign No.", "Order Address Code", "Responsibility Center", "Assigned User ID", "Status", "Doc. Amount Incl. VAT", "Doc. Amount VAT", "Job Queue Status"],
+                fields: &["Buy-from Vendor No.", "Buy-from Vendor Name", "Buy-from Address", "Buy-from Address 2", "Buy-from City", "Buy-from Post Code", "Buy-from Country/Region Code", "Buy-from Contact No.", "Buy-from Contact", "Document Date", "Invoice Received Date", "Posting Date", "Due Date", "Vendor Invoice No.", "Spend Request No.", "Purchaser Code", "Campaign No.", "Order Address Code", "Responsibility Center", "Assigned User ID", "Status", "Doc. Amount Incl. VAT", "Doc. Amount VAT"],
                 promoted: &["Buy-from Vendor Name", "Document Date", "Posting Date", "Due Date", "Status"],
-                additional: &["Buy-from Vendor No.", "Buy-from Address", "Buy-from Address 2", "Buy-from City", "Buy-from County", "Buy-from Post Code", "Buy-from Country/Region Code", "Buy-from Contact No.", "Invoice Received Date", "Spend Request No.", "Purchaser Code", "Campaign No.", "Order Address Code", "Responsibility Center", "Assigned User ID", "Job Queue Status"],
+                additional: &["Buy-from Vendor No.", "Buy-from Address", "Buy-from Address 2", "Buy-from City", "Buy-from Post Code", "Buy-from Country/Region Code", "Buy-from Contact No.", "Invoice Received Date", "Spend Request No.", "Purchaser Code", "Campaign No.", "Order Address Code", "Responsibility Center", "Assigned User ID"],
                 breaks: &["Buy-from Address"],
                 captions: &[("Buy-from Vendor No.", "Vendor No."), ("Buy-from Vendor Name", "Vendor Name"), ("Buy-from Address", "Address"), ("Buy-from Address 2", "Address 2"), ("Buy-from City", "City"), ("Buy-from Post Code", "Post Code"), ("Buy-from Country/Region Code", "Country/Region"), ("Buy-from Contact No.", "Contact No."), ("Buy-from Contact", "Contact"), ("Order Address Code", "Alternate Vendor Address Code")],
                 headings: &[("Buy-from Address", "Buy-from")],
@@ -3330,16 +3290,16 @@ pub fn extend(m: &mut Metadata) {
             },
             Tab {
                 caption: "Invoice Details",
-                fields: &["Currency Code", "Expected Receipt Date", "Prices Including VAT", "VAT Bus. Posting Group", "Vendor Posting Group", "Payment Terms Code", "Payment Method Code", "Shortcut Dimension 1 Code", "Shortcut Dimension 2 Code", "Payment Discount %", "Pmt. Discount Date", "Journal Templ. Name", "Tax Liable", "Tax Area Code", "Shipment Method Code", "Payment Reference", "Creditor No.", "On Hold"],
+                fields: &["Currency Code", "Expected Receipt Date", "Prices Including VAT", "VAT Bus. Posting Group", "Vendor Posting Group", "Payment Terms Code", "Payment Method Code", "Shortcut Dimension 1 Code", "Shortcut Dimension 2 Code", "Payment Discount %", "Pmt. Discount Date", "Tax Liable", "Tax Area Code", "Shipment Method Code", "Payment Reference", "Creditor No.", "On Hold"],
                 promoted: &["Currency Code", "Expected Receipt Date", "Payment Terms Code"],
                 additional: &["Vendor Posting Group", "Payment Method Code", "Pmt. Discount Date", "Shipment Method Code", "Payment Reference", "Creditor No.", "On Hold"],
                 ..Tab::default()
             },
             Tab {
                 caption: "Shipping and Payment",
-                fields: &["Location Code", "Ship-to Name", "Ship-to Address", "Ship-to Address 2", "Ship-to City", "Ship-to County", "Ship-to Post Code", "Ship-to Country/Region Code", "Ship-to Phone No.", "Ship-to Contact", "Pay-to Name", "Pay-to Address", "Pay-to Address 2", "Pay-to City", "Pay-to County", "Pay-to Post Code", "Pay-to Country/Region Code", "Pay-to Contact No.", "Pay-to Contact", "Remit-to Code"],
+                fields: &["Location Code", "Ship-to Name", "Ship-to Address", "Ship-to Address 2", "Ship-to City", "Ship-to Post Code", "Ship-to Country/Region Code", "Ship-to Phone No.", "Ship-to Contact", "Pay-to Name", "Pay-to Address", "Pay-to Address 2", "Pay-to City", "Pay-to Post Code", "Pay-to Country/Region Code", "Pay-to Contact No.", "Pay-to Contact", "Remit-to Code"],
                 promoted: &["Pay-to Name", "Remit-to Code"],
-                additional: &["Ship-to Name", "Ship-to Address", "Ship-to Address 2", "Ship-to City", "Ship-to County", "Ship-to Post Code", "Ship-to Country/Region Code", "Ship-to Phone No.", "Ship-to Contact", "Pay-to Address", "Pay-to Address 2", "Pay-to City", "Pay-to County", "Pay-to Post Code", "Pay-to Country/Region Code", "Pay-to Contact No."],
+                additional: &["Ship-to Name", "Ship-to Address", "Ship-to Address 2", "Ship-to City", "Ship-to Post Code", "Ship-to Country/Region Code", "Ship-to Phone No.", "Ship-to Contact", "Pay-to Address", "Pay-to Address 2", "Pay-to City", "Pay-to Post Code", "Pay-to Country/Region Code", "Pay-to Contact No."],
                 breaks: &["Location Code", "Pay-to Name", "Remit-to Code"],
                 captions: &[("Ship-to Name", "Name"), ("Ship-to Address", "Address"), ("Ship-to Address 2", "Address 2"), ("Ship-to City", "City"), ("Ship-to Post Code", "Post Code"), ("Ship-to Country/Region Code", "Country/Region"), ("Ship-to Phone No.", "Phone No."), ("Ship-to Contact", "Contact"), ("Pay-to Name", "Name"), ("Pay-to Address", "Address"), ("Pay-to Address 2", "Address 2"), ("Pay-to City", "City"), ("Pay-to Post Code", "Post Code"), ("Pay-to Country/Region Code", "Country/Region"), ("Pay-to Contact No.", "Contact No."), ("Pay-to Contact", "Contact")],
                 ..Tab::default()
@@ -3359,9 +3319,9 @@ pub fn extend(m: &mut Metadata) {
         &[
             Tab {
                 caption: "General",
-                fields: &["No.", "Buy-from Vendor No.", "Buy-from Vendor Name", "Buy-from Address", "Buy-from Address 2", "Buy-from City", "Buy-from County", "Buy-from Post Code", "Buy-from Country/Region Code", "Buy-from Contact No.", "Buy-from Contact", "Document Date", "Invoice Received Date", "Posting Date", "VAT Reporting Date", "Due Date", "Vendor Invoice No.", "Spend Request No.", "Your Reference", "Purchaser Code", "Order Date", "Quote No.", "Vendor Order No.", "Vendor Shipment No.", "Order Address Code", "Responsibility Center", "Assigned User ID", "Status", "Job Queue Status"],
-                promoted: &["No.", "Buy-from Vendor Name", "Document Date", "Status"],
-                additional: &["Buy-from Vendor No.", "Buy-from Address", "Buy-from Address 2", "Buy-from City", "Buy-from County", "Buy-from Post Code", "Buy-from Country/Region Code", "Buy-from Contact No.", "Invoice Received Date", "Posting Date", "VAT Reporting Date", "Due Date", "Spend Request No.", "Your Reference", "Purchaser Code", "Order Date", "Quote No.", "Vendor Order No.", "Order Address Code", "Responsibility Center", "Assigned User ID", "Job Queue Status"],
+                fields: &["Buy-from Vendor No.", "Buy-from Vendor Name", "Buy-from Address", "Buy-from Address 2", "Buy-from City", "Buy-from Post Code", "Buy-from Country/Region Code", "Buy-from Contact No.", "Buy-from Contact", "Document Date", "Invoice Received Date", "Posting Date", "Due Date", "Vendor Invoice No.", "Spend Request No.", "Your Reference", "Purchaser Code", "Order Date", "Quote No.", "Vendor Order No.", "Vendor Shipment No.", "Order Address Code", "Responsibility Center", "Assigned User ID", "Status"],
+                promoted: &["Buy-from Vendor Name", "Document Date", "Status"],
+                additional: &["Buy-from Vendor No.", "Buy-from Address", "Buy-from Address 2", "Buy-from City", "Buy-from Post Code", "Buy-from Country/Region Code", "Buy-from Contact No.", "Invoice Received Date", "Posting Date", "Due Date", "Spend Request No.", "Your Reference", "Purchaser Code", "Order Date", "Quote No.", "Vendor Order No.", "Order Address Code", "Responsibility Center", "Assigned User ID"],
                 breaks: &["Buy-from Address"],
                 captions: &[("Buy-from Vendor No.", "Vendor No."), ("Buy-from Vendor Name", "Vendor Name"), ("Buy-from Address", "Address"), ("Buy-from Address 2", "Address 2"), ("Buy-from City", "City"), ("Buy-from Post Code", "Post Code"), ("Buy-from Country/Region Code", "Country/Region"), ("Buy-from Contact No.", "Contact No."), ("Buy-from Contact", "Contact"), ("Order Address Code", "Alternate Vendor Address Code")],
                 headings: &[("Buy-from Address", "Buy-from")],
@@ -3369,16 +3329,16 @@ pub fn extend(m: &mut Metadata) {
             },
             Tab {
                 caption: "Invoice Details",
-                fields: &["Currency Code", "Expected Receipt Date", "Prices Including VAT", "VAT Bus. Posting Group", "Vendor Posting Group", "Payment Terms Code", "Payment Method Code", "Shortcut Dimension 1 Code", "Shortcut Dimension 2 Code", "Payment Discount %", "Pmt. Discount Date", "Journal Templ. Name", "Tax Liable", "Tax Area Code", "Shipment Method Code", "Payment Reference", "Creditor No.", "On Hold", "Lead Time Calculation", "Requested Receipt Date", "Promised Receipt Date", "Receipt on Invoice"],
+                fields: &["Currency Code", "Expected Receipt Date", "Prices Including VAT", "VAT Bus. Posting Group", "Vendor Posting Group", "Payment Terms Code", "Payment Method Code", "Shortcut Dimension 1 Code", "Shortcut Dimension 2 Code", "Payment Discount %", "Pmt. Discount Date", "Tax Liable", "Tax Area Code", "Shipment Method Code", "Payment Reference", "Creditor No.", "On Hold", "Lead Time Calculation", "Requested Receipt Date", "Promised Receipt Date", "Receipt on Invoice"],
                 promoted: &["Currency Code", "Expected Receipt Date", "Payment Terms Code"],
                 additional: &["Vendor Posting Group", "Payment Method Code", "Pmt. Discount Date", "Tax Liable", "Tax Area Code", "Lead Time Calculation"],
                 ..Tab::default()
             },
             Tab {
                 caption: "Shipping and Payment",
-                fields: &["Sell-to Customer No.", "Ship-to Code", "Location Code", "Ship-to Name", "Ship-to Address", "Ship-to Address 2", "Ship-to City", "Ship-to County", "Ship-to Post Code", "Ship-to Country/Region Code", "Ship-to Phone No.", "Ship-to Contact", "Pay-to Name", "Pay-to Address", "Pay-to Address 2", "Pay-to City", "Pay-to County", "Pay-to Post Code", "Pay-to Country/Region Code", "Pay-to Contact No.", "Pay-to Contact", "Remit-to Code"],
+                fields: &["Sell-to Customer No.", "Ship-to Code", "Location Code", "Ship-to Name", "Ship-to Address", "Ship-to Address 2", "Ship-to City", "Ship-to Post Code", "Ship-to Country/Region Code", "Ship-to Phone No.", "Ship-to Contact", "Pay-to Name", "Pay-to Address", "Pay-to Address 2", "Pay-to City", "Pay-to Post Code", "Pay-to Country/Region Code", "Pay-to Contact No.", "Pay-to Contact", "Remit-to Code"],
                 promoted: &["Location Code", "Pay-to Name", "Remit-to Code"],
-                additional: &["Ship-to Name", "Ship-to Address", "Ship-to Address 2", "Ship-to City", "Ship-to County", "Ship-to Post Code", "Ship-to Country/Region Code", "Ship-to Phone No.", "Ship-to Contact", "Pay-to Address", "Pay-to Address 2", "Pay-to City", "Pay-to County", "Pay-to Post Code", "Pay-to Country/Region Code", "Pay-to Contact No."],
+                additional: &["Ship-to Name", "Ship-to Address", "Ship-to Address 2", "Ship-to City", "Ship-to Post Code", "Ship-to Country/Region Code", "Ship-to Phone No.", "Ship-to Contact", "Pay-to Address", "Pay-to Address 2", "Pay-to City", "Pay-to Post Code", "Pay-to Country/Region Code", "Pay-to Contact No."],
                 breaks: &["Sell-to Customer No.", "Pay-to Name", "Remit-to Code"],
                 captions: &[("Sell-to Customer No.", "Customer"), ("Ship-to Name", "Name"), ("Ship-to Address", "Address"), ("Ship-to Address 2", "Address 2"), ("Ship-to City", "City"), ("Ship-to Post Code", "Post Code"), ("Ship-to Country/Region Code", "Country/Region"), ("Ship-to Phone No.", "Phone No."), ("Ship-to Contact", "Contact"), ("Pay-to Name", "Name"), ("Pay-to Address", "Address"), ("Pay-to Address 2", "Address 2"), ("Pay-to City", "City"), ("Pay-to Post Code", "Post Code"), ("Pay-to Country/Region Code", "Country/Region"), ("Pay-to Contact No.", "Contact No."), ("Pay-to Contact", "Contact")],
                 ..Tab::default()
@@ -3403,9 +3363,9 @@ pub fn extend(m: &mut Metadata) {
         &[
             Tab {
                 caption: "General",
-                fields: &["No.", "Buy-from Vendor No.", "Buy-from Vendor Name", "Buy-from Address", "Buy-from Address 2", "Buy-from City", "Buy-from County", "Buy-from Post Code", "Buy-from Country/Region Code", "Buy-from Contact No.", "Buy-from Contact", "Buy-from Vendor Templ. Code", "Document Date", "Due Date", "Order Date", "Requested Receipt Date", "Spend Request No.", "Vendor Order No.", "Vendor Shipment No.", "Purchaser Code", "Campaign No.", "Order Address Code", "Responsibility Center", "Assigned User ID", "Status"],
-                promoted: &["No.", "Buy-from Vendor Name", "Document Date", "Order Date", "Status"],
-                additional: &["Buy-from Vendor No.", "Buy-from Address", "Buy-from Address 2", "Buy-from City", "Buy-from County", "Buy-from Post Code", "Buy-from Country/Region Code", "Buy-from Contact No.", "Buy-from Vendor Templ. Code", "Due Date", "Spend Request No.", "Vendor Order No.", "Purchaser Code", "Campaign No.", "Order Address Code", "Responsibility Center", "Assigned User ID"],
+                fields: &["Buy-from Vendor No.", "Buy-from Vendor Name", "Buy-from Address", "Buy-from Address 2", "Buy-from City", "Buy-from Post Code", "Buy-from Country/Region Code", "Buy-from Contact No.", "Buy-from Contact", "Buy-from Vendor Templ. Code", "Document Date", "Due Date", "Order Date", "Requested Receipt Date", "Spend Request No.", "Vendor Order No.", "Vendor Shipment No.", "Purchaser Code", "Campaign No.", "Order Address Code", "Responsibility Center", "Assigned User ID", "Status"],
+                promoted: &["Buy-from Vendor Name", "Document Date", "Order Date", "Status"],
+                additional: &["Buy-from Vendor No.", "Buy-from Address", "Buy-from Address 2", "Buy-from City", "Buy-from Post Code", "Buy-from Country/Region Code", "Buy-from Contact No.", "Buy-from Vendor Templ. Code", "Due Date", "Spend Request No.", "Vendor Order No.", "Purchaser Code", "Campaign No.", "Order Address Code", "Responsibility Center", "Assigned User ID"],
                 breaks: &["Buy-from Address"],
                 captions: &[("Buy-from Vendor No.", "Vendor No."), ("Buy-from Vendor Name", "Vendor Name"), ("Buy-from Address", "Address"), ("Buy-from Address 2", "Address 2"), ("Buy-from City", "City"), ("Buy-from Post Code", "Post Code"), ("Buy-from Country/Region Code", "Country/Region"), ("Buy-from Contact No.", "Contact No."), ("Buy-from Contact", "Contact"), ("Buy-from Vendor Templ. Code", "Vendor Template Code"), ("Order Address Code", "Alternate Vendor Address Code")],
                 headings: &[("Buy-from Address", "Buy-from")],
@@ -3420,9 +3380,9 @@ pub fn extend(m: &mut Metadata) {
             },
             Tab {
                 caption: "Shipping and Payment",
-                fields: &["Location Code", "Ship-to Name", "Ship-to Address", "Ship-to Address 2", "Ship-to City", "Ship-to County", "Ship-to Post Code", "Ship-to Country/Region Code", "Ship-to Phone No.", "Ship-to Contact", "Pay-to Name", "Pay-to Address", "Pay-to Address 2", "Pay-to City", "Pay-to County", "Pay-to Post Code", "Pay-to Country/Region Code", "Pay-to Contact No.", "Pay-to Contact"],
+                fields: &["Location Code", "Ship-to Name", "Ship-to Address", "Ship-to Address 2", "Ship-to City", "Ship-to Post Code", "Ship-to Country/Region Code", "Ship-to Phone No.", "Ship-to Contact", "Pay-to Name", "Pay-to Address", "Pay-to Address 2", "Pay-to City", "Pay-to Post Code", "Pay-to Country/Region Code", "Pay-to Contact No.", "Pay-to Contact"],
                 promoted: &["Location Code", "Pay-to Name"],
-                additional: &["Ship-to Name", "Ship-to Address", "Ship-to Address 2", "Ship-to City", "Ship-to County", "Ship-to Post Code", "Ship-to Country/Region Code", "Ship-to Phone No.", "Ship-to Contact", "Pay-to Address", "Pay-to Address 2", "Pay-to City", "Pay-to County", "Pay-to Post Code", "Pay-to Country/Region Code", "Pay-to Contact No."],
+                additional: &["Ship-to Name", "Ship-to Address", "Ship-to Address 2", "Ship-to City", "Ship-to Post Code", "Ship-to Country/Region Code", "Ship-to Phone No.", "Ship-to Contact", "Pay-to Address", "Pay-to Address 2", "Pay-to City", "Pay-to Post Code", "Pay-to Country/Region Code", "Pay-to Contact No."],
                 breaks: &["Location Code", "Pay-to Name"],
                 captions: &[("Ship-to Name", "Name"), ("Ship-to Address", "Address"), ("Ship-to Address 2", "Address 2"), ("Ship-to City", "City"), ("Ship-to Post Code", "Post Code"), ("Ship-to Country/Region Code", "Country/Region"), ("Ship-to Phone No.", "Phone No."), ("Ship-to Contact", "Contact"), ("Pay-to Name", "Name"), ("Pay-to Address", "Address"), ("Pay-to Address 2", "Address 2"), ("Pay-to City", "City"), ("Pay-to Post Code", "Post Code"), ("Pay-to Country/Region Code", "Country/Region"), ("Pay-to Contact No.", "Contact No."), ("Pay-to Contact", "Contact")],
                 ..Tab::default()
@@ -3485,9 +3445,9 @@ pub fn extend(m: &mut Metadata) {
         &[
             Tab {
                 caption: "General",
-                fields: &["No.", "Sell-to Customer No.", "Sell-to Customer Name", "Sell-to Address", "Sell-to Address 2", "Sell-to City", "Sell-to County", "Sell-to Post Code", "Sell-to Country/Region Code", "Sell-to Contact No.", "Sell-to Contact", "Your Reference", "Posting Date", "VAT Reporting Date", "Document Date", "Due Date", "External Document No.", "Salesperson Code", "Campaign No.", "Responsibility Center", "Assigned User ID", "Job Queue Status", "Status", "Applies-to Doc. Type", "Applies-to Doc. No.", "Applies-to ID"],
-                promoted: &["Sell-to Customer Name", "Posting Date", "VAT Reporting Date", "Due Date", "Status"],
-                additional: &["Sell-to Customer No.", "Sell-to Address", "Sell-to Address 2", "Sell-to City", "Sell-to County", "Sell-to Post Code", "Sell-to Country/Region Code", "Sell-to Contact No.", "Your Reference", "Document Date", "External Document No.", "Salesperson Code", "Campaign No.", "Responsibility Center", "Assigned User ID", "Job Queue Status", "Applies-to Doc. Type", "Applies-to Doc. No.", "Applies-to ID"],
+                fields: &["Sell-to Customer No.", "Sell-to Customer Name", "Sell-to Address", "Sell-to Address 2", "Sell-to City", "Sell-to Post Code", "Sell-to Country/Region Code", "Sell-to Contact No.", "Sell-to Contact", "Your Reference", "Posting Date", "Document Date", "Due Date", "External Document No.", "Salesperson Code", "Campaign No.", "Responsibility Center", "Assigned User ID", "Status", "Applies-to Doc. Type", "Applies-to Doc. No.", "Applies-to ID"],
+                promoted: &["Sell-to Customer Name", "Posting Date", "Due Date", "Status"],
+                additional: &["Sell-to Customer No.", "Sell-to Address", "Sell-to Address 2", "Sell-to City", "Sell-to Post Code", "Sell-to Country/Region Code", "Sell-to Contact No.", "Your Reference", "Document Date", "External Document No.", "Salesperson Code", "Campaign No.", "Responsibility Center", "Assigned User ID", "Applies-to Doc. Type", "Applies-to Doc. No.", "Applies-to ID"],
                 breaks: &["Sell-to Address"],
                 captions: &[("Sell-to Customer No.", "Customer No."), ("Sell-to Customer Name", "Customer Name"), ("Sell-to Address", "Address"), ("Sell-to Address 2", "Address 2"), ("Sell-to City", "City"), ("Sell-to Post Code", "Post Code"), ("Sell-to Country/Region Code", "Country/Region"), ("Sell-to Contact No.", "Contact No."), ("Sell-to Contact", "Contact")],
                 headings: &[("Sell-to Address", "Sell-to")],
@@ -3495,16 +3455,16 @@ pub fn extend(m: &mut Metadata) {
             },
             Tab {
                 caption: "Credit Memo Details",
-                fields: &["Currency Code", "Company Bank Account Code", "Shipment Date", "Prices Including VAT", "VAT Country/Region Code", "VAT Registration No.", "Gen. Bus. Posting Group", "VAT Bus. Posting Group", "Customer Posting Group", "Payment Terms Code", "Payment Method Code", "Shortcut Dimension 1 Code", "Shortcut Dimension 2 Code", "Payment Discount %", "Pmt. Discount Date", "Journal Templ. Name", "Location Code", "EU 3-Party Trade", "Correction"],
+                fields: &["Currency Code", "Company Bank Account Code", "Shipment Date", "Prices Including VAT", "VAT Country/Region Code", "VAT Registration No.", "Gen. Bus. Posting Group", "VAT Bus. Posting Group", "Customer Posting Group", "Payment Terms Code", "Payment Method Code", "Shortcut Dimension 1 Code", "Shortcut Dimension 2 Code", "Payment Discount %", "Pmt. Discount Date", "Location Code", "EU 3-Party Trade", "Correction"],
                 promoted: &["Currency Code", "Company Bank Account Code", "Shipment Date", "Payment Terms Code"],
                 additional: &["VAT Country/Region Code", "VAT Registration No.", "Gen. Bus. Posting Group", "Customer Posting Group", "Payment Method Code", "Pmt. Discount Date", "Location Code"],
                 ..Tab::default()
             },
             Tab {
                 caption: "Billing",
-                fields: &["Bill-to Name", "Bill-to Address", "Bill-to Address 2", "Bill-to City", "Bill-to County", "Bill-to Post Code", "Bill-to Country/Region Code", "Bill-to Contact No.", "Bill-to Contact"],
+                fields: &["Bill-to Name", "Bill-to Address", "Bill-to Address 2", "Bill-to City", "Bill-to Post Code", "Bill-to Country/Region Code", "Bill-to Contact No.", "Bill-to Contact"],
                 promoted: &["Bill-to Name"],
-                additional: &["Bill-to Address", "Bill-to Address 2", "Bill-to City", "Bill-to County", "Bill-to Post Code", "Bill-to Country/Region Code", "Bill-to Contact No."],
+                additional: &["Bill-to Address", "Bill-to Address 2", "Bill-to City", "Bill-to Post Code", "Bill-to Country/Region Code", "Bill-to Contact No."],
                 breaks: &["Bill-to Name"],
                 captions: &[("Bill-to Name", "Name"), ("Bill-to Address", "Address"), ("Bill-to Address 2", "Address 2"), ("Bill-to City", "City"), ("Bill-to Post Code", "Post Code"), ("Bill-to Country/Region Code", "Country/Region"), ("Bill-to Contact No.", "Contact No"), ("Bill-to Contact", "Contact")],
                 headings: &[("Bill-to Name", "Bill-to")],
@@ -3524,9 +3484,9 @@ pub fn extend(m: &mut Metadata) {
         &[
             Tab {
                 caption: "General",
-                fields: &["No.", "Sell-to Customer No.", "Sell-to Customer Name", "Sell-to Address", "Sell-to Address 2", "Sell-to City", "Sell-to County", "Sell-to Post Code", "Sell-to Country/Region Code", "Sell-to Contact No.", "Sell-to Contact", "Your Reference", "Document Date", "Posting Date", "VAT Reporting Date", "Due Date", "External Document No.", "Salesperson Code", "Campaign No.", "Responsibility Center", "Assigned User ID", "Status", "Job Queue Status"],
-                promoted: &["Sell-to Customer Name", "Document Date", "Posting Date", "VAT Reporting Date", "Due Date", "Status"],
-                additional: &["Sell-to Customer No.", "Sell-to Address", "Sell-to Address 2", "Sell-to City", "Sell-to County", "Sell-to Post Code", "Sell-to Country/Region Code", "Sell-to Contact No.", "Your Reference", "External Document No.", "Salesperson Code", "Campaign No.", "Responsibility Center", "Assigned User ID", "Job Queue Status"],
+                fields: &["Sell-to Customer No.", "Sell-to Customer Name", "Sell-to Address", "Sell-to Address 2", "Sell-to City", "Sell-to Post Code", "Sell-to Country/Region Code", "Sell-to Contact No.", "Sell-to Contact", "Your Reference", "Document Date", "Posting Date", "Due Date", "External Document No.", "Salesperson Code", "Campaign No.", "Responsibility Center", "Assigned User ID", "Status"],
+                promoted: &["Sell-to Customer Name", "Document Date", "Posting Date", "Due Date", "Status"],
+                additional: &["Sell-to Customer No.", "Sell-to Address", "Sell-to Address 2", "Sell-to City", "Sell-to Post Code", "Sell-to Country/Region Code", "Sell-to Contact No.", "Your Reference", "External Document No.", "Salesperson Code", "Campaign No.", "Responsibility Center", "Assigned User ID"],
                 breaks: &["Sell-to Address"],
                 captions: &[("Sell-to Customer No.", "Customer No."), ("Sell-to Customer Name", "Customer Name"), ("Sell-to Address", "Address"), ("Sell-to Address 2", "Address 2"), ("Sell-to City", "City"), ("Sell-to Post Code", "Post Code"), ("Sell-to Country/Region Code", "Country/Region Code"), ("Sell-to Contact No.", "Contact No."), ("Sell-to Contact", "Contact")],
                 headings: &[("Sell-to Address", "Sell-to")],
@@ -3534,17 +3494,16 @@ pub fn extend(m: &mut Metadata) {
             },
             Tab {
                 caption: "Invoice Details",
-                fields: &["Currency Code", "Company Bank Account Code", "Shipment Date", "Quote No.", "Prices Including VAT", "VAT Country/Region Code", "VAT Registration No.", "Gen. Bus. Posting Group", "VAT Bus. Posting Group", "Customer Posting Group", "Payment Terms Code", "Payment Method Code", "EU 3-Party Trade", "Shortcut Dimension 1 Code", "Shortcut Dimension 2 Code", "Payment Discount %", "Pmt. Discount Date", "Journal Templ. Name", "Direct Debit Mandate ID", "Location Code"],
+                fields: &["Currency Code", "Company Bank Account Code", "Shipment Date", "Prices Including VAT", "VAT Country/Region Code", "VAT Registration No.", "Gen. Bus. Posting Group", "VAT Bus. Posting Group", "Customer Posting Group", "Payment Terms Code", "Payment Method Code", "EU 3-Party Trade", "Shortcut Dimension 1 Code", "Shortcut Dimension 2 Code", "Payment Discount %", "Pmt. Discount Date", "Direct Debit Mandate ID", "Location Code"],
                 promoted: &["Currency Code", "Company Bank Account Code", "Shipment Date", "Payment Terms Code"],
                 additional: &["VAT Country/Region Code", "VAT Registration No.", "Gen. Bus. Posting Group", "Customer Posting Group", "Payment Method Code", "Pmt. Discount Date", "Location Code"],
-                breaks: &["Quote No."],
                 ..Tab::default()
             },
             Tab {
                 caption: "Shipping and Billing",
-                fields: &["Ship-to Code", "Ship-to Name", "Ship-to Address", "Ship-to Address 2", "Ship-to City", "Ship-to County", "Ship-to Post Code", "Ship-to Country/Region Code", "Ship-to Phone No.", "Ship-to Contact", "Shipment Method Code", "Shipping Agent Code", "Shipping Agent Service Code", "Package Tracking No.", "Bill-to Name", "Bill-to Address", "Bill-to Address 2", "Bill-to City", "Bill-to County", "Bill-to Post Code", "Bill-to Country/Region Code", "Bill-to Contact No.", "Bill-to Contact"],
+                fields: &["Ship-to Code", "Ship-to Name", "Ship-to Address", "Ship-to Address 2", "Ship-to City", "Ship-to Post Code", "Ship-to Country/Region Code", "Ship-to Phone No.", "Ship-to Contact", "Shipment Method Code", "Shipping Agent Code", "Shipping Agent Service Code", "Package Tracking No.", "Bill-to Name", "Bill-to Address", "Bill-to Address 2", "Bill-to City", "Bill-to Post Code", "Bill-to Country/Region Code", "Bill-to Contact No.", "Bill-to Contact"],
                 promoted: &["Ship-to Code", "Bill-to Name"],
-                additional: &["Ship-to Country/Region Code", "Shipment Method Code", "Shipping Agent Code", "Shipping Agent Service Code", "Package Tracking No.", "Bill-to Address", "Bill-to Address 2", "Bill-to City", "Bill-to County", "Bill-to Post Code", "Bill-to Country/Region Code", "Bill-to Contact No."],
+                additional: &["Ship-to Country/Region Code", "Shipment Method Code", "Shipping Agent Code", "Shipping Agent Service Code", "Package Tracking No.", "Bill-to Address", "Bill-to Address 2", "Bill-to City", "Bill-to Post Code", "Bill-to Country/Region Code", "Bill-to Contact No."],
                 breaks: &["Ship-to Code", "Bill-to Name"],
                 captions: &[("Ship-to Code", "Code"), ("Ship-to Name", "Name"), ("Ship-to Address", "Address"), ("Ship-to Address 2", "Address 2"), ("Ship-to City", "City"), ("Ship-to Post Code", "Post Code"), ("Ship-to Country/Region Code", "Country/Region"), ("Ship-to Phone No.", "Phone No."), ("Ship-to Contact", "Contact"), ("Shipment Method Code", "Code"), ("Shipping Agent Code", "Agent"), ("Shipping Agent Service Code", "Agent service"), ("Bill-to Name", "Name"), ("Bill-to Address", "Address"), ("Bill-to Address 2", "Address 2"), ("Bill-to City", "City"), ("Bill-to Post Code", "Post Code"), ("Bill-to Country/Region Code", "Country/Region"), ("Bill-to Contact No.", "Contact No."), ("Bill-to Contact", "Contact")],
                 headings: &[("Shipment Method Code", "Shipment Method")],
@@ -3565,26 +3524,26 @@ pub fn extend(m: &mut Metadata) {
         &[
             Tab {
                 caption: "General",
-                fields: &["No.", "Sell-to Customer No.", "Sell-to Customer Name", "Quote No.", "Sell-to Address", "Sell-to Address 2", "Sell-to City", "Sell-to County", "Sell-to Post Code", "Sell-to Country/Region Code", "Sell-to Contact No.", "Sell-to Phone No.", "Sell-to E-Mail", "Sell-to Contact", "Document Date", "Posting Date", "VAT Reporting Date", "Order Date", "Due Date", "Requested Delivery Date", "Promised Delivery Date", "External Document No.", "Your Reference", "Salesperson Code", "Campaign No.", "Opportunity No.", "Responsibility Center", "Assigned User ID", "Job Queue Status", "Status"],
-                promoted: &["Document Date", "Posting Date", "VAT Reporting Date", "Order Date", "Due Date", "External Document No.", "Status"],
-                additional: &["Sell-to Customer No.", "Sell-to Address", "Sell-to Address 2", "Sell-to City", "Sell-to County", "Sell-to Post Code", "Sell-to Country/Region Code", "Sell-to Contact No.", "Sell-to Phone No.", "Sell-to E-Mail", "Promised Delivery Date", "Your Reference", "Salesperson Code", "Campaign No.", "Opportunity No.", "Responsibility Center", "Assigned User ID", "Job Queue Status"],
-                breaks: &["Quote No.", "Sell-to Address"],
+                fields: &["Sell-to Customer No.", "Sell-to Customer Name", "Sell-to Address", "Sell-to Address 2", "Sell-to City", "Sell-to Post Code", "Sell-to Country/Region Code", "Sell-to Contact No.", "Sell-to Phone No.", "Sell-to E-Mail", "Sell-to Contact", "Document Date", "Posting Date", "Order Date", "Due Date", "Requested Delivery Date", "Promised Delivery Date", "External Document No.", "Your Reference", "Salesperson Code", "Campaign No.", "Opportunity No.", "Responsibility Center", "Assigned User ID", "Status"],
+                promoted: &["Document Date", "Posting Date", "Order Date", "Due Date", "External Document No.", "Status"],
+                additional: &["Sell-to Customer No.", "Sell-to Address", "Sell-to Address 2", "Sell-to City", "Sell-to Post Code", "Sell-to Country/Region Code", "Sell-to Contact No.", "Sell-to Phone No.", "Sell-to E-Mail", "Promised Delivery Date", "Your Reference", "Salesperson Code", "Campaign No.", "Opportunity No.", "Responsibility Center", "Assigned User ID"],
+                breaks: &["Sell-to Address"],
                 captions: &[("Sell-to Customer No.", "Customer No."), ("Sell-to Customer Name", "Customer Name"), ("Sell-to Address", "Address"), ("Sell-to Address 2", "Address 2"), ("Sell-to City", "City"), ("Sell-to Post Code", "Post Code"), ("Sell-to Country/Region Code", "Country/Region Code"), ("Sell-to Contact No.", "Contact No."), ("Sell-to Phone No.", "Phone No."), ("Sell-to Contact", "Contact")],
                 headings: &[("Sell-to Address", "Sell-to")],
                 ..Tab::default()
             },
             Tab {
                 caption: "Invoice Details",
-                fields: &["Currency Code", "Company Bank Account Code", "Prices Including VAT", "VAT Country/Region Code", "VAT Registration No.", "Gen. Bus. Posting Group", "VAT Bus. Posting Group", "Customer Posting Group", "Payment Terms Code", "Payment Method Code", "EU 3-Party Trade", "Shortcut Dimension 1 Code", "Shortcut Dimension 2 Code", "Payment Discount %", "Pmt. Discount Date", "Journal Templ. Name", "Direct Debit Mandate ID"],
+                fields: &["Currency Code", "Company Bank Account Code", "Prices Including VAT", "VAT Country/Region Code", "VAT Registration No.", "Gen. Bus. Posting Group", "VAT Bus. Posting Group", "Customer Posting Group", "Payment Terms Code", "Payment Method Code", "EU 3-Party Trade", "Shortcut Dimension 1 Code", "Shortcut Dimension 2 Code", "Payment Discount %", "Pmt. Discount Date", "Direct Debit Mandate ID"],
                 promoted: &["Currency Code", "Company Bank Account Code", "Payment Terms Code"],
                 additional: &["VAT Country/Region Code", "VAT Registration No.", "Gen. Bus. Posting Group", "Customer Posting Group", "Payment Method Code", "Pmt. Discount Date"],
                 ..Tab::default()
             },
             Tab {
                 caption: "Shipping and Billing",
-                fields: &["Ship-to Code", "Ship-to Name", "Ship-to Address", "Ship-to Address 2", "Ship-to City", "Ship-to County", "Ship-to Post Code", "Ship-to Country/Region Code", "Ship-to Phone No.", "Ship-to Contact", "Shipment Method Code", "Shipping Agent Code", "Shipping Agent Service Code", "Package Tracking No.", "Bill-to Name", "Bill-to Address", "Bill-to Address 2", "Bill-to City", "Bill-to County", "Bill-to Post Code", "Bill-to Country/Region Code", "Bill-to Contact No.", "Bill-to Contact", "Location Code", "Shipment Date", "Shipping Advice", "Shipping Time", "Late Order Shipping", "Combine Shipments"],
+                fields: &["Ship-to Code", "Ship-to Name", "Ship-to Address", "Ship-to Address 2", "Ship-to City", "Ship-to Post Code", "Ship-to Country/Region Code", "Ship-to Phone No.", "Ship-to Contact", "Shipment Method Code", "Shipping Agent Code", "Shipping Agent Service Code", "Package Tracking No.", "Bill-to Name", "Bill-to Address", "Bill-to Address 2", "Bill-to City", "Bill-to Post Code", "Bill-to Country/Region Code", "Bill-to Contact No.", "Bill-to Contact", "Location Code", "Shipment Date", "Shipping Advice", "Shipping Time", "Late Order Shipping", "Combine Shipments"],
                 promoted: &["Ship-to Code", "Bill-to Name", "Shipment Date"],
-                additional: &["Ship-to Country/Region Code", "Shipment Method Code", "Shipping Agent Code", "Shipping Agent Service Code", "Package Tracking No.", "Bill-to Address", "Bill-to Address 2", "Bill-to City", "Bill-to County", "Bill-to Post Code", "Bill-to Country/Region Code", "Bill-to Contact No.", "Shipping Advice", "Shipping Time", "Late Order Shipping", "Combine Shipments"],
+                additional: &["Ship-to Country/Region Code", "Shipment Method Code", "Shipping Agent Code", "Shipping Agent Service Code", "Package Tracking No.", "Bill-to Address", "Bill-to Address 2", "Bill-to City", "Bill-to Post Code", "Bill-to Country/Region Code", "Bill-to Contact No.", "Shipping Advice", "Shipping Time", "Late Order Shipping", "Combine Shipments"],
                 breaks: &["Ship-to Code", "Bill-to Name"],
                 captions: &[("Ship-to Code", "Code"), ("Ship-to Name", "Name"), ("Ship-to Address", "Address"), ("Ship-to Address 2", "Address 2"), ("Ship-to City", "City"), ("Ship-to Post Code", "Post Code"), ("Ship-to Country/Region Code", "Country/Region"), ("Ship-to Phone No.", "Phone No."), ("Ship-to Contact", "Contact"), ("Shipment Method Code", "Code"), ("Shipping Agent Code", "Agent"), ("Shipping Agent Service Code", "Agent Service"), ("Bill-to Name", "Name"), ("Bill-to Address", "Address"), ("Bill-to Address 2", "Address 2"), ("Bill-to City", "City"), ("Bill-to Post Code", "Post Code"), ("Bill-to Country/Region Code", "Country/Region Code"), ("Bill-to Contact No.", "Contact No."), ("Bill-to Contact", "Contact")],
                 headings: &[("Shipment Method Code", "Shipment Method")],
@@ -3610,9 +3569,9 @@ pub fn extend(m: &mut Metadata) {
         &[
             Tab {
                 caption: "General",
-                fields: &["No.", "Sell-to Customer No.", "Sell-to Customer Name", "External Document No.", "Sell-to Address", "Sell-to Address 2", "Sell-to City", "Sell-to County", "Sell-to Post Code", "Sell-to Country/Region Code", "Sell-to Contact No.", "Sell-to Contact", "Sell-to Customer Templ. Code", "Order Date", "Document Date", "Quote Valid Until Date", "Quote Accepted", "Quote Accepted Date", "Due Date", "Requested Delivery Date", "Your Reference", "Salesperson Code", "Campaign No.", "Opportunity No.", "Responsibility Center", "Assigned User ID", "Status"],
+                fields: &["Sell-to Customer No.", "Sell-to Customer Name", "External Document No.", "Sell-to Address", "Sell-to Address 2", "Sell-to City", "Sell-to Post Code", "Sell-to Country/Region Code", "Sell-to Contact No.", "Sell-to Contact", "Sell-to Customer Templ. Code", "Order Date", "Document Date", "Quote Valid Until Date", "Quote Accepted", "Quote Accepted Date", "Due Date", "Requested Delivery Date", "Your Reference", "Salesperson Code", "Campaign No.", "Opportunity No.", "Responsibility Center", "Assigned User ID", "Status"],
                 promoted: &["Sell-to Customer Name", "Document Date", "Due Date", "Status"],
-                additional: &["Sell-to Customer No.", "Sell-to Address", "Sell-to Address 2", "Sell-to City", "Sell-to County", "Sell-to Post Code", "Sell-to Country/Region Code", "Sell-to Contact No.", "Sell-to Customer Templ. Code", "Order Date", "Your Reference", "Salesperson Code", "Campaign No.", "Opportunity No.", "Responsibility Center", "Assigned User ID"],
+                additional: &["Sell-to Customer No.", "Sell-to Address", "Sell-to Address 2", "Sell-to City", "Sell-to Post Code", "Sell-to Country/Region Code", "Sell-to Contact No.", "Sell-to Customer Templ. Code", "Order Date", "Your Reference", "Salesperson Code", "Campaign No.", "Opportunity No.", "Responsibility Center", "Assigned User ID"],
                 breaks: &["Sell-to Address"],
                 captions: &[("Sell-to Customer No.", "Customer No."), ("Sell-to Customer Name", "Customer Name"), ("Sell-to Address", "Address"), ("Sell-to Address 2", "Address 2"), ("Sell-to City", "City"), ("Sell-to Post Code", "Post Code"), ("Sell-to Country/Region Code", "Country/Region"), ("Sell-to Contact No.", "Contact No."), ("Sell-to Contact", "Contact"), ("Sell-to Customer Templ. Code", "Customer Template Code")],
                 headings: &[("Sell-to Address", "Sell-to")],
@@ -3620,16 +3579,16 @@ pub fn extend(m: &mut Metadata) {
             },
             Tab {
                 caption: "Invoice Details",
-                fields: &["Currency Code", "Company Bank Account Code", "Prices Including VAT", "VAT Bus. Posting Group", "Payment Terms Code", "Payment Method Code", "Tax Liable", "Tax Area Code", "Transaction Type", "Shortcut Dimension 1 Code", "Shortcut Dimension 2 Code", "Payment Discount %", "Pmt. Discount Date", "Journal Templ. Name", "Location Code"],
+                fields: &["Currency Code", "Company Bank Account Code", "Prices Including VAT", "VAT Bus. Posting Group", "Payment Terms Code", "Payment Method Code", "Tax Liable", "Tax Area Code", "Transaction Type", "Shortcut Dimension 1 Code", "Shortcut Dimension 2 Code", "Payment Discount %", "Pmt. Discount Date", "Location Code"],
                 promoted: &["Currency Code", "Company Bank Account Code", "Payment Terms Code"],
                 additional: &["Payment Method Code", "Pmt. Discount Date", "Location Code"],
                 ..Tab::default()
             },
             Tab {
                 caption: "Shipping and Billing",
-                fields: &["Ship-to Code", "Ship-to Name", "Ship-to Address", "Ship-to Address 2", "Ship-to City", "Ship-to County", "Ship-to Post Code", "Ship-to Country/Region Code", "Ship-to Phone No.", "Ship-to Contact", "Shipment Date", "Shipment Method Code", "Shipping Agent Code", "Shipping Agent Service Code", "Package Tracking No.", "Bill-to Name", "Bill-to Address", "Bill-to Address 2", "Bill-to City", "Bill-to County", "Bill-to Post Code", "Bill-to Country/Region Code", "Bill-to Contact No.", "Bill-to Contact"],
+                fields: &["Ship-to Code", "Ship-to Name", "Ship-to Address", "Ship-to Address 2", "Ship-to City", "Ship-to Post Code", "Ship-to Country/Region Code", "Ship-to Phone No.", "Ship-to Contact", "Shipment Date", "Shipment Method Code", "Shipping Agent Code", "Shipping Agent Service Code", "Package Tracking No.", "Bill-to Name", "Bill-to Address", "Bill-to Address 2", "Bill-to City", "Bill-to Post Code", "Bill-to Country/Region Code", "Bill-to Contact No.", "Bill-to Contact"],
                 promoted: &["Ship-to Code", "Shipment Date", "Bill-to Name"],
-                additional: &["Ship-to Country/Region Code", "Shipment Method Code", "Shipping Agent Code", "Shipping Agent Service Code", "Package Tracking No.", "Bill-to Address", "Bill-to Address 2", "Bill-to City", "Bill-to County", "Bill-to Post Code", "Bill-to Contact No."],
+                additional: &["Ship-to Country/Region Code", "Shipment Method Code", "Shipping Agent Code", "Shipping Agent Service Code", "Package Tracking No.", "Bill-to Address", "Bill-to Address 2", "Bill-to City", "Bill-to Post Code", "Bill-to Contact No."],
                 breaks: &["Ship-to Code", "Bill-to Name"],
                 captions: &[("Ship-to Code", "Code"), ("Ship-to Name", "Name"), ("Ship-to Address", "Address"), ("Ship-to Address 2", "Address 2"), ("Ship-to City", "City"), ("Ship-to Post Code", "Post Code"), ("Ship-to Country/Region Code", "Country/Region"), ("Ship-to Phone No.", "Phone No."), ("Ship-to Contact", "Contact"), ("Shipment Method Code", "Code"), ("Shipping Agent Code", "Agent"), ("Shipping Agent Service Code", "Agent service"), ("Bill-to Name", "Name"), ("Bill-to Address", "Address"), ("Bill-to Address 2", "Address 2"), ("Bill-to City", "City"), ("Bill-to Post Code", "Post Code"), ("Bill-to Country/Region Code", "Country/Region"), ("Bill-to Contact No.", "Contact No."), ("Bill-to Contact", "Contact")],
                 headings: &[("Shipment Method Code", "Shipment Method")],
@@ -3683,11 +3642,6 @@ pub fn extend(m: &mut Metadata) {
                 fields: &["S. Invoice Template Name", "S. Cr. Memo Template Name", "S. Prep. Inv. Template Name", "S. Prep. Cr.Memo Template Name", "IC Sales Invoice Template Name", "IC Sales Cr. Memo Templ. Name", "Fin. Charge Jnl. Template Name", "Fin. Charge Jnl. Batch Name", "Reminder Journal Template Name", "Reminder Journal Batch Name"],
                 ..Tab::default()
             },
-            Tab {
-                caption: "Dynamics 365 Sales",
-                fields: &["Write-in Product Type", "Write-in Product No.", "Freight G/L Acc. No."],
-                ..Tab::default()
-            },
         ],
     );
     columns(m, "salespersons", &["Code", "Name", "Commission %", "Phone No."]);
@@ -3709,7 +3663,7 @@ pub fn extend(m: &mut Metadata) {
             },
             Tab {
                 caption: "Address & Contact",
-                fields: &["Address", "Address 2", "Country/Region Code", "City", "County", "Post Code", "Phone No.", "Mobile Phone No.", "E-Mail", "Fax No.", "Home Page", "Our Account No.", "Language Code", "Format Region", "Primary Contact No.", "Contact"],
+                fields: &["Address", "Address 2", "Country/Region Code", "City", "Post Code", "Phone No.", "Mobile Phone No.", "E-Mail", "Fax No.", "Home Page", "Our Account No.", "Language Code", "Format Region", "Primary Contact No.", "Contact"],
                 promoted: &["Post Code", "E-Mail", "Contact"],
                 additional: &["Fax No.", "Language Code", "Format Region"],
                 breaks: &["Address", "Primary Contact No."],

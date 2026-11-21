@@ -8,6 +8,35 @@ use std::path::{Path, PathBuf};
 /// Application areas the Essential experience (what a new BC company runs) does not show.
 const HIDDEN_AREAS: &[&str] = &["manufacturing", "planning", "warehouse", "service", "adcs", "advanced"];
 
+/// Page variables that are false in a standard company (no approvals, Dataverse, Office add-in,
+/// job queue or manual document numbers), so the controls they show stay hidden. Checked against
+/// the live web client where possible (No., Quote No. and VAT Date don't show on a sales order).
+const FALSE_BY_DEFAULT: &[&str] = &[
+    "openapprovalentriesexistforcurruser",
+    "openapprovalentriesexistcurruser",
+    "openapprovalentriesexist",
+    "showworkflowstatus",
+    "isofficeaddin",
+    "crmintegrationenabled",
+    "crmiscoupledtorecord",
+    "cdsintegrationenabled",
+    "docnovisible",
+    "showquoteno",
+    "vatdateenabled",
+    "jobqueuevisible",
+    "jobqueuesused",
+    "jobqueueused",
+    "isshiptocountyvisible",
+    "isselltocountyvisible",
+    "isbilltocountyvisible",
+    "isbuyfromcountyvisible",
+    "ispaytocountyvisible",
+    "iscountyvisible",
+    "isjournaltemplnamevisible",
+    "entitytextenabled",
+    "paymentservicevisible",
+];
+
 #[derive(Debug, Default)]
 pub struct Node {
     pub head: String,
@@ -200,6 +229,7 @@ pub fn visibility(n: &Node) -> Vis {
     match n.prop("Visible").map(str::to_ascii_lowercase).as_deref() {
         None | Some("true") => Vis::Shown,
         Some("false") => Vis::Hidden,
+        Some(v) if FALSE_BY_DEFAULT.contains(&v.trim()) => Vis::Hidden,
         Some(_) => Vis::Conditional,
     }
 }

@@ -30,6 +30,10 @@ cargo run -p erpcraft-cli -- mcp                   # MCP server on stdio for age
 
 On Windows without the MSVC build tools, use the `stable-x86_64-pc-windows-gnullvm` toolchain with llvm-mingw.
 
+## Roadmap
+
+The road to full Business Central parity, how it is measured and the to-do list: [`docs/roadmap.md`](docs/roadmap.md).
+
 ## What works today
 
 - **Master data:** customers, vendors, items, G/L accounts, bank accounts, and the setup tables (posting groups, VAT and General Posting Setup, number series, payment terms).

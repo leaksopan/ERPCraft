@@ -60,7 +60,7 @@ fn statistics(ctx: &mut Ctx, p: &Json) -> Result<Json> {
         }
         (sales, cost, sold, returned)
     };
-    let ps = periods(ctx.work_date);
+    let ps = periods(ctx, ctx.work_date);
     let mut rows: Vec<Vec<Json>> = vec![
         vec![json!("Sales Growth Rate (%)")],
         vec![json!("Net Sales (LCY)")],

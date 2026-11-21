@@ -51,6 +51,17 @@ pub fn extend(m: &mut Metadata) {
     );
     relabel(
         m,
+        "Accounting Period",
+        &[
+            ("Starting Date", "Starting Date", "Specifies the date that the accounting period will begin.", 0),
+            ("Name", "Name", "Specifies the name of the accounting period.", 0),
+            ("New Fiscal Year", "New Fiscal Year", "Specifies whether to use the accounting period to start a fiscal year.", 0),
+            ("Closed", "Closed", "Specifies if the accounting period belongs to a closed fiscal year.", 0),
+            ("Date Locked", "Date Locked", "Specifies if you can change the starting date for the accounting period.", 0),
+        ],
+    );
+    relabel(
+        m,
         "Approval Entry",
         &[
             ("Due Date", "Approval Due Date", "", 0),
@@ -187,6 +198,7 @@ pub fn extend(m: &mut Metadata) {
             ("Show Opposite Sign", "Show Opposite Sign", "Specifies whether to show debits in reports as negative amounts (that is, with a minus sign) and credits as positive amounts.", 0),
             ("Show", "Show", "Specifies when you want the amounts in the column to be shown in reports.", 0),
             ("Rounding Factor", "Rounding Factor", "Specifies a rounding factor for amounts in the column.", 0),
+            ("Budget Name", "Budget Name", "Specifies which budget amounts will be totaled in this column.", 0),
         ],
     );
     fields(
@@ -194,7 +206,6 @@ pub fn extend(m: &mut Metadata) {
         "Column Layout",
         vec![
             F::code("Comparison Period Formula", 20).tooltip("Specifies a period formula that specifies the accounting periods you want to use to calculate the amount in this column."),
-            F::code("Budget Name", 10).tooltip("Specifies which budget amounts will be totaled in this column."),
             F::option("Include Date In Header", &["", "Weekday", "Week", "Month", "Month and Year", "Quarter", "Quarter and Year", "Year", "Full Date"]).caption("Include Date in Column Header").tooltip("Specifies how the ending date of the Date Filter applied to the column is displayed on the Column Header."),
             F::text("G/L Account Totaling", 250).tooltip("Specifies which G/L accounts will be totalled in this column. Note that this filter will be applied in addition to any G/L account filters from the row definition lines."),
             F::boolean("Show in ACY").tooltip("Specifies whether amounts are shown in the Additional Reporting Currency."),
@@ -889,6 +900,49 @@ pub fn extend(m: &mut Metadata) {
             F::option("Spend Request Required", &["None", "Warning", "Required"]).tooltip("Specifies whether a spend request is required before expenses can be posted to this account."),
             F::code("Cost Type No.", 20).read_only().tooltip("Specifies a cost type number to establish which cost type a general ledger account belongs to."),
             F::code("Default Deferral Template Code", 10).tooltip("Specifies the default deferral template that governs how to defer revenues and expenses to the periods when they occurred."),
+        ],
+    );
+    relabel(
+        m,
+        "G/L Budget Entry",
+        &[
+            ("Entry No.", "Entry No.", "Specifies the number of the entry, as assigned from the specified number series when the entry was created.", 0),
+            ("Budget Name", "Budget Name", "Specifies the name of the G/L budget that the entry belongs to.", 0),
+            ("G/L Account No.", "G/L Account No.", "Specifies the number of the G/L account that the budget entry applies to, or, the account on the line where the budget figure has been entered.", 0),
+            ("Date", "Date", "Specifies the date of the budget entry.", 0),
+            ("Global Dimension 1 Code", "Global Dimension 1 Code", "Specifies the code for the global dimension that is linked to the record or entry for analysis purposes. Two global dimensions, typically for the company's most important activities, are available on all cards, documents, reports, and lists.", 0),
+            ("Global Dimension 2 Code", "Global Dimension 2 Code", "Specifies the code for the global dimension that is linked to the record or entry for analysis purposes. Two global dimensions, typically for the company's most important activities, are available on all cards, documents, reports, and lists.", 0),
+            ("Amount", "Amount", "Specifies the amount of the budget entry.", 1),
+            ("Description", "Description", "Specifies a description of the budget figure.", 0),
+        ],
+    );
+    fields(
+        m,
+        "G/L Budget Entry",
+        vec![
+            F::code("Budget Dimension 1 Code", 20).tooltip("Specifies the dimension value code for the Budget Dimension 1 Code the budget entry is linked to."),
+            F::code("Budget Dimension 2 Code", 20).tooltip("Specifies the dimension value code for the Budget Dimension 2 Code the budget entry is linked to."),
+            F::code("Budget Dimension 3 Code", 20).tooltip("Specifies the dimension value code for the Budget Dimension 3 Code the budget entry is linked to."),
+            F::code("Budget Dimension 4 Code", 20).tooltip("Specifies the dimension value code for the Budget Dimension 4 Code the budget entry is linked to."),
+        ],
+    );
+    relabel(
+        m,
+        "G/L Budget Name",
+        &[
+            ("Name", "Name", "Specifies the name of the general ledger budget.", 0),
+            ("Description", "Description", "Specifies a description of the general ledger budget name.", 0),
+            ("Blocked", "Blocked", "Specifies that the related record is blocked from being posted in transactions, for example a customer that is declared insolvent or an item that is placed in quarantine.", 0),
+        ],
+    );
+    fields(
+        m,
+        "G/L Budget Name",
+        vec![
+            F::code("Budget Dimension 1 Code", 20).relation("Dimension").tooltip("Specifies a code for a budget dimension. You can specify four additional dimensions on each budget that you create."),
+            F::code("Budget Dimension 2 Code", 20).relation("Dimension").tooltip("Specifies a code for a budget dimension. You can specify four additional dimensions on each budget that you create."),
+            F::code("Budget Dimension 3 Code", 20).relation("Dimension").tooltip("Specifies a code for a budget dimension. You can specify four additional dimensions on each budget that you create."),
+            F::code("Budget Dimension 4 Code", 20).relation("Dimension").tooltip("Specifies a code for a budget dimension. You can specify four additional dimensions on each budget that you create."),
         ],
     );
     relabel(
@@ -2921,6 +2975,7 @@ pub fn extend(m: &mut Metadata) {
     );
     columns(m, "account-schedule", &["Row No.", "Description", "Totaling Type", "Row Type", "Amount Type", "Show Opposite Sign", "Show", "Bold", "Italic", "Underline", "Double Underline", "New Page", "Internal Description"]);
     columns(m, "account-schedule-names", &["Name", "Description", "Analysis View Name", "Status", "Internal Description"]);
+    columns(m, "accounting-periods", &["Starting Date", "Name", "New Fiscal Year", "Closed", "Date Locked"]);
     columns(m, "approval-comments", &["Comment", "User ID", "Date and Time"]);
     columns(m, "approval-entries", &["Limit Type", "Approval Type", "Sequence No.", "Status", "Sender ID", "Salespers./Purch. Code", "Approver ID", "Currency Code", "Amount (LCY)", "Available Credit Limit (LCY)", "Date-Time Sent for Approval", "Last Date-Time Modified", "Last Modified By User ID", "Due Date"]);
     columns(m, "attached-documents", &["File Name", "File Extension", "File Type", "User", "Attached Date", "Document Flow Purchase", "Document Flow Sales", "Document Flow Production"]);
@@ -3224,6 +3279,8 @@ pub fn extend(m: &mut Metadata) {
             },
         ],
     );
+    columns(m, "gl-budget-entries", &["Budget Name", "Date", "G/L Account No.", "Description", "Global Dimension 1 Code", "Global Dimension 2 Code", "Budget Dimension 1 Code", "Budget Dimension 2 Code", "Budget Dimension 3 Code", "Budget Dimension 4 Code", "Amount", "Entry No."]);
+    columns(m, "gl-budget-names", &["Name", "Description", "Budget Dimension 1 Code", "Budget Dimension 2 Code", "Budget Dimension 3 Code", "Budget Dimension 4 Code", "Blocked"]);
     columns(m, "gl-registers", &["No.", "User ID", "Source Code", "Journal Batch Name", "From Entry No.", "To Entry No.", "From VAT Entry No.", "To VAT Entry No."]);
     columns(m, "inventory-posting-groups", &["Code", "Description"]);
     columns(m, "inventory-posting-setup", &["Location Code", "Invt. Posting Group Code", "Description", "View All Accounts on Lookup", "Inventory Account", "Inventory Account (Interim)", "WIP Account", "Material Variance Account", "Capacity Variance Account", "Cap. Overhead Variance Account", "Mfg. Overhead Variance Account", "Mat. Non-Inv. Variance Acc."]);
@@ -4145,6 +4202,7 @@ pub fn extend(m: &mut Metadata) {
         m,
         "general-ledger-setup",
         &[
+            Nav { caption: "Accounting Periods", page: "accounting-periods", link: &[], shortcut: "" },
             Nav { caption: "Dimensions", page: "dimensions", link: &[], shortcut: "" },
             Nav { caption: "User Setup", page: "user-setup", link: &[], shortcut: "" },
             Nav { caption: "General Posting Setup", page: "general-posting-setup", link: &[], shortcut: "" },
@@ -4431,6 +4489,14 @@ pub fn extend(m: &mut Metadata) {
     );
     categories(
         m,
+        "accounting-periods",
+        &[
+            ("Process", &["&Create Year", "C&lose Year"]),
+            ("Reports", &["Trial Balance by Period"]),
+        ],
+    );
+    categories(
+        m,
         "bank-account-card",
         &[
             ("Bank Account", &["Dimensions", "Co&mments", "Ledger E&ntries"]),
@@ -4609,7 +4675,7 @@ pub fn extend(m: &mut Metadata) {
         "general-ledger-setup",
         &[
             ("Posting", &["General Posting Setup", "Gen. Business Posting Groups", "Gen. Product Posting Groups"]),
-            ("General", &["Dimensions", "User Setup"]),
+            ("General", &["Accounting Periods", "Dimensions", "User Setup"]),
             ("VAT", &["VAT Posting Setup", "VAT Business Posting Groups", "VAT Product Posting Groups"]),
             ("Bank", &["Bank Account Posting Groups"]),
             ("Journal Templates", &["General Journal Templates"]),

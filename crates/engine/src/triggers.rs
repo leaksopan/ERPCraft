@@ -28,6 +28,14 @@ pub fn on_insert(ctx: &mut Ctx, t: &TableDef, r: &mut Record) -> Result<()> {
         crate::item_journal::on_insert(ctx, r)?;
         return crate::approvals::on_journal_line_insert(ctx, &t.name, r);
     }
+    if t.name == crate::schema::fiscal::GL_BUDGET_ENTRY {
+        crate::fiscal::on_budget_insert(ctx, r);
+        return Ok(());
+    }
+    if t.name == crate::schema::fiscal::ACCOUNTING_PERIOD {
+        crate::fiscal::on_period_insert(r);
+        return Ok(());
+    }
     if t.name == crate::schema::approvals::APPROVAL_COMMENT {
         crate::approvals::on_comment_insert(ctx, r);
         return Ok(());

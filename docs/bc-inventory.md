@@ -17,10 +17,10 @@ orders this list into phases.
 | CRM | 1 | 163 | 0 | 36 |
 | CashFlow | 0 | 22 | 0 | 3 |
 | CostAccounting | 0 | 30 | 0 | 21 |
-| Finance | 26 | 344 | 1 | 86 |
+| Finance | 28 | 344 | 1 | 86 |
 | FinancialMgt | 0 | 1 | 0 | 0 |
 | FixedAssets | 11 | 61 | 1 | 38 |
-| Foundation | 4 | 58 | 0 | 2 |
+| Foundation | 5 | 58 | 0 | 2 |
 | HumanResources | 0 | 57 | 0 | 15 |
 | Integration | 0 | 87 | 0 | 0 |
 | Inventory | 12 | 312 | 1 | 101 |
@@ -38,7 +38,7 @@ orders this list into phases.
 | Utilities | 0 | 12 | 0 | 2 |
 | Warehouse | 0 | 144 | 0 | 35 |
 | eServices | 0 | 25 | 0 | 0 |
-| **Base Application** | **116** | **2638** | **16** | **659** |
+| **Base Application** | **119** | **2638** | **16** | **659** |
 
 ### (root)
 
@@ -746,7 +746,7 @@ Pages 0 / 30, reports 0 / 21.
 
 ### Finance
 
-Pages 26 / 344, reports 1 / 86.
+Pages 28 / 344, reports 1 / 86.
 
 <details><summary>Finance / AllocationAccount: pages 0 / 5, reports 0 / 0</summary>
 
@@ -955,7 +955,7 @@ Pages 26 / 344, reports 1 / 86.
 
 </details>
 
-<details><summary>Finance / GeneralLedger: pages 13 / 50, reports 1 / 33</summary>
+<details><summary>Finance / GeneralLedger: pages 15 / 50, reports 1 / 33</summary>
 
 - [x] Page 16 Chart of Accounts (List)
 - [x] Page 17 G/L Account Card (Card)
@@ -967,8 +967,8 @@ Pages 26 / 344, reports 1 / 86.
 - [ ] Page 115 G/L Posting Preview (List)
 - [x] Page 116 G/L Registers (List)
 - [x] Page 118 General Ledger Setup (Card)
-- [ ] Page 120 G/L Budget Entries (List)
-- [ ] Page 121 G/L Budget Names (List)
+- [x] Page 120 G/L Budget Entries (List)
+- [x] Page 121 G/L Budget Names (List)
 - [ ] Page 122 G/L Entries Preview (List)
 - [ ] Page 182 Posted General Journal (Worksheet)
 - [ ] Page 183 Reverse Transaction Entries (List)
@@ -1398,7 +1398,7 @@ Pages 11 / 61, reports 1 / 38.
 
 ### Foundation
 
-Pages 4 / 58, reports 0 / 2.
+Pages 5 / 58, reports 0 / 2.
 
 <details><summary>Foundation / Address: pages 0 / 10, reports 0 / 0</summary>
 
@@ -1467,9 +1467,9 @@ Pages 4 / 58, reports 0 / 2.
 
 </details>
 
-<details><summary>Foundation / Period: pages 0 / 2, reports 0 / 1</summary>
+<details><summary>Foundation / Period: pages 1 / 2, reports 0 / 1</summary>
 
-- [ ] Page 100 Accounting Periods (List)
+- [x] Page 100 Accounting Periods (List)
 - [ ] Page 107 Date Compr. Registers (List)
 - [ ] Report 93 Create Fiscal Year (Report)
 

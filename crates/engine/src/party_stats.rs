@@ -82,18 +82,15 @@ pub(crate) fn money(d: Decimal) -> String {
 }
 
 /// This Period (the work date's month), This Year, Last Year and To Date.
-pub(crate) fn periods(work: NaiveDate) -> [(String, NaiveDate, NaiveDate); 4] {
-    let first = |y: i32, m: u32| NaiveDate::from_ymd_opt(y, m, 1).unwrap_or(work);
-    let month_start = first(work.year(), work.month());
-    let next_month = if work.month() == 12 { first(work.year() + 1, 1) } else { first(work.year(), work.month() + 1) };
-    let month_end = next_month.pred_opt().unwrap_or(work);
-    let year = |y: i32| (first(y, 1), NaiveDate::from_ymd_opt(y, 12, 31).unwrap_or(work));
-    let (ty0, ty1) = year(work.year());
-    let (ly0, ly1) = year(work.year() - 1);
+pub(crate) fn periods(ctx: &Ctx, work: NaiveDate) -> [(String, NaiveDate, NaiveDate); 4] {
+    // This Period: the accounting period of the work date; years: its fiscal year and the one before.
+    let (p0, p1) = crate::fiscal::period_of(ctx, work);
+    let (y0, y1) = crate::fiscal::fiscal_year(ctx, work);
+    let (l0, l1) = crate::fiscal::fiscal_year(ctx, y0.pred_opt().unwrap_or(y0));
     [
-        (month_start.format("%B %Y").to_string(), month_start, month_end),
-        (format!("Fiscal Year {}", work.year()), ty0, ty1),
-        (format!("Fiscal Year {}", work.year() - 1), ly0, ly1),
+        (p0.format("%B %Y").to_string(), p0, p1),
+        (format!("Fiscal Year {}", y0.year()), y0, y1),
+        (format!("Fiscal Year {}", l0.year()), l0, l1),
         ("To Date".to_string(), NaiveDate::MIN, work),
     ]
 }
@@ -119,7 +116,7 @@ fn entry_statistics(ctx: &mut Ctx, p: &Json, party: &Party) -> Result<Json> {
         });
     }
 
-    let ps = periods(ctx.work_date);
+    let ps = periods(ctx, ctx.work_date);
     let by_no: BTreeMap<i64, &Record> = es.iter().map(|e| (e.get("Entry No.").as_int(), e)).collect();
     let mut cols: Vec<Vec<Json>> = Vec::new();
     for (_, from, to) in &ps {

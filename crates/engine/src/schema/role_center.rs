@@ -52,6 +52,8 @@ pub fn register(m: &mut Metadata) {
                 vec![
                     L::new("Chart of Accounts", "chart-of-accounts"),
                     L::new("Financial Reports", "financial-reports"),
+                    L::new("G/L Budgets", "gl-budget-names"),
+                    L::new("Accounting Periods", "accounting-periods"),
                     L::new("General Ledger Entries", "general-ledger-entries"),
                     L::new("Customer Ledger Entries", "customer-ledger-entries"),
                     L::new("Vendor Ledger Entries", "vendor-ledger-entries"),

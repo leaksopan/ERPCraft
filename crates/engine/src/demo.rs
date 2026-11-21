@@ -449,6 +449,8 @@ fn demo_financial_reports(ctx: &mut Ctx) -> Result<()> {
         ("B", "Prior Year", "Net Change", "-1Y", ""),
         ("C", "Change", "Formula", "", "A-B"),
         ("D", "Year to Date", "Year to Date", "", ""),
+        ("E", "Budget", "Net Change", "", ""),
+        ("F", "Variance", "Formula", "", "A-E"),
     ];
     for (name, desc, cols) in [("BALANCE", "Balance and prior year", balance_cols), ("PERIOD", "Period, prior year and year to date", period_cols)] {
         raw(ctx, COLUMN_LAYOUT_NAME, json!({"Name": name, "Description": desc}))?;
@@ -457,8 +459,27 @@ fn demo_financial_reports(ctx: &mut Ctx) -> Result<()> {
                 ctx,
                 COLUMN_LAYOUT,
                 json!({"Column Layout Name": name, "Line No.": (i as i64 + 1) * 10000, "Column No.": no, "Column Header": header, "Column Type": ty,
-                       "Comparison Date Formula": cmp, "Formula": formula, "Ledger Entry Type": "Entries", "Amount Type": "Net Amount", "Show": "Always", "Rounding Factor": "None"}),
+                       "Comparison Date Formula": cmp, "Formula": formula, "Ledger Entry Type": if *header == "Budget" { "Budget Entries" } else { "Entries" },
+                       "Budget Name": if *header == "Budget" { "2026" } else { "" }, "Amount Type": "Net Amount", "Show": "Always", "Rounding Factor": "None"}),
             )?;
+        }
+    }
+    // Fiscal years 2025 and 2026 in months, and a 2026 budget.
+    for year in [2025, 2026] {
+        for month in 1..=12u32 {
+            if let Some(d) = chrono::NaiveDate::from_ymd_opt(year, month, 1) {
+                raw(ctx, "Accounting Period", json!({"Starting Date": d.to_string(), "Name": d.format("%B").to_string(), "New Fiscal Year": month == 1}))?;
+            }
+        }
+    }
+    raw(ctx, "G/L Budget Name", json!({"Name": "2026", "Description": "Budget 2026"}))?;
+    let mut entry = 0;
+    for (account, monthly) in [("40200", -20_000_000i64), ("40300", -15_000_000), ("50200", 12_000_000), ("60200", 15_000_000), ("60300", 3_000_000), ("60400", 60_000_000)] {
+        for month in 1..=12u32 {
+            entry += 1;
+            if let Some(d) = chrono::NaiveDate::from_ymd_opt(2026, month, 1) {
+                raw(ctx, "G/L Budget Entry", json!({"Entry No.": entry, "Budget Name": "2026", "G/L Account No.": account, "Date": d.to_string(), "Amount": monthly, "Description": "Budget 2026"}))?;
+            }
         }
     }
     raw(ctx, FINANCIAL_REPORT, json!({"Name": "BALANCE", "Description": "Balance Sheet", "Financial Report Row Group": "BALANCE", "Financial Report Column Group": "BALANCE"}))?;

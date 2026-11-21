@@ -6,6 +6,7 @@ pub mod attachments;
 pub mod comments;
 pub mod dimensions;
 pub mod fin_reports;
+pub mod fiscal;
 pub mod finance;
 pub mod fixed_assets;
 pub mod inventory;
@@ -36,6 +37,7 @@ pub fn hand_written() -> Metadata {
     role_center::register(&mut m);
     finance::register(&mut m);
     fin_reports::register(&mut m);
+    fiscal::register(&mut m);
     inventory::register(&mut m);
     fixed_assets::register(&mut m);
     dimensions::register(&mut m);

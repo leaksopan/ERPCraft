@@ -251,7 +251,9 @@ pub fn post(ctx: &mut Ctx, template: &str, batch: &str) -> Result<Json> {
         if !series.is_empty() && noseries::peek(ctx, &series).ok().as_deref() == Some(doc_no.as_str()) {
             noseries::next(ctx, &series)?;
         }
-        let mut txn = Txn::new(ctx, &source_code, template, batch);
+        // A line's own source code wins (BC: Close Income Statement posts with CLSINCOME).
+        let code = doc_lines.first().map(|l| l.str("Source Code").to_string()).filter(|c| !c.is_empty() && *c != source_code).unwrap_or_else(|| source_code.clone());
+        let mut txn = Txn::new(ctx, &code, template, batch);
         txn.dim_set = doc_lines.first().map_or(0, |l| l.get("Dimension Set ID").as_int());
         let mut gl: Vec<GlLine> = Vec::new();
         let mut party_effects: Vec<(&Record, Effect)> = Vec::new();

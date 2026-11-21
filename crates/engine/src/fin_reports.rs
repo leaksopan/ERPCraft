@@ -8,7 +8,7 @@
 
 use std::collections::HashMap;
 
-use chrono::{Datelike, NaiveDate};
+use chrono::NaiveDate;
 use erpcraft_meta::{FieldType, Record, Value};
 use rust_decimal::Decimal;
 use serde_json::{Value as Json, json};
@@ -20,27 +20,40 @@ use crate::refuse;
 use crate::schema::fin_reports::{ACC_SCHED_LINE, COLUMN_LAYOUT, FINANCIAL_REPORT};
 use crate::schema::tables::{GL_ACCOUNT, GL_ENTRY};
 
-/// The G/L entries of one account, as (posting date, amount).
-type Entries = HashMap<String, Vec<(NaiveDate, Decimal)>>;
+/// The G/L entries (or budget entries) of one account, as (posting date, amount, closing entry).
+type Entries = HashMap<String, Vec<(NaiveDate, Decimal, bool)>>;
 
 fn entries_by_account(ctx: &Ctx) -> Entries {
     let mut m: Entries = HashMap::new();
     for e in ctx.db.rows(GL_ENTRY) {
         if let Some(d) = e.get("Posting Date").as_date() {
-            m.entry(e.str("G/L Account No.").to_string()).or_default().push((d, e.get("Amount").as_dec()));
+            let closing = e.str("Source Code") == crate::fiscal::CLOSE_INCOME_SOURCE;
+            m.entry(e.str("G/L Account No.").to_string()).or_default().push((d, e.get("Amount").as_dec(), closing));
         }
     }
     m
 }
 
-/// The amount of `accounts` between `from` and `to` (both inclusive, open ends allowed).
+fn budget_by_account(ctx: &Ctx, budget: &str) -> Entries {
+    let mut m: Entries = HashMap::new();
+    for e in ctx.db.rows(crate::schema::fiscal::GL_BUDGET_ENTRY).filter(|e| budget.is_empty() || e.str("Budget Name").eq_ignore_ascii_case(budget)) {
+        if let Some(d) = e.get("Date").as_date() {
+            m.entry(e.str("G/L Account No.").to_string()).or_default().push((d, e.get("Amount").as_dec(), false));
+        }
+    }
+    m
+}
+
+/// The amount of `accounts` between `from` and `to` (both inclusive, open ends allowed). A
+/// closing entry sorts after its date, as BC's closing date does: a period ending that day
+/// leaves it out.
 fn amount(entries: &Entries, accounts: &[String], from: Option<NaiveDate>, to: Option<NaiveDate>, amount_type: &str) -> Decimal {
     accounts
         .iter()
         .filter_map(|a| entries.get(a))
         .flatten()
-        .filter(|(d, _)| from.is_none_or(|f| *d >= f) && to.is_none_or(|t| *d <= t))
-        .map(|(_, a)| match amount_type {
+        .filter(|(d, _, closing)| from.is_none_or(|f| *d >= f) && to.is_none_or(|t| if *closing { *d < t } else { *d <= t }))
+        .map(|(_, a, _)| match amount_type {
             "Debit Amount" => (*a).max(Decimal::ZERO),
             "Credit Amount" => (-*a).max(Decimal::ZERO),
             _ => *a,
@@ -85,14 +98,9 @@ fn row_accounts(ctx: &Ctx, line: &Record) -> Vec<String> {
     }
 }
 
-/// January 1 – December 31 of `d`'s year (ERPCraft has no accounting periods yet).
-fn fiscal_year(d: NaiveDate) -> (NaiveDate, NaiveDate) {
-    (NaiveDate::from_ymd_opt(d.year(), 1, 1).unwrap_or(d), NaiveDate::from_ymd_opt(d.year(), 12, 31).unwrap_or(d))
-}
-
 /// The dates a column type looks at, for the report's date filter `from..to`.
-fn column_range(column_type: &str, row_type: &str, from: NaiveDate, to: NaiveDate) -> (Option<NaiveDate>, Option<NaiveDate>) {
-    let (fy0, fy1) = fiscal_year(to);
+fn column_range(ctx: &Ctx, column_type: &str, row_type: &str, from: NaiveDate, to: NaiveDate) -> (Option<NaiveDate>, Option<NaiveDate>) {
+    let (fy0, fy1) = crate::fiscal::fiscal_year(ctx, to);
     // A row's own type wins for amount columns (BC: Balance at Date / Beginning Balance rows).
     let ty = match (row_type, column_type) {
         ("Balance at Date", "Net Change") => "Balance at Date",
@@ -105,7 +113,7 @@ fn column_range(column_type: &str, row_type: &str, from: NaiveDate, to: NaiveDat
         "Year to Date" => (Some(fy0), Some(to)),
         "Rest of Fiscal Year" => (to.succ_opt(), Some(fy1)),
         "Entire Fiscal Year" => (Some(fy0), Some(fy1)),
-        "Month to Date" => (NaiveDate::from_ymd_opt(to.year(), to.month(), 1), Some(to)),
+        "Month to Date" => (Some(crate::fiscal::period_of(ctx, to).0), Some(to)),
         _ => (Some(from), Some(to)),
     }
 }
@@ -268,6 +276,8 @@ pub fn overview(ctx: &Ctx, rows_name: &str, columns_name: &str, from: NaiveDate,
         refuse!("The column definition {columns_name} has no columns.");
     }
     let entries = entries_by_account(ctx);
+    let budgets: Vec<Entries> =
+        cols.iter().map(|c| if c.str("Ledger Entry Type") == "Budget Entries" { budget_by_account(ctx, c.str("Budget Name")) } else { Entries::new() }).collect();
     // Amount columns first, per row; formula rows and columns after, in order.
     let mut values: Vec<Vec<Decimal>> = vec![vec![Decimal::ZERO; cols.len()]; lines.len()];
     let row_index = |code: &str| lines.iter().position(|l| !l.str("Row No.").is_empty() && l.str("Row No.").eq_ignore_ascii_case(code));
@@ -286,9 +296,10 @@ pub fn overview(ctx: &Ctx, rows_name: &str, columns_name: &str, from: NaiveDate,
             if matches!(l.str("Totaling Type"), "Formula" | "Set Base For Percent") {
                 continue;
             }
-            let (a, b) = column_range(c.str("Column Type"), l.str("Row Type"), f, t);
+            let (a, b) = column_range(ctx, c.str("Column Type"), l.str("Row Type"), f, t);
             let amount_type = if c.str("Amount Type") != "Net Amount" { c.str("Amount Type") } else { l.str("Amount Type") };
-            let v = if c.str("Ledger Entry Type") == "Budget Entries" { Decimal::ZERO } else { amount(&entries, &row_accounts(ctx, l), a, b, amount_type) };
+            let source = if c.str("Ledger Entry Type") == "Budget Entries" { &budgets[ci] } else { &entries };
+            let v = amount(source, &row_accounts(ctx, l), a, b, amount_type);
             // BC's CalcCellValue: a row's opposite sign applies before formulas use the row.
             let v = if l.get("Show Opposite Sign").as_bool() { -v } else { v };
             if let Some(cell) = values.get_mut(ri).and_then(|r| r.get_mut(ci)) {
@@ -419,7 +430,7 @@ fn run_overview(ctx: &mut Ctx, p: &Json) -> Result<Json> {
         }
     };
     let to = parse_date(p, "to")?.unwrap_or(ctx.work_date);
-    let from = parse_date(p, "from")?.unwrap_or(fiscal_year(to).0);
+    let from = parse_date(p, "from")?.unwrap_or(crate::fiscal::fiscal_year(ctx, to).0);
     if from > to {
         refuse!("The starting date {from} is after the ending date {to}.");
     }

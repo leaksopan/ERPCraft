@@ -259,6 +259,27 @@ fn pages(m: &mut Metadata) {
                         .confirm("Do you want to post the journal lines?"),
                 )
                 .action(
+                    Act::command("Card", A::Navigate, "journal.line.card")
+                        .icon("card")
+                        .shortcut("Shift+F7")
+                        .tooltip("View or change detailed information about the record on the document or journal line."),
+                )
+                .action(
+                    Act::command("Ledger E&ntries", A::Navigate, "journal.line.ledger_entries")
+                        .icon("ledger")
+                        .shortcut("Ctrl+F7")
+                        .tooltip("View the history of transactions that have been posted for the selected record."),
+                )
+                .action(
+                    Act::command("Post and &Print", A::Home, "journal.post_and_print")
+                        .param("template", template)
+                        .param("batch", "DEFAULT")
+                        .icon("print")
+                        .shortcut("Shift+F9")
+                        .confirm("Do you want to post the journal lines and print the report?")
+                        .tooltip("Finalize and prepare to print the document or journal. The values and quantities are posted to the related accounts."),
+                )
+                .action(
                     Act::command("Preview Posting", A::Process, "journal.preview_post")
                         .param("template", template)
                         .param("batch", "DEFAULT")

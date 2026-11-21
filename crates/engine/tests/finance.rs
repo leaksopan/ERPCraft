@@ -232,3 +232,22 @@ fn journal_preview_test_report_and_renumber() {
     assert_ne!(nos[0], nos[1], "two documents stay two documents");
     assert!(!nos.contains(&"ZZ999"));
 }
+
+#[test]
+fn journal_post_and_print_card_and_ledger_entries() {
+    let mut s = demo();
+    jnl_line(&mut s, "general-journal", json!({"Account No.": "60200", "Debit Amount": 300}));
+    jnl_line(&mut s, "general-journal", json!({"Account No.": "10110", "Credit Amount": 300}));
+    let lines = s.run("record.list", &json!({"page": "general-journal"})).unwrap();
+    let l = &lines["records"][0];
+    let key = json!([l["Journal Template Name"], l["Journal Batch Name"], l["Line No."]]);
+    let card = s.run("journal.line.card", &json!({"table": "Gen. Journal Line", "key": key})).unwrap();
+    assert_eq!(card["open"], json!({"page": "gl-account-card", "key": "60200"}));
+    let le = s.run("journal.line.ledger_entries", &json!({"table": "Gen. Journal Line", "key": key})).unwrap();
+    assert_eq!(le["open"]["page"], "general-ledger-entries");
+    assert_eq!(le["open"]["filters"], json!([["G/L Account No.", "60200"]]));
+    let r = s.run("journal.post_and_print", &json!({"template": "GENERAL"})).unwrap();
+    assert_eq!(r["report"]["title"], "G/L Register");
+    assert_eq!(r["report"]["rows"].as_array().unwrap().len(), 2, "{r}");
+    assert_eq!(s.run("record.list", &json!({"page": "general-journal"})).unwrap()["records"].as_array().unwrap().len(), 0);
+}

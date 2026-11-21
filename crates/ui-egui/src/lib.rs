@@ -372,7 +372,14 @@ impl ErpApp {
                 .and_then(|p| p.source_table.as_deref())
                 .and_then(|t| self.session.table(t))
                 .and_then(|t| Key::from_json(t, open.get("key").unwrap_or(&Json::Null)).ok());
-            if let Some(key) = key {
+            let filters: Vec<(String, String)> = open
+                .get("filters")
+                .and_then(Json::as_array)
+                .map(|fs| fs.iter().filter_map(|f| Some((f.get(0)?.as_str()?.to_string(), f.get(1)?.as_str()?.to_string()))).collect())
+                .unwrap_or_default();
+            if !filters.is_empty() {
+                self.open_page(&page, filters, None);
+            } else if let Some(key) = key {
                 // Posting deletes the document being shown: replace it instead of stacking.
                 if let Some(View::Card(c)) = self.stack.last()
                     && self.session.record(&c.table, &c.key).is_none()

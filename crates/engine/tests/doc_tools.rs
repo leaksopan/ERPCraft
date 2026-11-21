@@ -130,3 +130,16 @@ fn post_and_print_and_posted_statistics() {
     assert!(rows.iter().any(|row| row[0] == "Profit %"));
     assert!(s.run("document.posted_statistics", &json!({"table": "Customer", "key": "10000"})).is_err());
 }
+
+#[test]
+fn customer_and_vendor_statistics_on_documents() {
+    let mut s = demo();
+    let order = s.run("record.list", &json!({"page": "sales-order-list"})).unwrap();
+    let o = &order["records"][0];
+    let r = s.run("sales.document.customer_statistics", &json!({"document_type": "Order", "no": o["No."]})).unwrap();
+    assert!(r.to_string().contains("Balance (LCY)"), "{r}");
+    let po = s.run("record.list", &json!({"page": "purchase-order-list"})).unwrap();
+    let p = &po["records"][0];
+    let r = s.run("purchase.document.vendor_statistics", &json!({"table": "Purchase Header", "key": ["Order", p["No."]]})).unwrap();
+    assert!(r.to_string().contains("Purchases (LCY)"), "{r}");
+}

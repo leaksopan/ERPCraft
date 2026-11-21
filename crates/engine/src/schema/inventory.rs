@@ -145,7 +145,16 @@ fn pages(m: &mut Metadata) {
             .view("Journal Template Name", template)
             .view("Journal Batch Name", "DEFAULT")
             .action(
-                Act::command("Preview Posting", A::Process, "item_journal.preview_post")
+                Act::command("Post and &Print", A::Home, "item_journal.post_and_print")
+                        .param("template", template)
+                        .param("batch", "DEFAULT")
+                        .icon("print")
+                        .shortcut("Shift+F9")
+                        .confirm("Do you want to post the journal lines and print the report?")
+                        .tooltip("Finalize and prepare to print the document or journal. The values and quantities are posted to the related accounts."),
+                )
+                .action(
+                    Act::command("Preview Posting", A::Process, "item_journal.preview_post")
                         .param("template", template)
                         .param("batch", "DEFAULT")
                         .icon("preview")

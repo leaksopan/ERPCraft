@@ -4325,7 +4325,7 @@ pub fn extend(m: &mut Metadata) {
         m,
         "cash-receipt-journal",
         &[
-            ("Process", &["P&ost", "Preview Posting", "Test Report", "Renumber Document Numbers"]),
+            ("Process", &["P&ost", "Preview Posting", "Post and &Print", "Test Report", "Renumber Document Numbers"]),
             ("Line", &["Dimensions"]),
         ],
     );
@@ -4440,7 +4440,7 @@ pub fn extend(m: &mut Metadata) {
         m,
         "general-journal",
         &[
-            ("Process", &["P&ost", "Preview Posting", "Test Report", "Renumber Document Numbers"]),
+            ("Process", &["P&ost", "Preview Posting", "Post and &Print", "Test Report", "Renumber Document Numbers"]),
             ("Line", &["Dimensions"]),
         ],
     );
@@ -4511,7 +4511,7 @@ pub fn extend(m: &mut Metadata) {
         m,
         "item-journal",
         &[
-            ("Process", &["P&ost", "Preview Posting"]),
+            ("Process", &["P&ost", "Preview Posting", "Post and &Print"]),
             ("Line", &["Dimensions"]),
         ],
     );
@@ -4534,7 +4534,7 @@ pub fn extend(m: &mut Metadata) {
         m,
         "item-reclass-journal",
         &[
-            ("Process", &["P&ost", "Preview Posting"]),
+            ("Process", &["P&ost", "Preview Posting", "Post and &Print"]),
             ("Line", &["Dimensions"]),
         ],
     );
@@ -4549,7 +4549,7 @@ pub fn extend(m: &mut Metadata) {
         m,
         "payment-journal",
         &[
-            ("Process", &["P&ost", "Preview Posting", "Test Report", "Renumber Document Numbers"]),
+            ("Process", &["P&ost", "Preview Posting", "Post and &Print", "Test Report", "Renumber Document Numbers"]),
             ("Line", &["Dimensions"]),
         ],
     );
@@ -4557,7 +4557,7 @@ pub fn extend(m: &mut Metadata) {
         m,
         "phys-inventory-journal",
         &[
-            ("Process", &["P&ost", "Preview Posting"]),
+            ("Process", &["P&ost", "Preview Posting", "Post and &Print"]),
             ("Prepare", &["Calculate &Inventory"]),
             ("Line", &["Dimensions"]),
             ("Item", &["Card", "Ledger E&ntries"]),

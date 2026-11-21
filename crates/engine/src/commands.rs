@@ -123,7 +123,7 @@ fn table_param<'a>(ctx: &Ctx, params: &'a Json) -> Result<(&'static TableDef, Op
     Ok((ctx.table(t)?, None))
 }
 
-fn key_param(t: &TableDef, params: &Json) -> Result<Key> {
+pub(crate) fn key_param(t: &TableDef, params: &Json) -> Result<Key> {
     let k = params.get("key").ok_or_else(|| EngineError::invalid("missing parameter 'key'"))?;
     Key::from_json(t, k).map_err(EngineError::invalid)
 }
@@ -817,7 +817,7 @@ fn vend_payment(c: &mut Ctx, p: &Json) -> Result<Json> {
 
 // ---- reports ---------------------------------------------------------------------------------
 
-fn party_statistics(ctx: &mut Ctx, p: &Json, table: &str) -> Result<Json> {
+pub(crate) fn party_statistics(ctx: &mut Ctx, p: &Json, table: &str) -> Result<Json> {
     let no = opt_str(p, "no").map(str::to_string).or_else(|| context_code(p, table)).ok_or_else(|| EngineError::invalid("missing parameter 'no'"))?;
     let t = ctx.table(table)?;
     let r = read(ctx, t, ctx.get_code(table, &no)?);

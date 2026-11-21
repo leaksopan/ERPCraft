@@ -408,6 +408,15 @@ fn doc_actions(sales: bool, doc_type: &str) -> Vec<Act> {
             .tooltip("Copy document lines and header information from another document to this document."),
     );
     v.push(Act::command("Statistics", A::Process, &format!("{p}.document.statistics")).shortcut("F7").icon("stats"));
+    v.push(if sales {
+        Act::command("Customer Statistics", A::Navigate, "sales.document.customer_statistics")
+            .icon("stats")
+            .tooltip("View statistical information about the customer, such as the value of posted entries.")
+    } else {
+        Act::command("Vendor Statistics", A::Navigate, "purchase.document.vendor_statistics")
+            .icon("stats")
+            .tooltip("View statistical information about the vendor, such as the value of posted entries.")
+    });
     v.push(Act::command("Print...", A::Report, "document.print").shortcut("Ctrl+P").icon("print").tooltip("Print the document to PDF."));
     if sales && doc_type == "Order" {
         v.push(Act::command("Print Confirmation", A::Report, "document.print").icon("print").tooltip("Print an order confirmation."));

@@ -214,6 +214,10 @@ fn flag(p: &Json, name: &str, default: bool) -> bool {
     }
 }
 
+fn s_doc_ref() -> Json {
+    json!({"type": "object", "properties": {"document_type": {"type": "string", "default": "Order"}, "no": {"type": "string"}}, "required": ["no"]})
+}
+
 fn s_doc_mode() -> Json {
     json!({"type": "object", "properties": {
         "document_type": {"type": "string", "default": "Order"}, "no": {"type": "string"},
@@ -423,8 +427,100 @@ fn item_journal_renumber(ctx: &mut Ctx, p: &Json) -> Result<Json> {
     renumber(ctx, p, "Item Journal Line", "Item Journal Batch", "ITEM")
 }
 
+/// Highest Entry No. in `table`, so the entries a posting adds can be told apart.
+fn last_entry(ctx: &Ctx, table: &str) -> i64 {
+    ctx.db.rows(table).map(|r| r.get("Entry No.").as_int()).max().unwrap_or(0)
+}
+
+/// BC's Post and Print on a journal: posts the batch, then prints the register of what it posted
+/// (G/L Register for general journals, Item Register - Quantity for item journals).
+fn journal_post_print(ctx: &mut Ctx, p: &Json, item: bool) -> Result<Json> {
+    let (t, b) = journal_ref(p, if item { "ITEM" } else { "GENERAL" });
+    let (ledger, title, cols): (&str, &str, &[&str]) = if item {
+        ("Item Ledger Entry", "Item Register - Quantity", &["Entry No.", "Posting Date", "Entry Type", "Document No.", "Item No.", "Description", "Location Code", "Quantity"])
+    } else {
+        ("G/L Entry", "G/L Register", &["Entry No.", "Posting Date", "Document Type", "Document No.", "G/L Account No.", "Description", "Amount"])
+    };
+    let from = last_entry(ctx, ledger);
+    let mut posted = if item { crate::item_journal::post(ctx, &t, &b)? } else { crate::journal::post(ctx, &t, &b)? };
+    let mut entries: Vec<&Record> = ctx.db.rows(ledger).filter(|r| r.get("Entry No.").as_int() > from).collect();
+    entries.sort_by_key(|r| r.get("Entry No.").as_int());
+    let rows: Vec<Json> = entries.iter().map(|r| Json::Array(cols.iter().map(|c| json!(r.get(c).to_string())).collect())).collect();
+    posted["report"] = json!({"title": title, "columns": cols, "rows": rows});
+    Ok(posted)
+}
+
+fn journal_post_and_print(ctx: &mut Ctx, p: &Json) -> Result<Json> {
+    journal_post_print(ctx, p, false)
+}
+
+fn item_journal_post_and_print(ctx: &mut Ctx, p: &Json) -> Result<Json> {
+    journal_post_print(ctx, p, true)
+}
+
+/// The journal line an action runs on (`key` of the selected row).
+fn journal_line(ctx: &Ctx, p: &Json) -> Result<Record> {
+    let t = ctx.table("Gen. Journal Line")?;
+    let key = crate::commands::key_param(t, p)?;
+    ctx.get("Gen. Journal Line", &key)
+}
+
+/// The card, the ledger entries page and its account field for a journal line's Account Type.
+fn account_pages(account_type: &str) -> Option<(&'static str, &'static str, &'static str)> {
+    match account_type {
+        "G/L Account" | "" => Some(("gl-account-card", "general-ledger-entries", "G/L Account No.")),
+        "Customer" => Some(("customer-card", "customer-ledger-entries", "Customer No.")),
+        "Vendor" => Some(("vendor-card", "vendor-ledger-entries", "Vendor No.")),
+        "Bank Account" => Some(("bank-account-card", "bank-account-ledger-entries", "Bank Account No.")),
+        "Fixed Asset" => Some(("fixed-asset-card", "fa-ledger-entries", "FA No.")),
+        _ => None,
+    }
+}
+
+fn line_account(ctx: &Ctx, p: &Json) -> Result<(String, (&'static str, &'static str, &'static str))> {
+    let l = journal_line(ctx, p)?;
+    let no = l.str("Account No.").to_string();
+    if no.is_empty() {
+        refuse!("Account No. must have a value in Gen. Journal Line.");
+    }
+    match account_pages(l.str("Account Type")) {
+        Some(pages) => Ok((no, pages)),
+        None => refuse!("There is nothing to show for Account Type {}.", l.str("Account Type")),
+    }
+}
+
+/// BC's Card on a journal: the selected line's account card.
+fn journal_card(ctx: &mut Ctx, p: &Json) -> Result<Json> {
+    let (no, (card, _, _)) = line_account(ctx, p)?;
+    Ok(json!({"open": {"page": card, "key": no}}))
+}
+
+/// BC's Ledger Entries on a journal: the selected line's account entries.
+fn journal_ledger_entries(ctx: &mut Ctx, p: &Json) -> Result<Json> {
+    let (no, (_, list, field)) = line_account(ctx, p)?;
+    Ok(json!({"open": {"page": list, "filters": [[field, no]]}}))
+}
+
+fn s_line() -> Json {
+    json!({"type": "object", "properties": {"table": {"type": "string"}, "key": {}}, "required": ["key"]})
+}
+
 fn s_journal() -> Json {
     json!({"type": "object", "properties": {"template": {"type": "string"}, "batch": {"type": "string", "default": "DEFAULT"}}})
+}
+
+/// BC's Customer Statistics / Vendor Statistics on a document: the bill-to / pay-to party's.
+fn party_stats(ctx: &mut Ctx, side: &Side, p: &Json) -> Result<Json> {
+    let (doc_type, no) = doc_ref(p, side)?;
+    let h = ctx.get(side.header, &Key(vec![Value::text(&doc_type), Value::text(&no)]))?;
+    let party = match h.str(side.bill_no) {
+        "" => h.str(side.party_no).to_string(),
+        b => b.to_string(),
+    };
+    if party.is_empty() {
+        refuse!("{} must have a value in {}: Document Type={doc_type}, No.={no}.", side.bill_no, side.header);
+    }
+    crate::commands::party_statistics(ctx, &json!({"no": party}), side.party_table)
 }
 
 macro_rules! per_side {
@@ -438,6 +534,7 @@ macro_rules! per_side {
     };
 }
 per_side!(sales_preview, purch_preview, preview);
+per_side!(sales_party_stats, purch_party_stats, party_stats);
 per_side!(sales_test, purch_test, test_report);
 per_side!(sales_post_new, purch_post_new, post_and_new);
 per_side!(sales_copy, purch_copy, copy_document);
@@ -460,6 +557,12 @@ pub static COMMANDS: &[CommandDef] = &[
     cmd!("sales.document.post_and_print", "Post and Print", "Sales", true, s_post_print, sales_post_print, "Post a sales document and print the posted invoice or credit memo."),
     cmd!("purchase.document.post_and_print", "Post and Print", "Purchasing", true, s_post_print, purch_post_print, "Post a purchase document and print the posted invoice or credit memo."),
     cmd!("document.posted_statistics", "Statistics", "Documents", false, s_posted_stats, posted_statistics, "Amounts, VAT, cost and profit of a posted invoice or credit memo."),
+    cmd!("sales.document.customer_statistics", "Customer Statistics", "Sales", false, s_doc_ref, sales_party_stats, "Balance, sales and payments of a sales document's bill-to customer."),
+    cmd!("purchase.document.vendor_statistics", "Vendor Statistics", "Purchasing", false, s_doc_ref, purch_party_stats, "Balance, purchases and payments of a purchase document's pay-to vendor."),
+    cmd!("journal.post_and_print", "Post and Print", "Finance", true, s_journal, journal_post_and_print, "Post a general journal batch and print the G/L Register of what was posted."),
+    cmd!("item_journal.post_and_print", "Post and Print", "Inventory", true, s_journal, item_journal_post_and_print, "Post an item journal batch and print the Item Register of what was posted."),
+    cmd!("journal.line.card", "Card", "Finance", false, s_line, journal_card, "Open the card of the selected journal line's account."),
+    cmd!("journal.line.ledger_entries", "Ledger Entries", "Finance", false, s_line, journal_ledger_entries, "Open the ledger entries of the selected journal line's account."),
     cmd!("journal.preview_post", "Preview Posting", "Finance", false, s_journal, journal_preview, "The entries posting a general journal batch would make, without posting it."),
     cmd!("journal.test_report", "Test Report", "Finance", false, s_journal, journal_test_report, "What would stop a general journal batch from posting."),
     cmd!("journal.renumber", "Renumber Document Numbers", "Finance", true, s_journal, journal_renumber, "Number a journal batch's documents again from its number series."),

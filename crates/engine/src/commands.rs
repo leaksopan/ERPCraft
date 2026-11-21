@@ -51,7 +51,7 @@ impl CommandDef {
 }
 
 /// Modules that add commands of their own (each a `static` slice of [`CommandDef`]).
-fn module_commands() -> [&'static [CommandDef]; 22] {
+fn module_commands() -> [&'static [CommandDef]; 23] {
     [
         crate::print::COMMANDS,
         crate::bc::COMMANDS,
@@ -75,6 +75,7 @@ fn module_commands() -> [&'static [CommandDef]; 22] {
         crate::item_charge::COMMANDS,
         crate::reqwksh::COMMANDS,
         crate::reservation::COMMANDS,
+        crate::physinvt::COMMANDS,
     ]
 }
 

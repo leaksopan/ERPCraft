@@ -13,6 +13,7 @@ pub mod bank_rec;
 pub mod reminders;
 pub mod item_setup;
 pub mod transfer;
+pub mod physinvt;
 pub mod tracking;
 pub mod finance;
 pub mod fixed_assets;
@@ -53,6 +54,7 @@ pub fn hand_written() -> Metadata {
     item_setup::register(&mut m);
     transfer::register(&mut m);
     tracking::register(&mut m);
+    physinvt::register(&mut m);
     fixed_assets::register(&mut m);
     dimensions::register(&mut m);
     comments::register(&mut m);

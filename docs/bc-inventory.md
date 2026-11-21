@@ -23,7 +23,7 @@ orders this list into phases.
 | Foundation | 8 | 58 | 0 | 2 |
 | HumanResources | 0 | 57 | 0 | 15 |
 | Integration | 0 | 87 | 0 | 0 |
-| Inventory | 37 | 312 | 1 | 101 |
+| Inventory | 54 | 312 | 1 | 101 |
 | Invoicing | 0 | 7 | 0 | 0 |
 | Manufacturing | 0 | 134 | 0 | 50 |
 | Modules | 2 | 93 | 0 | 1 |
@@ -38,7 +38,7 @@ orders this list into phases.
 | Utilities | 0 | 12 | 0 | 2 |
 | Warehouse | 0 | 144 | 0 | 35 |
 | eServices | 0 | 25 | 0 | 0 |
-| **Base Application** | **178** | **2638** | **16** | **659** |
+| **Base Application** | **195** | **2638** | **16** | **659** |
 
 ### (root)
 
@@ -1754,7 +1754,7 @@ Pages 0 / 87, reports 0 / 0.
 
 ### Inventory
 
-Pages 37 / 312, reports 1 / 101.
+Pages 54 / 312, reports 1 / 101.
 
 <details><summary>Inventory / Analysis: pages 0 / 34, reports 0 / 8</summary>
 
@@ -1876,26 +1876,26 @@ Pages 37 / 312, reports 1 / 101.
 
 </details>
 
-<details><summary>Inventory / Counting: pages 1 / 29, reports 0 / 14</summary>
+<details><summary>Inventory / Counting: pages 18 / 29, reports 0 / 14</summary>
 
 - [ ] Page 390 Phys. Inventory Ledger Entries (List)
 - [x] Page 392 Phys. Inventory Journal (Worksheet)
-- [ ] Page 5875 Physical Inventory Order (Document)
-- [ ] Page 5876 Physical Inventory Orders (List)
-- [ ] Page 5877 Physical Inventory Order Subf. (ListPart)
-- [ ] Page 5878 Physical Inventory Order Lines (List)
-- [ ] Page 5879 Phys. Inventory Recording (Document)
-- [ ] Page 5880 Phys. Inventory Recording List (List)
-- [ ] Page 5881 Phys. Invt. Recording Subform (ListPart)
-- [ ] Page 5882 Phys. Invt. Recording Lines (List)
-- [ ] Page 5883 Posted Phys. Invt. Order (Document)
-- [ ] Page 5884 Posted Phys. Invt. Order List (List)
-- [ ] Page 5885 Posted Phys. Invt. Order Subf. (ListPart)
-- [ ] Page 5886 Posted Phys. Invt. Order Lines (List)
-- [ ] Page 5887 Posted Phys. Invt. Recording (Document)
-- [ ] Page 5888 Posted Phys. Invt. Rec. List (List)
-- [ ] Page 5889 Posted Phys. Invt. Rec. Subf. (ListPart)
-- [ ] Page 5890 Posted Phys. Invt. Rec. Lines (List)
+- [x] Page 5875 Physical Inventory Order (Document)
+- [x] Page 5876 Physical Inventory Orders (List)
+- [x] Page 5877 Physical Inventory Order Subf. (ListPart)
+- [x] Page 5878 Physical Inventory Order Lines (List)
+- [x] Page 5879 Phys. Inventory Recording (Document)
+- [x] Page 5880 Phys. Inventory Recording List (List)
+- [x] Page 5881 Phys. Invt. Recording Subform (ListPart)
+- [x] Page 5882 Phys. Invt. Recording Lines (List)
+- [x] Page 5883 Posted Phys. Invt. Order (Document)
+- [x] Page 5884 Posted Phys. Invt. Order List (List)
+- [x] Page 5885 Posted Phys. Invt. Order Subf. (ListPart)
+- [x] Page 5886 Posted Phys. Invt. Order Lines (List)
+- [x] Page 5887 Posted Phys. Invt. Recording (Document)
+- [x] Page 5888 Posted Phys. Invt. Rec. List (List)
+- [x] Page 5889 Posted Phys. Invt. Rec. Subf. (ListPart)
+- [x] Page 5890 Posted Phys. Invt. Rec. Lines (List)
 - [ ] Page 5891 Phys. Inventory Comment Sheet (List)
 - [ ] Page 5892 Phys. Inventory Comment List (List)
 - [ ] Page 5893 Phys. Invt. Item Track. List (List)
@@ -1906,7 +1906,7 @@ Pages 37 / 312, reports 1 / 101.
 - [ ] Page 6026 Posted.Exp.Invt.Order.Tracking (List)
 - [ ] Page 6029 Invt. Order Tracking Lines (List)
 - [ ] Page 7380 Phys. Invt. Item Selection (List)
-- [ ] Page 7381 Phys. Invt. Counting Periods (List)
+- [x] Page 7381 Phys. Invt. Counting Periods (List)
 - [ ] Report 789 Delete Phys. Inventory Ledger (Report)
 - [ ] Report 790 Calculate Inventory (Report)
 - [ ] Report 5875 Phys. Invt. Order Diff. List (Report)

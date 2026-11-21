@@ -8,6 +8,16 @@ use std::path::{Path, PathBuf};
 /// Application areas the Essential experience (what a new BC company runs) does not show.
 const HIDDEN_AREAS: &[&str] = &["manufacturing", "planning", "warehouse", "service", "adcs", "advanced"];
 
+thread_local! {
+    /// The application areas of the page being read: a page that BC shows (say a Warehouse page
+    /// such as Physical Inventory Orders) shows the controls of its own area.
+    static PAGE_AREAS: std::cell::RefCell<Vec<String>> = const { std::cell::RefCell::new(Vec::new()) };
+}
+
+fn areas_of(a: &str) -> Vec<String> {
+    a.split(',').map(|x| x.trim().trim_start_matches('#').to_ascii_lowercase()).filter(|x| !x.is_empty()).collect()
+}
+
 /// Page variables that are false in a standard company (no approvals, Dataverse, Office add-in,
 /// job queue or manual document numbers), so the controls they show stay hidden. Checked against
 /// the live web client where possible (No., Quote No. and VAT Date don't show on a sales order).
@@ -227,9 +237,9 @@ pub enum Vis {
 
 pub fn visibility(n: &Node) -> Vis {
     if let Some(a) = n.prop("ApplicationArea") {
-        let areas: Vec<String> =
-            a.split(',').map(|x| x.trim().trim_start_matches('#').to_ascii_lowercase()).filter(|x| !x.is_empty()).collect();
-        if !areas.is_empty() && areas.iter().all(|x| HIDDEN_AREAS.contains(&x.as_str())) {
+        let areas = areas_of(a);
+        let own = PAGE_AREAS.with(|p| areas.iter().any(|x| p.borrow().contains(x)));
+        if !own && !areas.is_empty() && areas.iter().all(|x| HIDDEN_AREAS.contains(&x.as_str())) {
             return Vis::Hidden;
         }
     }
@@ -439,9 +449,26 @@ fn object_id(head: &str) -> Option<(u32, String)> {
 }
 
 pub fn al_page(src: &str) -> Option<AlPage> {
+    let p = al_page_in(src, None)?;
+    // A part or list without an area of its own whose every field sits in a hidden area (the
+    // lines of a Warehouse document) shows them wherever it is opened from.
+    let shown = |p: &AlPage| p.columns.iter().chain(p.groups.iter().flat_map(|g| g.fields.iter())).any(|f| f.vis != Vis::Hidden);
+    if !shown(&p) {
+        let all: Vec<String> = HIDDEN_AREAS.iter().map(|a| (*a).to_string()).collect();
+        let again = al_page_in(src, Some(all))?;
+        if shown(&again) {
+            return Some(again);
+        }
+    }
+    Some(p)
+}
+
+fn al_page_in(src: &str, areas: Option<Vec<String>>) -> Option<AlPage> {
     let root = parse(src);
     let page = object(&root, "page")?;
     let (id, name) = object_id(&page.head)?;
+    let areas = areas.unwrap_or_else(|| page.prop("ApplicationArea").map(areas_of).unwrap_or_default());
+    PAGE_AREAS.with(|p| *p.borrow_mut() = areas);
     let mut p = AlPage { id, name, kind: page.prop("PageType").unwrap_or("Card").to_string(), ..AlPage::default() };
     for k in &page.kids {
         match k.kind().0.as_str() {

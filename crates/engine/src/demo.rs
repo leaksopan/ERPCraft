@@ -94,6 +94,8 @@ pub fn setup(ctx: &mut Ctx) -> Result<()> {
         ("T-ORD", "Transfer Orders", "T-ORD1001"),
         ("T-SHPT", "Posted Transfer Shipments", "T-SHPT1001"),
         ("T-RCPT", "Posted Transfer Receipts", "T-RCPT1001"),
+        ("PI-ORD", "Phys. Invt. Orders", "PI-ORD1001"),
+        ("PI-PSTD", "Posted Phys. Invt. Orders", "PI-PSTD1001"),
         ("S-REM", "Reminders", "S-REM1001"),
         ("S-IREM", "Issued Reminders", "S-IREM1001"),
         ("S-FIN", "Finance Charge Memos", "S-FIN1001"),
@@ -118,7 +120,7 @@ pub fn setup(ctx: &mut Ctx) -> Result<()> {
                "Credit Memo Nos.": "P-CR", "Return Order Nos.": "P-RET", "Posted Invoice Nos.": "PP-INV", "Posted Credit Memo Nos.": "PP-CR", "Posted Receipt Nos.": "PP-RCPT",
                "Ext. Doc. No. Mandatory": false}),
     )?;
-    raw(ctx, "Inventory Setup", json!({"Primary Key": "", "Item Nos.": "ITEM", "Automatic Cost Posting": true, "Transfer Order Nos.": "T-ORD", "Posted Transfer Shpt. Nos.": "T-SHPT", "Posted Transfer Rcpt. Nos.": "T-RCPT"}))?;
+    raw(ctx, "Inventory Setup", json!({"Primary Key": "", "Item Nos.": "ITEM", "Automatic Cost Posting": true, "Transfer Order Nos.": "T-ORD", "Posted Transfer Shpt. Nos.": "T-SHPT", "Posted Transfer Rcpt. Nos.": "T-RCPT", "Phys. Invt. Order Nos.": "PI-ORD", "Posted Phys. Invt. Order Nos.": "PI-PSTD"}))?;
     for (template, ty, _, _, caption, series) in crate::schema::finance::JOURNALS {
         let source = match *template {
             "CASHRCPT" => "CASHRECJNL",
@@ -384,6 +386,10 @@ pub fn master_data(ctx: &mut Ctx) -> Result<()> {
     // Item charges: freight and insurance on purchases.
     for (no, desc) in [("FREIGHT", "Freight charges"), ("INSURANCE", "Transport insurance")] {
         raw(ctx, "Item Charge", json!({"No.": no, "Description": desc, "Gen. Prod. Posting Group": "PARTS", "VAT Prod. Posting Group": "STANDARD", "Search Description": desc.to_uppercase()}))?;
+    }
+    // Counting periods for cycle counting.
+    for (code, desc, freq) in [("FAST", "Fast moving items", 12), ("SLOW", "Slow moving items", 2)] {
+        raw(ctx, "Phys. Invt. Counting Period", json!({"Code": code, "Description": desc, "Count Frequency per Year": freq}))?;
     }
     // Item tracking codes: by lot, by serial number.
     raw(ctx, "Item Tracking Code", json!({"Code": "LOTALL", "Description": "Lot specific tracking", "Lot Specific Tracking": true, "Lot Warehouse Tracking": true}))?;

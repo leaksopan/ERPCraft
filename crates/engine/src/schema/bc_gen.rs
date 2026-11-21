@@ -1594,6 +1594,8 @@ pub fn extend(m: &mut Metadata) {
             ("Transfer Order Nos.", "Transfer Order Nos.", "Specifies the number series that will be used to assign numbers to transfer orders.", 0),
             ("Posted Transfer Shpt. Nos.", "Posted Transfer Shpt. Nos.", "Specifies the number series that will be used to assign numbers to posted transfer shipments.", 0),
             ("Posted Transfer Rcpt. Nos.", "Posted Transfer Rcpt. Nos.", "Specifies the number series that will be used to assign numbers to posted transfer receipts.", 0),
+            ("Phys. Invt. Order Nos.", "Phys. Invt. Order Nos.", "Specifies the number series that will be used to assign numbers to physical inventory orders.", 0),
+            ("Posted Phys. Invt. Order Nos.", "Posted Phys. Invt. Order Nos.", "Specifies the number series that will be used to assign numbers to physical inventory orders when they are posted.", 0),
         ],
     );
     fields(
@@ -1623,8 +1625,6 @@ pub fn extend(m: &mut Metadata) {
             F::code("Posted Direct Trans. Nos.", 20).tooltip("Specifies the number series from which numbers are assigned to new records."),
             F::option("Direct Transfer Posting Type", &["", "Shipment and Receipt", "Direct Transfer"]).caption("Default Direct Transfer Posting").tooltip("Specifies if Direct Transfer will be posted as Shipment and Receipt or as single Direct Transfer document. There are different restrictions associated with different modes, for example Directed Transfer document does not support partial posting."),
             F::code("Package Nos.", 20).tooltip("Specifies the number series that will be used to assign numbers to item tracking packages."),
-            F::code("Phys. Invt. Order Nos.", 20).tooltip("Specifies the number series that will be used to assign numbers to physical inventory orders."),
-            F::code("Posted Phys. Invt. Order Nos.", 20).tooltip("Specifies the number series that will be used to assign numbers to physical inventory orders when they are posted."),
             F::text("Package Caption", 30).tooltip("Specifies the alternative caption of Package tracking dimension that you want to use for captions for this dimension. For example, Size."),
             F::code("Item Group Dimension Code", 20).relation("Dimension").tooltip("Specifies the dimension code that you want to use for product groups in analysis reports."),
         ],
@@ -1776,6 +1776,11 @@ pub fn extend(m: &mut Metadata) {
             ("Item Category Code", "Item Category Code", "Specifies the category that the item belongs to. Item categories also contain any assigned item attributes.", 0),
             ("Item Tracking Code", "Item Tracking Code", "Specifies how serial, lot or package numbers assigned to the item are tracked in the supply chain.", 0),
             ("Lot Nos.", "Lot Nos.", "Specifies the number series code that will be used when assigning lot numbers.", 0),
+            ("Phys Invt Counting Period Code", "Phys Invt Counting Period Code", "Specifies the code of the counting period that indicates how often you want to count the item in a physical inventory.", 0),
+            ("Last Counting Period Update", "Last Counting Period Update", "Specifies the last date on which you calculated the counting period. It is updated when you use the function Calculate Counting Period.", 0),
+            ("Last Phys. Invt. Date", "Last Phys. Invt. Date", "Specifies the date on which you last posted the results of a physical inventory for the item to the item ledger.", 0),
+            ("Next Counting Start Date", "Next Counting Start Date", "Specifies the starting date of the next counting period.", 0),
+            ("Next Counting End Date", "Next Counting End Date", "Specifies the ending date of the next counting period.", 0),
             ("Sales Blocked", "Sales Blocked", "Specifies that transactions with the item cannot be sold, for example, because the item is in quarantine.", 0),
             ("Purchasing Blocked", "Purchasing Blocked", "Specifies that the item cannot be entered on purchase documents, except return orders and credit memos, and journals.", 0),
         ],
@@ -2150,6 +2155,220 @@ pub fn extend(m: &mut Metadata) {
         "Payment Terms",
         vec![
             F::boolean("Calc. Pmt. Disc. on Cr. Memos").tooltip("Specifies that a payment discount, cash discount, cash discount date, and due date are calculated on credit memos with these payment terms."),
+        ],
+    );
+    relabel(
+        m,
+        "Phys. Invt. Counting Period",
+        &[
+            ("Code", "Code", "Specifies a code for physical inventory counting period.", 0),
+            ("Description", "Description", "Specifies a description of the physical inventory counting period.", 0),
+            ("Count Frequency per Year", "Count Frequency per Year", "Specifies the number of times you want the item or stockkeeping unit to be counted each year.", 0),
+        ],
+    );
+    relabel(
+        m,
+        "Phys. Invt. Order Header",
+        &[
+            ("No.", "No.", "Specifies a number for the physical inventory order.", 0),
+            ("Description", "Description", "Specifies a short description of the physical inventory order.", 0),
+            ("Status", "Status", "Specifies if the physical inventory order is open or finished.", 0),
+            ("Order Date", "Order Date", "Specifies the order date for the physical inventory order.", 0),
+            ("Posting Date", "Posting Date", "Specifies the posting date of the physical inventory order.", 0),
+            ("Person Responsible", "Person Responsible", "Specifies the code of the person who is responsible for performing this physical inventory order.", 0),
+            ("Shortcut Dimension 1 Code", "Shortcut Dimension 1 Code", "Specifies the code for Shortcut Dimension 1, whose dimension values you can then enter directly on journals and sales or purchase lines.", 0),
+            ("Shortcut Dimension 2 Code", "Shortcut Dimension 2 Code", "Specifies the code for Shortcut Dimension 2, which is one of two global dimension codes that you set up in the General Ledger Setup window.", 0),
+            ("No. Finished Recordings", "No. Finished Recordings", "Specifies the number of entered physical inventory recording documents that have the status set to Finished.", 0),
+            ("Location Code", "Location Code", "Specifies the code of the location where items on this line should be counted.", 0),
+        ],
+    );
+    relabel(
+        m,
+        "Phys. Invt. Order Line",
+        &[
+            ("Document No.", "Document No.", "Specifies the document number.", 0),
+            ("Line No.", "Line No.", "Specifies the number of the line.", 0),
+            ("On Recording Lines", "On Recording Lines", "Specifies if the item exists on one or more physical inventory recording lines.", 0),
+            ("Item No.", "Item No.", "Specifies the number of the item, which should be counted when taking the physical inventory.", 0),
+            ("Variant Code", "Variant Code", "Specifies the variant of the item on the line.", 0),
+            ("Location Code", "Location Code", "Specifies the location where the item must be counted.", 0),
+            ("Bin Code", "Bin Code", "Specifies the bin where the item must be counted.", 0),
+            ("Description", "Description", "Specifies the description of the item.", 0),
+            ("Description 2", "Description 2", "Specifies an additional description of the item.", 0),
+            ("Unit of Measure", "Unit of Measure", "Specifies the unit of measure, such as bottle or piece, that is currently used for the item.", 0),
+            ("Base Unit of Measure Code", "Base Unit of Measure Code", "Specifies the unit of measure, such as bottle or piece, that is currently used for the item.", 0),
+            ("Qty. Exp. Calculated", "Qty. Exp. Calculated", "Specifies if the Qty. Expected (Base) field has been updated with the Calculate Expected Qty. function.", 0),
+            ("Use Item Tracking", "Use Item Tracking", "Specifies that the counting of the item is done by counting its serial, lot and package numbers.", 0),
+            ("Unit Amount", "Unit Amount", "Specifies the unit price of the item.", 2),
+            ("Unit Cost", "Unit Cost", "Specifies the unit costs of the item, which will be used when posting the physical inventory.", 2),
+            ("No. Finished Rec.-Lines", "No. Finished Rec.-Lines", "Specifies how many of the related physical inventory recordings are closed.", 0),
+            ("Entry Type", "Entry Type", "Specifies if the difference in the Quantity (Base) field on the related closed recording is positive or negative.", 0),
+            ("Recorded Without Order", "Recorded Without Order", "Specifies whether the Inventory Order Line was automatically created by finishing a Phys. Inventory.", 0),
+            ("Shelf No.", "Shelf No.", "Specifies the shelf number where the item can be found normally.", 0),
+        ],
+    );
+    fields(
+        m,
+        "Phys. Invt. Order Line",
+        vec![
+            F::code("Shortcut Dimension 1 Code", 20).tooltip("Specifies the code for Shortcut Dimension 1, which is one of two global dimension codes that you set up in the General Ledger Setup window."),
+            F::code("Shortcut Dimension 2 Code", 20).tooltip("Specifies the code for Shortcut Dimension 2, which is one of two global dimension codes that you set up in the General Ledger Setup window."),
+            F::code("Item Reference No.", 50).tooltip("Specifies a reference to the item number as defined by the item's barcode."),
+        ],
+    );
+    relabel(
+        m,
+        "Phys. Invt. Record Header",
+        &[
+            ("Order No.", "Order No.", "Specifies the physical inventory header number that is linked to the physical inventory recording.", 0),
+            ("Recording No.", "Recording No.", "Specifies a number that is assigned to the physical inventory recording, when you link a physical inventory recording to a physical inventory order.", 0),
+            ("Description", "Description", "Specifies the description of the inventory recording.", 0),
+            ("Status", "Status", "Specifies if the physical inventory recording is open or finished.", 0),
+            ("Person Responsible", "Person Responsible", "Specifies the code of the person responsible for performing this physical inventory recording.", 0),
+            ("Allow Recording Without Order", "Allow Recording Without Order", "Specifies that recording lines are automatically created for items that do not exist on the physical inventory order. This can only happen if none of the values in these four fields exist for an item on the order: Item No., Variant Code, Location Code, and Bin Code.", 0),
+            ("Date Recorded", "Date Recorded", "Specifies the date when the physical inventory was taken.", 0),
+            ("Person Recorded", "Person Recorded", "Specifies the user ID of the person who performed the physical inventory.", 0),
+            ("Recorded by User ID", "Created by User", "", 0),
+            ("Location Code", "Location Code", "Specifies the location where the items must be counted.", 0),
+        ],
+    );
+    fields(
+        m,
+        "Phys. Invt. Record Header",
+        vec![
+            F::text("Time Recorded", 30).read_only().tooltip("Specifies the time when physical inventory was taken."),
+        ],
+    );
+    relabel(
+        m,
+        "Phys. Invt. Record Line",
+        &[
+            ("Order No.", "Order No.", "Specifies the order number.", 0),
+            ("Recording No.", "Recording No.", "Specifies a number that is assigned to the physical inventory recording.", 0),
+            ("Line No.", "Line No.", "Specifies the number of the line.", 0),
+            ("Order Line No.", "Order Line No.", "Specifies the Line No. of the linked physical inventory order line.", 0),
+            ("Item No.", "Item No.", "Specifies the number of the item that was counted when taking the physical inventory.", 0),
+            ("Variant Code", "Variant Code", "Specifies the variant of the item on the line.", 0),
+            ("Location Code", "Location Code", "Specifies the code of the location where the item was counted during taking the physical inventory.", 0),
+            ("Bin Code", "Bin Code", "Specifies the code of the bin where the item was counted while performing the physical inventory.", 0),
+            ("Description", "Description", "Specifies the description of the item.", 0),
+            ("Description 2", "Description 2", "Specifies the additional description of the item.", 0),
+            ("Unit of Measure Code", "Unit of Measure Code", "Specifies how each unit of the item or resource is measured, such as in pieces or hours. By default, the value in the Base Unit of Measure field on the item or resource card is inserted.", 0),
+            ("Quantity", "Quantity", "Specifies the quantity of the item of the physical inventory recording line.", 0),
+            ("Recorded", "Recorded", "Specifies if a value was entered in Quantity of the physical inventory recording line.", 0),
+            ("Date Recorded", "Date Recorded", "Specifies the date when the physical inventory was taken.", 0),
+            ("Person Recorded", "Person Recorded", "Specifies the code of the person who performed the physical inventory.", 0),
+            ("Recorded by User ID", "Created by User", "", 0),
+            ("Serial No.", "Serial No.", "Specifies the serial number of the entered item.", 0),
+            ("Lot No.", "Lot No.", "Specifies the lot number of the entered item.", 0),
+        ],
+    );
+    fields(
+        m,
+        "Phys. Invt. Record Line",
+        vec![
+            F::boolean("Use Item Tracking").read_only().tooltip("Specifies if it is necessary to record the item using serial, lot or package numbers."),
+            F::code("Package No.", 50).tooltip("Specifies the package number of the entered item."),
+            F::code("Item Reference No.", 50).tooltip("Specifies a reference to the item number as defined by the item's barcode."),
+        ],
+    );
+    relabel(
+        m,
+        "Pstd. Phys. Invt. Order Hdr",
+        &[
+            ("No.", "No.", "Specifies the No. of the table physical inventory order header.", 0),
+            ("Description", "Description", "Specifies the Description of the table physical inventory order header.", 0),
+            ("Order Date", "Order Date", "Specifies the Order Date of the table physical inventory order header.", 0),
+            ("Posting Date", "Posting Date", "Specifies the Posting Date of the table physical inventory order header.", 0),
+            ("Person Responsible", "Person Responsible", "Specifies the Person Responsible of the table physical inventory order header.", 0),
+            ("Shortcut Dimension 1 Code", "Shortcut Dimension 1 Code", "Specifies the code for Shortcut Dimension 1, which is one of two global dimension codes that you set up in the General Ledger Setup window.", 0),
+            ("Shortcut Dimension 2 Code", "Shortcut Dimension 2 Code", "Specifies the code for Shortcut Dimension 2, which is one of two global dimension codes that you set up in the General Ledger Setup window.", 0),
+            ("Pre-Assigned No.", "Pre-Assigned No.", "Specifies the number of the physical inventory header, from which the posted physical inventory order was posted.", 0),
+            ("No. Finished Recordings", "No. Finished Recordings", "Specifies the No. Finished Recordings.", 0),
+            ("Location Code", "Location Code", "Specifies the Location Code of the table physical inventory order header.", 0),
+        ],
+    );
+    relabel(
+        m,
+        "Pstd. Phys. Invt. Order Line",
+        &[
+            ("Document No.", "Document No.", "Specifies the physical inventory order that the line exists on.", 0),
+            ("Line No.", "Line No.", "Specifies the line on the physical inventory order line.", 0),
+            ("Item No.", "Item No.", "Specifies the item on the physical inventory order line.", 0),
+            ("Variant Code", "Variant Code", "Specifies the variant of the item on the physical inventory order line.", 0),
+            ("Location Code", "Location Code", "Specifies the location of the item on the physical inventory order line.", 0),
+            ("Bin Code", "Bin Code", "Specifies the Bin Code of the table physical inventory order line.", 0),
+            ("Description", "Description", "Specifies the description of the item on the physical inventory order line.", 0),
+            ("Description 2", "Description 2", "Specifies an additional part of the description of the item on the physical inventory order line.", 0),
+            ("Unit of Measure", "Unit of Measure", "Specifies the unit of measure, such as bottle or piece, that is used for the item on the physical inventory order line.", 0),
+            ("Base Unit of Measure Code", "Base Unit of Measure Code", "Specifies the base unit of measure that is set up for the item on the physical inventory order line.", 0),
+            ("Use Item Tracking", "Use Item Tracking", "Specifies that the counting of the item is done by counting its serial, lot and package numbers.", 0),
+            ("Unit Amount", "Unit Amount", "Specifies the sum of unit costs of the item quantity on the line.", 2),
+            ("Unit Cost", "Unit Cost", "Specifies the cost of one unit of the item on the line.", 2),
+            ("No. Finished Rec.-Lines", "No. Finished Rec.-Lines", "Specifies how many of the related physical inventory recordings are closed.", 0),
+            ("Entry Type", "Entry Type", "Specifies the Entry Type of the physical inventory order line.", 0),
+            ("Recorded Without Order", "Recorded Without Order", "Specifies that no physical inventory order lines existed for the recorded item, and that the line was generated based on the related recording.", 0),
+            ("Shelf No.", "Shelf No.", "Specifies the shelf number where the item is placed.", 0),
+        ],
+    );
+    fields(
+        m,
+        "Pstd. Phys. Invt. Order Line",
+        vec![
+            F::code("Shortcut Dimension 1 Code", 20).tooltip("Specifies the code for Shortcut Dimension 1, which is one of two global dimension codes that you set up in the General Ledger Setup window."),
+            F::code("Shortcut Dimension 2 Code", 20).tooltip("Specifies the code for Shortcut Dimension 2, which is one of two global dimension codes that you set up in the General Ledger Setup window."),
+        ],
+    );
+    relabel(
+        m,
+        "Pstd. Phys. Invt. Record Hdr",
+        &[
+            ("Order No.", "Order No.", "Specifies the number of the related physical inventory order.", 0),
+            ("Recording No.", "Recording No.", "Specifies the number of the related physical inventory recording.", 0),
+            ("Description", "Description", "Specifies the Description of the table physical inventory recording header.", 0),
+            ("Person Responsible", "Person Responsible", "Specifies the Person Responsible of the table physical inventory recording header.", 0),
+            ("Allow Recording Without Order", "Allow Recording Without Order", "Specifies that recording lines were automatically created for items that did not exist on the physical inventory order. This can only happen if none of the values in these four fields exist for an item on the order: Item No., Variant Code, Location Code, and Bin Code.", 0),
+            ("Date Recorded", "Date Recorded", "Specifies the Date Recorded of the table physical inventory recording header.", 0),
+            ("Person Recorded", "Person Recorded", "Specifies the person who performed the recording.", 0),
+            ("Location Code", "Location Code", "Specifies the location where the recording was performed.", 0),
+        ],
+    );
+    fields(
+        m,
+        "Pstd. Phys. Invt. Record Hdr",
+        vec![
+            F::option("Status", &["Open", "Finished"]).read_only().tooltip("Specifies if the recording is Open or Finished"),
+            F::text("Time Recorded", 30).read_only().tooltip("Specifies the time when the recording was performed."),
+        ],
+    );
+    relabel(
+        m,
+        "Pstd. Phys. Invt. Record Line",
+        &[
+            ("Order No.", "Order No.", "Specifies the Order No. of the table physical inventory recording line.", 0),
+            ("Recording No.", "Recording No.", "Specifies the Recording No. of the table physical inventory recording line.", 0),
+            ("Line No.", "Line No.", "Specifies the Line No. of the table physical inventory recording line.", 0),
+            ("Order Line No.", "Order Line No.", "Specifies the Order Line No. of the table physical inventory recording line.", 0),
+            ("Recorded Without Order", "Recorded without Order", "", 0),
+            ("Item No.", "Item No.", "Specifies the Item No. of the table physical inventory recording line.", 0),
+            ("Variant Code", "Variant Code", "Specifies the variant of the item on the line.", 0),
+            ("Location Code", "Location Code", "Specifies the Location Code of the table physical inventory recording line.", 0),
+            ("Bin Code", "Bin Code", "Specifies the Bin Code of the table physical inventory recording line.", 0),
+            ("Description", "Description", "Specifies the Description of the table physical inventory recording line.", 0),
+            ("Description 2", "Description 2", "Specifies the Description 2 of the table physical inventory recording line.", 0),
+            ("Unit of Measure Code", "Unit of Measure Code", "Specifies how each unit of the item or resource is measured, such as in pieces or hours. By default, the value in the Base Unit of Measure field on the item or resource card is inserted.", 0),
+            ("Quantity", "Quantity", "Specifies the Quantity of the table physical inventory recording line.", 0),
+            ("Date Recorded", "Date Recorded", "Specifies the Date Recorded of the table physical inventory recording line.", 0),
+            ("Person Recorded", "Person Recorded", "Specifies the Person Recorded of the table physical inventory recording line.", 0),
+            ("Serial No.", "Serial No.", "Specifies the Serial No. of the table physical inventory recording line.", 0),
+            ("Lot No.", "Lot No.", "Specifies the Lot No. of the table physical inventory recording line.", 0),
+        ],
+    );
+    fields(
+        m,
+        "Pstd. Phys. Invt. Record Line",
+        vec![
+            F::code("Package No.", 50).tooltip("Specifies the Package No. of the table physical inventory recording line."),
         ],
     );
     relabel(
@@ -2848,7 +3067,9 @@ pub fn extend(m: &mut Metadata) {
         m,
         "Requisition Line",
         vec![
+            F::text("Vendor Item No.", 50).tooltip("Specifies the number that the vendor uses for this item."),
             F::option("Price Calculation Method", &["", "Lowest Price"]).tooltip("Specifies the method that will be used for unit cost calculation in the line."),
+            F::date("Original Due Date").read_only().tooltip("Specifies the due date stated on the production or purchase order, when an action message proposes to reschedule an order."),
         ],
     );
     relabel(
@@ -4672,6 +4893,65 @@ pub fn extend(m: &mut Metadata) {
     columns(m, "payment-terms", &["Code", "Due Date Calculation", "Discount Date Calculation", "Discount %", "Calc. Pmt. Disc. on Cr. Memos", "Description"]);
     columns(m, "permission-sets", &["Role ID", "Name"]);
     columns(m, "phys-inventory-journal", &["Posting Date", "Document No.", "Item No.", "Description", "Location Code", "Salespers./Purch. Code", "Qty. (Calculated)", "Qty. (Phys. Inventory)", "Quantity", "Unit Amount", "Amount", "Unit Cost", "Applies-to Entry", "Shortcut Dimension 1 Code", "Shortcut Dimension 2 Code"]);
+    layout(
+        m,
+        "phys-inventory-recording",
+        &[
+            Tab {
+                caption: "General",
+                fields: &["Order No.", "Recording No.", "Description", "Location Code", "Person Responsible", "Status", "Person Recorded", "Date Recorded", "Time Recorded", "Allow Recording Without Order"],
+                ..Tab::default()
+            },
+        ],
+    );
+    columns(m, "phys-inventory-recording-list", &["Order No.", "Recording No.", "Description", "Status", "Person Responsible", "Date Recorded", "Time Recorded", "Person Recorded"]);
+    columns(m, "phys-invt-counting-periods", &["Code", "Description", "Count Frequency per Year"]);
+    columns(m, "phys-invt-recording-lines", &["Order No.", "Recording No.", "Item No.", "Item Reference No.", "Description", "Unit of Measure Code", "Location Code", "Use Item Tracking", "Serial No.", "Lot No.", "Package No.", "Quantity", "Recorded"]);
+    columns(m, "phys-invt-recording-subform", &["Item Reference No."]);
+    layout(
+        m,
+        "physical-inventory-order",
+        &[
+            Tab {
+                caption: "General",
+                fields: &["Shortcut Dimension 1 Code", "Shortcut Dimension 2 Code"],
+                ..Tab::default()
+            },
+        ],
+    );
+    columns(m, "physical-inventory-order-lines", &["Document No.", "Item No.", "Description", "Location Code", "Base Unit of Measure Code", "Qty. Expected (Base)", "Qty. Exp. Calculated", "Qty. Recorded (Base)", "On Recording Lines", "No. Finished Rec.-Lines", "Entry Type", "Quantity (Base)", "Unit Amount"]);
+    columns(m, "physical-inventory-order-subf", &["Item Reference No.", "Shortcut Dimension 1 Code", "Shortcut Dimension 2 Code"]);
+    columns(m, "physical-inventory-orders", &["No.", "Description", "Status", "Order Date", "Posting Date", "Person Responsible", "No. Finished Recordings"]);
+    layout(
+        m,
+        "posted-phys-invt-order",
+        &[
+            Tab {
+                caption: "General",
+                fields: &["No.", "Description", "Location Code", "Person Responsible", "No. Finished Recordings", "Order Date", "Posting Date", "Pre-Assigned No.", "Shortcut Dimension 1 Code", "Shortcut Dimension 2 Code"],
+                promoted: &["Location Code"],
+                ..Tab::default()
+            },
+        ],
+    );
+    columns(m, "posted-phys-invt-order-lines", &["Document No.", "Item No.", "Description", "Location Code", "Base Unit of Measure Code", "Qty. Expected (Base)", "Qty. Recorded (Base)", "Entry Type", "Quantity (Base)", "No. Finished Rec.-Lines", "Unit Amount"]);
+    columns(m, "posted-phys-invt-order-list", &["No.", "Description", "Order Date", "Posting Date", "Person Responsible", "No. Finished Recordings"]);
+    columns(m, "posted-phys-invt-order-subf", &["Shortcut Dimension 1 Code", "Shortcut Dimension 2 Code"]);
+    columns(m, "posted-phys-invt-rec-lines", &["Order No.", "Recording No.", "Item No.", "Description", "Unit of Measure Code", "Location Code", "Serial No.", "Lot No.", "Quantity"]);
+    columns(m, "posted-phys-invt-rec-list", &["Order No.", "Recording No.", "Description", "Person Responsible", "Date Recorded", "Time Recorded", "Person Recorded"]);
+    columns(m, "posted-phys-invt-rec-subf", &["Item No.", "Description", "Location Code", "Serial No.", "Lot No.", "Package No.", "Unit of Measure Code", "Quantity"]);
+    layout(
+        m,
+        "posted-phys-invt-recording",
+        &[
+            Tab {
+                caption: "General",
+                fields: &["Order No.", "Recording No.", "Description", "Location Code", "Person Responsible", "Status", "Person Recorded", "Date Recorded", "Time Recorded", "Allow Recording Without Order"],
+                promoted: &["Location Code", "Status"],
+                ..Tab::default()
+            },
+        ],
+    );
     columns(m, "posted-purchase-cr-memo-lines", &["No.", "Item Reference No.", "Description", "Return Reason Code", "Quantity", "Unit of Measure Code", "Direct Unit Cost", "Unit Price (LCY)", "Line Discount %", "Line Amount", "Deferral Code"]);
     layout(
         m,
@@ -5207,8 +5487,8 @@ pub fn extend(m: &mut Metadata) {
     columns(m, "reminder-list", &["No.", "Customer No.", "Name", "Currency Code", "Remaining Amount", "Assigned User ID"]);
     columns(m, "reminder-subform", &["Type", "No.", "Document Type", "Document No.", "Due Date", "Description", "Remaining Amount", "Amount"]);
     columns(m, "reminder-terms", &["Code", "Description", "Max. No. of Reminders", "Post Interest", "Post Additional Fee", "Post Add. Fee per Line", "Minimum Amount (LCY)", "Note About Line Fee on Report"]);
-    columns(m, "req-worksheet", &["Price Calculation Method", "Location Code"]);
-    columns(m, "req-worksheet-templates", &["Increment Batch Name"]);
+    columns(m, "req-worksheet", &["Type", "No.", "Price Calculation Method", "Action Message", "Accept Action Message", "Description", "Location Code", "Original Quantity", "Quantity", "Unit of Measure Code", "Direct Unit Cost", "Original Due Date", "Due Date", "Vendor No.", "Vendor Item No.", "Replenishment System"]);
+    columns(m, "req-worksheet-templates", &["Name", "Description", "Recurring", "Increment Batch Name"]);
     columns(m, "requests-to-approve", &["Sender ID", "Due Date", "Status", "Amount", "Amount (LCY)", "Currency Code"]);
     columns(m, "reservation-entries", &["Reservation Status", "Item No.", "Location Code", "Quantity (Base)", "Entry No.", "Transferred from Entry No."]);
     columns(m, "sales-comment-sheet", &["Date", "Comment"]);
@@ -5834,6 +6114,34 @@ pub fn extend(m: &mut Metadata) {
         &[
             Nav { caption: "Card", page: "item-card", link: &[("No.", "Item No.")], shortcut: "Shift+F7" },
             Nav { caption: "Ledger E&ntries", page: "item-ledger-entries", link: &[("Item No.", "Item No.")], shortcut: "Ctrl+F7" },
+        ],
+    );
+    actions(
+        m,
+        "phys-invt-recording-lines",
+        &[
+            Nav { caption: "Show Document", page: "phys-inventory-recording", link: &[("Order No.", "Order No."), ("Recording No.", "Recording No.")], shortcut: "Shift+F7" },
+        ],
+    );
+    actions(
+        m,
+        "physical-inventory-order-lines",
+        &[
+            Nav { caption: "Show Document", page: "physical-inventory-order", link: &[("No.", "Document No.")], shortcut: "Shift+F7" },
+        ],
+    );
+    actions(
+        m,
+        "posted-phys-invt-order-lines",
+        &[
+            Nav { caption: "Show Document", page: "posted-phys-invt-order", link: &[("No.", "Document No.")], shortcut: "Shift+F7" },
+        ],
+    );
+    actions(
+        m,
+        "posted-phys-invt-rec-lines",
+        &[
+            Nav { caption: "Show Document", page: "posted-phys-invt-recording", link: &[("Order No.", "Order No."), ("Recording No.", "Recording No.")], shortcut: "Shift+F7" },
         ],
     );
     actions(
@@ -6474,6 +6782,41 @@ pub fn extend(m: &mut Metadata) {
     );
     categories(
         m,
+        "phys-inventory-recording",
+        &[
+            ("Process", &["Fi&nish", "Reo&pen"]),
+        ],
+    );
+    categories(
+        m,
+        "phys-invt-recording-lines",
+        &[
+            ("Process", &["Show Document"]),
+        ],
+    );
+    categories(
+        m,
+        "physical-inventory-order-lines",
+        &[
+            ("Process", &["Show Document"]),
+        ],
+    );
+    categories(
+        m,
+        "posted-phys-invt-order-lines",
+        &[
+            ("Process", &["Show Document"]),
+        ],
+    );
+    categories(
+        m,
+        "posted-phys-invt-rec-lines",
+        &[
+            ("Process", &["Show Document"]),
+        ],
+    );
+    categories(
+        m,
         "posted-purchase-credit-memo",
         &[
             ("Process", &["Find entries..."]),
@@ -6691,6 +7034,13 @@ pub fn extend(m: &mut Metadata) {
         "reminder-terms",
         &[
             ("Process", &["&Levels"]),
+        ],
+    );
+    categories(
+        m,
+        "req-worksheet",
+        &[
+            ("Process", &["Carry &Out Action Message", "Calculate Plan"]),
         ],
     );
     categories(

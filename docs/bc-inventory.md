@@ -17,7 +17,7 @@ orders this list into phases.
 | CRM | 1 | 163 | 0 | 36 |
 | CashFlow | 0 | 22 | 0 | 3 |
 | CostAccounting | 0 | 30 | 0 | 21 |
-| Finance | 34 | 344 | 1 | 86 |
+| Finance | 36 | 344 | 1 | 86 |
 | FinancialMgt | 0 | 1 | 0 | 0 |
 | FixedAssets | 11 | 61 | 1 | 38 |
 | Foundation | 5 | 58 | 0 | 2 |
@@ -38,7 +38,7 @@ orders this list into phases.
 | Utilities | 0 | 12 | 0 | 2 |
 | Warehouse | 0 | 144 | 0 | 35 |
 | eServices | 0 | 25 | 0 | 0 |
-| **Base Application** | **147** | **2638** | **16** | **659** |
+| **Base Application** | **149** | **2638** | **16** | **659** |
 
 ### (root)
 
@@ -746,7 +746,7 @@ Pages 0 / 30, reports 0 / 21.
 
 ### Finance
 
-Pages 34 / 344, reports 1 / 86.
+Pages 36 / 344, reports 1 / 86.
 
 <details><summary>Finance / AllocationAccount: pages 0 / 5, reports 0 / 0</summary>
 
@@ -955,7 +955,7 @@ Pages 34 / 344, reports 1 / 86.
 
 </details>
 
-<details><summary>Finance / GeneralLedger: pages 15 / 50, reports 1 / 33</summary>
+<details><summary>Finance / GeneralLedger: pages 17 / 50, reports 1 / 33</summary>
 
 - [x] Page 16 Chart of Accounts (List)
 - [x] Page 17 G/L Account Card (Card)
@@ -980,8 +980,8 @@ Pages 34 / 344, reports 1 / 86.
 - [ ] Page 254 Purchase Journal (Worksheet)
 - [x] Page 255 Cash Receipt Journal (Worksheet)
 - [x] Page 256 Payment Journal (Worksheet)
-- [ ] Page 283 Recurring General Journal (Worksheet)
-- [ ] Page 284 Allocations (Worksheet)
+- [x] Page 283 Recurring General Journal (Worksheet)
+- [x] Page 284 Allocations (Worksheet)
 - [x] Page 312 Gen. Business Posting Groups (List)
 - [x] Page 313 Gen. Product Posting Groups (List)
 - [x] Page 314 General Posting Setup (List)

@@ -28,6 +28,10 @@ pub fn on_insert(ctx: &mut Ctx, t: &TableDef, r: &mut Record) -> Result<()> {
         crate::item_journal::on_insert(ctx, r)?;
         return crate::approvals::on_journal_line_insert(ctx, &t.name, r);
     }
+    if t.name == crate::recurring::ALLOCATION {
+        crate::recurring::on_allocation_insert(ctx, r);
+        return Ok(());
+    }
     if t.name == crate::schema::bank_rec::BANK_REC {
         return crate::bank_rec::on_insert(ctx, r);
     }

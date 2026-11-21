@@ -90,6 +90,7 @@ pub fn setup(ctx: &mut Ctx) -> Result<()> {
         ("G-JNL", "General Journal", "G00001"),
         ("G-RCPT", "Cash Receipts Journal", "GR00001"),
         ("G-PMT", "Payment Journal", "GP00001"),
+        ("G-REC", "Recurring Journal", "REC00001"),
         ("S-REM", "Reminders", "S-REM1001"),
         ("S-IREM", "Issued Reminders", "S-IREM1001"),
         ("S-FIN", "Finance Charge Memos", "S-FIN1001"),
@@ -121,7 +122,7 @@ pub fn setup(ctx: &mut Ctx) -> Result<()> {
             "PAYMENT" => "PAYMENTJNL",
             _ => "GENJNL",
         };
-        raw(ctx, "Gen. Journal Template", json!({"Name": template, "Description": caption, "Type": ty, "No. Series": series, "Source Code": source}))?;
+        raw(ctx, "Gen. Journal Template", json!({"Name": template, "Description": caption, "Type": ty, "No. Series": series, "Source Code": source, "Recurring": *template == "RECURRING"}))?;
         raw(ctx, "Gen. Journal Batch", json!({"Journal Template Name": template, "Name": "DEFAULT", "Description": "Default journal", "No. Series": series}))?;
     }
 

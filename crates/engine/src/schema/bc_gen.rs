@@ -1205,6 +1205,26 @@ pub fn extend(m: &mut Metadata) {
     );
     relabel(
         m,
+        "Gen. Jnl. Allocation",
+        &[
+            ("Account No.", "Account No.", "Specifies the account number that the allocation will be posted to.", 0),
+            ("Allocation Quantity", "Allocation Quantity", "Specifies the quantity that will be used to calculate the amount in the allocation journal line.", 0),
+            ("Allocation %", "Allocation %", "Specifies the percentage that will be used to calculate the amount in the allocation journal line.", 0),
+            ("Amount", "Amount", "Specifies the amount that will be posted from the allocation journal line.", 1),
+            ("Account Name", "Account Name", "Specifies the name of the account that the allocation will be posted to.", 0),
+        ],
+    );
+    fields(
+        m,
+        "Gen. Jnl. Allocation",
+        vec![
+            F::option("Gen. Posting Type", &["", "Purchase", "Sale", "Settlement"]).tooltip("Specifies the type of transaction."),
+            F::code("Gen. Bus. Posting Group", 20).tooltip("Specifies the vendor's or customer's trade type to link transactions made for this business partner with the appropriate general ledger account according to the general posting setup."),
+            F::code("Gen. Prod. Posting Group", 20).tooltip("Specifies the item's product type to link transactions made for this item with the appropriate general ledger account according to the general posting setup."),
+        ],
+    );
+    relabel(
+        m,
         "Gen. Journal Batch",
         &[
             ("Name", "Name", "Specifies the name of the journal you are creating.", 0),
@@ -1245,6 +1265,9 @@ pub fn extend(m: &mut Metadata) {
             ("Applies-to Doc. Type", "Applies-to Doc. Type", "Specifies the type of the posted document that this document or journal line will be applied to when you post, for example to register payment.", 0),
             ("Applies-to Doc. No.", "Applies-to Doc. No.", "Specifies the number of the posted document that this document or journal line will be applied to when you post, for example to register payment.", 0),
             ("Due Date", "Due Date", "Specifies the due date on the entry.", 0),
+            ("Recurring Method", "Recurring Method", "Specifies a recurring method if the Recurring field of the General Journal Template table indicates the journal is recurring.", 0),
+            ("Expiration Date", "Expiration Date", "Specifies the last date the recurring journal will be posted, if you have indicated in the journal is recurring.", 0),
+            ("Recurring Frequency", "Recurring Frequency", "Specifies a recurring frequency if the Recurring field of the General Journal Template table indicates the journal is recurring.", 0),
             ("Bal. Account Type", "Bal. Account Type", "Specifies the type of account that a balancing entry is posted to, such as BANK for a cash account.", 0),
             ("External Document No.", "External Document No.", "Specifies a document number that refers to the customer's or vendor's numbering system.", 0),
             ("FA Posting Type", "FA Posting Type", "Specifies the posting type, if Account Type field contains Fixed Asset.", 0),
@@ -1259,6 +1282,7 @@ pub fn extend(m: &mut Metadata) {
             F::code("Posting Group", 20).tooltip("Specifies the posting group that will be used in posting the journal line.The field is used only if the account type is either customer or vendor."),
             F::code("Shortcut Dimension 1 Code", 20).tooltip("Specifies the code for Shortcut Dimension 1, which is one of two global dimension codes that you set up in the General Ledger Setup window."),
             F::code("Shortcut Dimension 2 Code", 20).tooltip("Specifies the code for Shortcut Dimension 2, which is one of two global dimension codes that you set up in the General Ledger Setup window."),
+            F::decimal("Allocated Amt. (LCY)").calc(CalcFormula::new(CalcFunc::Sum, "Gen. Jnl. Allocation", "Amount", &[("Journal Template Name", "Journal Template Name"), ("Journal Batch Name", "Journal Batch Name"), ("Journal Line No.", "Line No.")], &[])).auto_format(1),
             F::option("Gen. Posting Type", &["", "Purchase", "Sale", "Settlement"]).tooltip("Specifies the type of transaction."),
             F::code("Gen. Bus. Posting Group", 20).tooltip("Specifies the vendor's or customer's trade type to link transactions made for this business partner with the appropriate general ledger account according to the general posting setup."),
             F::code("Gen. Prod. Posting Group", 20).tooltip("Specifies the item's product type to link transactions made for this item with the appropriate general ledger account according to the general posting setup."),
@@ -1294,6 +1318,7 @@ pub fn extend(m: &mut Metadata) {
             ("Description", "Description", "Specifies a brief description of the journal template you are creating.", 0),
             ("Type", "Type", "Specifies the journal type.", 0),
             ("Source Code", "Source Code", "Specifies the source code that specifies where the entry was created.", 0),
+            ("Recurring", "Recurring", "Specifies whether the journal template will be a recurring journal.", 0),
             ("No. Series", "No. Series", "Specifies the number series from which entry or record numbers are assigned to new entries or records.", 0),
         ],
     );
@@ -1302,7 +1327,6 @@ pub fn extend(m: &mut Metadata) {
         "Gen. Journal Template",
         vec![
             F::code("Reason Code", 10).tooltip("Specifies the reason code, a supplementary source code that enables you to trace the entry."),
-            F::boolean("Recurring").tooltip("Specifies whether the journal template will be a recurring journal."),
             F::boolean("Force Doc. Balance").tooltip("Specifies whether transactions that are posted in the general journal must balance by document number and document type, in addition to balancing by date."),
             F::option("Bal. Account Type", &["G/L Account", "Customer", "Vendor", "Bank Account", "Fixed Asset", "IC Partner", "Employee", "Allocation Account"]).tooltip("Specifies the type of account that a balancing entry is posted to, such as BANK for a cash account."),
             F::code("Bal. Account No.", 20).tooltip("Specifies the number of the general ledger, customer, vendor, or bank account that the balancing entry is posted to, such as a cash account for cash purchases."),
@@ -3443,6 +3467,7 @@ pub fn extend(m: &mut Metadata) {
     columns(m, "account-schedule", &["Row No.", "Description", "Totaling Type", "Row Type", "Amount Type", "Show Opposite Sign", "Show", "Bold", "Italic", "Underline", "Double Underline", "New Page", "Internal Description"]);
     columns(m, "account-schedule-names", &["Name", "Description", "Analysis View Name", "Status", "Internal Description"]);
     columns(m, "accounting-periods", &["Starting Date", "Name", "New Fiscal Year", "Closed", "Date Locked"]);
+    columns(m, "allocations", &["Account No.", "Account Name", "Gen. Posting Type", "Gen. Bus. Posting Group", "Gen. Prod. Posting Group", "Allocation Quantity", "Allocation %", "Amount"]);
     columns(m, "approval-comments", &["Comment", "User ID", "Date and Time"]);
     columns(m, "approval-entries", &["Limit Type", "Approval Type", "Sequence No.", "Status", "Sender ID", "Salespers./Purch. Code", "Approver ID", "Currency Code", "Amount (LCY)", "Available Credit Limit (LCY)", "Date-Time Sent for Approval", "Last Date-Time Modified", "Last Modified By User ID", "Due Date"]);
     columns(m, "attached-documents", &["File Name", "File Extension", "File Type", "User", "Attached Date", "Document Flow Purchase", "Document Flow Sales", "Document Flow Production"]);
@@ -4389,6 +4414,7 @@ pub fn extend(m: &mut Metadata) {
             },
         ],
     );
+    columns(m, "recurring-general-journal", &["Recurring Method", "Posting Date", "Document Type", "Document No.", "Account Type", "Account No.", "Description", "Gen. Posting Type", "Gen. Bus. Posting Group", "Gen. Prod. Posting Group", "Amount", "Amount (LCY)", "Debit Amount", "Credit Amount", "Allocated Amt. (LCY)", "Expiration Date", "Shortcut Dimension 1 Code", "Shortcut Dimension 2 Code"]);
     layout(
         m,
         "reminder",
@@ -4683,6 +4709,14 @@ pub fn extend(m: &mut Metadata) {
     columns(m, "workflows", &["Description", "Enabled"]);
     actions(
         m,
+        "allocations",
+        &[
+            Nav { caption: "Card", page: "gl-account-card", link: &[("No.", "Account No.")], shortcut: "Shift+F7" },
+            Nav { caption: "Ledger E&ntries", page: "general-ledger-entries", link: &[("G/L Account No.", "Account No.")], shortcut: "Ctrl+F7" },
+        ],
+    );
+    actions(
+        m,
         "bank-acc-reconciliation",
         &[
             Nav { caption: "&Bank Account Card", page: "bank-account-card", link: &[("No.", "Bank Account No.")], shortcut: "Shift+F7" },
@@ -4836,6 +4870,7 @@ pub fn extend(m: &mut Metadata) {
         m,
         "general-journal-batches",
         &[
+            Nav { caption: "Recurring General Journal", page: "recurring-general-journal", link: &[], shortcut: "" },
             Nav { caption: "G/L Register", page: "gl-registers", link: &[], shortcut: "" },
         ],
     );
@@ -5410,7 +5445,7 @@ pub fn extend(m: &mut Metadata) {
         m,
         "general-journal-batches",
         &[
-            ("General Journal", &["G/L Register"]),
+            ("General Journal", &["Recurring General Journal", "G/L Register"]),
         ],
     );
     categories(
@@ -5749,6 +5784,14 @@ pub fn extend(m: &mut Metadata) {
     );
     categories(
         m,
+        "recurring-general-journal",
+        &[
+            ("Process", &["P&ost", "Preview Posting", "Test Report", "Post and &Print", "Allocations"]),
+            ("Line", &["Dimensions"]),
+        ],
+    );
+    categories(
+        m,
         "reminder",
         &[
             ("Process", &["Issue", "Suggest Reminder Lines", "C&ustomer"]),
@@ -6074,6 +6117,13 @@ pub fn extend(m: &mut Metadata) {
             ("Shortcut Dimension 6 Code", "dimension-set-entries", &[("Dimension Set ID", "Dimension Set ID")], &[("Global Dimension No.", "6")]),
             ("Shortcut Dimension 7 Code", "dimension-set-entries", &[("Dimension Set ID", "Dimension Set ID")], &[("Global Dimension No.", "7")]),
             ("Shortcut Dimension 8 Code", "dimension-set-entries", &[("Dimension Set ID", "Dimension Set ID")], &[("Global Dimension No.", "8")]),
+        ],
+    );
+    drilldowns(
+        m,
+        "Gen. Journal Line",
+        &[
+            ("Allocated Amt. (LCY)", "allocations", &[("Journal Template Name", "Journal Template Name"), ("Journal Batch Name", "Journal Batch Name"), ("Journal Line No.", "Line No.")], &[]),
         ],
     );
     calcs(

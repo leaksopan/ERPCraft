@@ -37,6 +37,48 @@ pub fn register(m: &mut Metadata) {
         "Gen. Journal Line",
         vec![F::code("Currency Code", 10).relation("Currency"), F::decimal("Currency Factor").read_only(), F::decimal("Amount (LCY)").read_only().auto_format(1)],
     );
+    // Recurring journals: methods, frequency, expiry, and the allocations that balance a line.
+    ensure(
+        m,
+        "Gen. Journal Line",
+        vec![
+            F::option("Recurring Method", &["", "F  Fixed", "V  Variable", "B  Balance", "RF Reversing Fixed", "RV Reversing Variable", "RB Reversing Balance"]),
+            F::code("Recurring Frequency", 20),
+            F::date("Expiration Date"),
+        ],
+    );
+    ensure(m, "Gen. Journal Template", vec![F::boolean("Recurring")]);
+    m.add_table(
+        TableDef::new(crate::recurring::ALLOCATION, 221)
+            .fields(vec![
+                F::code("Journal Template Name", 10),
+                F::code("Journal Batch Name", 10),
+                F::integer("Journal Line No."),
+                F::integer("Line No."),
+                F::code("Account No.", 20).relation("G/L Account"),
+                F::text("Account Name", 100).read_only(),
+                F::decimal("Allocation Quantity"),
+                F::decimal("Allocation %"),
+                F::decimal("Amount").auto_format(1).read_only(),
+            ])
+            .key(&["Journal Template Name", "Journal Batch Name", "Journal Line No.", "Line No."]),
+    );
+    let mut alloc = PageDef::new("allocations", 284, "Allocations", PageKind::List, Some(crate::recurring::ALLOCATION));
+    alloc.columns = ["Account No.", "Account Name", "Allocation Quantity", "Allocation %", "Amount"].iter().map(|c| (*c).to_string()).collect();
+    alloc.editable = true;
+    m.add_page(alloc);
+    if let Some(p) = m.pages.get_mut("recurring-general-journal") {
+        p.actions.push(
+            Act::page("Allocations", A::Navigate, "allocations")
+                .link("Journal Template Name", "Journal Template Name")
+                .link("Journal Batch Name", "Journal Batch Name")
+                .link("Journal Line No.", "Line No.")
+                .icon("list")
+                .shortcut("Shift+Ctrl+A")
+                .tooltip("Allocate the amount on the selected journal line to the accounts that you specify."),
+        );
+        p.keywords = "recurring journal allocations accruals".to_string();
+    }
     // Payment discounts: terms, documents, entries and the posting groups' accounts.
     ensure(m, "Payment Terms", vec![F::code("Discount Date Calculation", 20), F::decimal("Discount %")]);
     for header in ["Sales Header", "Purchase Header"] {

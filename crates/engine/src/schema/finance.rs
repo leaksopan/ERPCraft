@@ -33,6 +33,7 @@ pub const JOURNALS: &[(&str, &str, &str, u32, &str, &str)] = &[
     ("GENERAL", "General", "general-journal", 39, "General Journals", "G-JNL"),
     ("CASHRCPT", "Cash Receipts", "cash-receipt-journal", 255, "Cash Receipt Journals", "G-RCPT"),
     ("PAYMENT", "Payments", "payment-journal", 256, "Payment Journals", "G-PMT"),
+    ("RECURRING", "General", "recurring-general-journal", 283, "Recurring General Journals", "G-REC"),
 ];
 
 pub fn register(m: &mut Metadata) {

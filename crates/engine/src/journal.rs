@@ -177,6 +177,10 @@ pub fn on_validate(ctx: &mut Ctx, r: &mut Record, field: &str) -> Result<()> {
 
 /// Problems that would stop posting: documents out of balance, missing accounts.
 pub fn check(ctx: &Ctx, template: &str, batch: &str) -> Result<Vec<String>> {
+    // Recurring lines balance line by line (balancing account or allocations) when posting.
+    if crate::recurring::is_recurring(ctx, template) {
+        return Ok(Vec::new());
+    }
     let mut problems = Vec::new();
     let mut balance: BTreeMap<(String, Option<NaiveDate>), Decimal> = BTreeMap::new();
     for l in batch_lines(ctx, template, batch) {
@@ -224,6 +228,9 @@ struct Effect<'a> {
 /// Posts every line of the batch; documents become transactions; posted lines are deleted.
 pub fn post(ctx: &mut Ctx, template: &str, batch: &str) -> Result<Json> {
     crate::approvals::check_journal_post(ctx, GEN_JNL_LINE, template, batch)?;
+    if crate::recurring::is_recurring(ctx, template) {
+        return crate::recurring::post(ctx, template, batch);
+    }
     let problems = check(ctx, template, batch)?;
     if let Some(p) = problems.first() {
         return Err(EngineError::refused(p.clone()));

@@ -73,7 +73,7 @@ The order follows impact for Auto Craft (a workshop and auto-parts business): mo
 - [x] Approvals, Send/Cancel Approval Request on document **lists**, acting on the selected row
 - [x] Co&mments on lists and journals (journal approval Comments; line Comments and Dimensions from the Lines part's Line menu)
 - [ ] Statistics, Customer Statistics, Vendor Statistics on lists and documents (Customer / Vendor Statistics on documents and their lists, Entry Statistics and Statistics by Currencies on customers and vendors done; item statistics to do)
-- [ ] Post and Print, Test Report, Preview Posting, Post Batch on **journals** (Preview Posting, Test Report, Renumber Document Numbers, Post and Print, Card, Ledger Entries done; Post Batch on order, invoice and credit memo lists done)
+- [x] Post and Print, Test Report, Preview Posting, Post Batch on **journals** (Preview Posting, Test Report, Renumber Document Numbers, Post and Print, Card, Ledger Entries done; Post Batch on order, invoice and credit memo lists done)
 - [x] Card actions mirrored on their list pages (generator `mirror` pass)
 - [ ] Attachments and Attach as PDF on posted document lists
 - [ ] Dimensions-Multiple and Set Dimension Filter on lists (Set Dimension Filter on every ledger entry list done; Dimensions-Multiple needs multi-select)

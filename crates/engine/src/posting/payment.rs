@@ -76,6 +76,7 @@ pub fn register(ctx: &mut Ctx, side: &Side, p: &Payment) -> Result<Json> {
             description: &description,
             currency: "",
             amount: pay_amount,
+            amount_lcy: pay_amount,
             sales_purch: Decimal::ZERO,
             due_date: Some(p.posting_date),
             person: "",

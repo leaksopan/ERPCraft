@@ -75,8 +75,11 @@ pub struct PartyEntry<'a> {
     pub ext_doc_no: &'a str,
     pub description: &'a str,
     pub currency: &'a str,
-    /// Signed: positive = the party owes (customer invoice) / we owe less (vendor payment).
+    /// Signed: positive = the party owes (customer invoice) / we owe less (vendor payment). In the
+    /// entry's currency.
     pub amount: Decimal,
+    /// `amount` in LCY (the same for an LCY entry).
+    pub amount_lcy: Decimal,
     /// Sales (LCY) for customers, Purchase (LCY) for vendors.
     pub sales_purch: Decimal,
     pub due_date: Option<NaiveDate>,
@@ -102,7 +105,7 @@ pub fn post_party_entry(ctx: &mut Ctx, side: &Side, txn: &Txn, e: &PartyEntry) -
     r.set("Description", Value::text(e.description));
     r.set("Currency Code", Value::text(e.currency));
     r.set("Amount", dec(e.amount));
-    r.set("Amount (LCY)", dec(e.amount));
+    r.set("Amount (LCY)", dec(e.amount_lcy));
     r.set("Remaining Amount", dec(e.amount));
     r.set(if side.sales { "Sales (LCY)" } else { "Purchase (LCY)" }, dec(e.sales_purch));
     r.set("Due Date", e.due_date.map_or(Value::Date(e.posting_date), Value::Date));
@@ -115,8 +118,26 @@ pub fn post_party_entry(ctx: &mut Ctx, side: &Side, txn: &Txn, e: &PartyEntry) -
     r.set("User ID", Value::text(ctx.user.to_uppercase()));
     stamp_dims(ctx, lt, &mut r, txn.dim_set);
     ctx.db.insert(lt, r)?;
-    detailed(ctx, side, txn.no, entry_no, "Initial Entry", e.posting_date, e.doc_type, e.doc_no, e.party_no, e.amount, 0, 0)?;
+    detailed(ctx, side, txn.no, entry_no, "Initial Entry", e.posting_date, e.doc_type, e.doc_no, e.party_no, (e.amount, e.amount_lcy), 0, 0)?;
     Ok(entry_no)
+}
+
+/// A detailed entry with its own LCY amount (gains and losses carry LCY only).
+#[allow(clippy::too_many_arguments)]
+pub fn detailed_lcy(
+    ctx: &mut Ctx,
+    side: &Side,
+    txn: i64,
+    ledger_entry: i64,
+    entry_type: &str,
+    posting_date: NaiveDate,
+    doc_type: &str,
+    doc_no: &str,
+    party_no: &str,
+    amount: Decimal,
+    amount_lcy: Decimal,
+) -> Result<i64> {
+    detailed(ctx, side, txn, ledger_entry, entry_type, posting_date, doc_type, doc_no, party_no, (amount, amount_lcy), 0, 0)
 }
 
 #[allow(clippy::too_many_arguments)]
@@ -130,7 +151,7 @@ fn detailed(
     doc_type: &str,
     doc_no: &str,
     party_no: &str,
-    amount: Decimal,
+    (amount, amount_lcy): (Decimal, Decimal),
     applied_to: i64,
     application_no: i64,
 ) -> Result<i64> {
@@ -146,9 +167,11 @@ fn detailed(
     d.set("Document Type", Value::text(doc_type));
     d.set("Document No.", Value::text(doc_no));
     d.set("Amount", dec(amount));
-    d.set("Amount (LCY)", dec(amount));
+    d.set("Amount (LCY)", dec(amount_lcy));
     d.set("Debit Amount", dec(amount.max(Decimal::ZERO)));
     d.set("Credit Amount", dec((-amount).max(Decimal::ZERO)));
+    d.set("Debit Amount (LCY)", dec(amount_lcy.max(Decimal::ZERO)));
+    d.set("Credit Amount (LCY)", dec((-amount_lcy).max(Decimal::ZERO)));
     d.set(side.ledger_party, Value::text(party_no));
     d.set("Transaction No.", Value::Int(txn));
     d.set("Application No.", Value::Int(application_no));
@@ -162,9 +185,38 @@ fn ledger_entry(ctx: &Ctx, side: &Side, entry_no: i64) -> Result<Record> {
     ctx.get(side.ledger, &erpcraft_meta::Key(vec![Value::Int(entry_no)]))
 }
 
+/// The detailed entry types one application writes (and an unapply reverses).
+fn is_application_part(ty: &str) -> bool {
+    matches!(ty, "Application" | "Realized Gain" | "Realized Loss" | "Unrealized Gain" | "Unrealized Loss")
+}
+
+/// The entry's remaining LCY (sum of its detailed entries' Amount (LCY)).
+fn remaining_lcy(ctx: &Ctx, side: &Side, entry_no: i64) -> Decimal {
+    ctx.db.rows(dtld_table(side)).filter(|d| d.get(entry_field(side)).as_int() == entry_no).map(|d| d.get("Amount (LCY)").as_dec()).sum()
+}
+
+/// The entry's open unrealized gain / loss (Adjust Exchange Rates not yet reversed).
+fn unrealized(ctx: &Ctx, side: &Side, entry_no: i64) -> Decimal {
+    ctx.db
+        .rows(dtld_table(side))
+        .filter(|d| d.get(entry_field(side)).as_int() == entry_no && d.str("Entry Type").starts_with("Unrealized"))
+        .map(|d| d.get("Amount (LCY)").as_dec())
+        .sum()
+}
+
+/// `fcy` of `entry` at the entry's own (original) rate.
+fn at_original_rate(entry: &Record, fcy: Decimal) -> Decimal {
+    let (amount, lcy) = (entry.get("Amount").as_dec(), entry.get("Amount (LCY)").as_dec());
+    if amount.is_zero() { fcy } else { crate::ctx::round_amount(fcy * lcy / amount) }
+}
+
 /// Applies the open entry `applying` to the open entries `targets` (same party, opposite sign),
 /// oldest first as given, until `applying` is used up. Writes "Application" detailed entries and
 /// updates remaining amounts. Returns (target document no., amount applied).
+///
+/// In a foreign currency (BC's CalcCurrencyRealizedGainLoss) both sides apply at the applying
+/// entry's rate; the target's difference to its own rate is a realized gain or loss, and the
+/// applied share of an earlier unrealized adjustment is reversed first. Both go to the G/L.
 pub fn apply(ctx: &mut Ctx, side: &Side, applying: i64, targets: &[i64], posting_date: NaiveDate) -> Result<Vec<(String, Decimal)>> {
     let lt = ctx.table(side.ledger)?;
     let mut a = ledger_entry(ctx, side, applying)?;
@@ -174,6 +226,7 @@ pub fn apply(ctx: &mut Ctx, side: &Side, applying: i64, targets: &[i64], posting
     let txn = Txn::new(ctx, "APPLICATION", "", "");
     let application_no = ctx.db.rows(dtld_table(side)).map(|d| d.get("Application No.").as_int()).max().unwrap_or(0).saturating_add(1);
     let party = a.str(side.ledger_party).to_string();
+    let currency = a.str("Currency Code").to_string();
     let mut applied = Vec::new();
     for &tno in targets {
         let left = a.get("Remaining Amount").as_dec();
@@ -184,6 +237,9 @@ pub fn apply(ctx: &mut Ctx, side: &Side, applying: i64, targets: &[i64], posting
         if t.str(side.ledger_party) != party {
             refuse!("{} Ledger Entry {tno} belongs to another {}.", side.party_caption, side.party_caption.to_lowercase());
         }
+        if t.str("Currency Code") != currency {
+            refuse!("All entries in one application must be in the same currency.");
+        }
         let rem = t.get("Remaining Amount").as_dec();
         if !t.get("Open").as_bool() || rem.is_zero() || rem.is_sign_positive() == left.is_sign_positive() {
             refuse!("{} Ledger Entry {tno} cannot be applied: it must be open and have the opposite sign.", side.party_caption);
@@ -192,8 +248,41 @@ pub fn apply(ctx: &mut Ctx, side: &Side, applying: i64, targets: &[i64], posting
         // Each entry moves toward zero by `take`.
         let on_target = if rem.is_sign_positive() { -take } else { take };
         let on_applying = -on_target;
-        detailed(ctx, side, txn.no, tno, "Application", posting_date, a.str("Document Type"), a.str("Document No."), &party, on_target, applying, application_no)?;
-        detailed(ctx, side, txn.no, applying, "Application", posting_date, a.str("Document Type"), a.str("Document No."), &party, on_applying, tno, application_no)?;
+        let (doc_type, doc_no) = (a.str("Document Type").to_string(), a.str("Document No.").to_string());
+        if currency.is_empty() {
+            detailed(ctx, side, txn.no, tno, "Application", posting_date, &doc_type, &doc_no, &party, (on_target, on_target), applying, application_no)?;
+            detailed(ctx, side, txn.no, applying, "Application", posting_date, &doc_type, &doc_no, &party, (on_applying, on_applying), tno, application_no)?;
+        } else {
+            // Reverse the applied share of each side's unrealized adjustment.
+            for (entry, on_x, before) in [(&t, on_target, rem), (&a, on_applying, left)] {
+                let open = unrealized(ctx, side, entry.get("Entry No.").as_int());
+                let share = if before.is_zero() { Decimal::ZERO } else { crate::ctx::round_amount(open * on_x.abs() / before.abs()) };
+                if !share.is_zero() {
+                    let gain = open.is_sign_positive();
+                    let ty = if gain { "Unrealized Gain" } else { "Unrealized Loss" };
+                    let no = entry.get("Entry No.").as_int();
+                    detailed(ctx, side, txn.no, no, ty, posting_date, &doc_type, &doc_no, &party, (Decimal::ZERO, -share), 0, application_no)?;
+                    let party_acc = crate::currency::party_account(ctx, side, entry)?;
+                    let acc = crate::currency::gain_loss_account(ctx, &currency, false, gain)?;
+                    crate::currency::post_gain_loss(ctx, &txn, posting_date, &doc_no, &party_acc, &acc, -share, &format!("Reversal of {ty}"))?;
+                }
+            }
+            // The applying side at its own rate (all that is left when it closes).
+            let lcy_new = if (left + on_applying).is_zero() { -remaining_lcy(ctx, side, applying) } else { at_original_rate(&a, on_applying) };
+            detailed(ctx, side, txn.no, applying, "Application", posting_date, &doc_type, &doc_no, &party, (on_applying, lcy_new), tno, application_no)?;
+            detailed(ctx, side, txn.no, tno, "Application", posting_date, &doc_type, &doc_no, &party, (on_target, -lcy_new), applying, application_no)?;
+            // What the target is worth at its own rate, against what it was applied at.
+            // A target that closes keeps nothing in LCY; a part keeps its own rate.
+            let realized = if (rem + on_target).is_zero() { -remaining_lcy(ctx, side, tno) } else { at_original_rate(&t, on_target) + lcy_new };
+            if !realized.is_zero() {
+                let gain = realized.is_sign_positive();
+                let ty = if gain { "Realized Gain" } else { "Realized Loss" };
+                detailed(ctx, side, txn.no, tno, ty, posting_date, &doc_type, &doc_no, &party, (Decimal::ZERO, realized), 0, application_no)?;
+                let party_acc = crate::currency::party_account(ctx, side, &t)?;
+                let acc = crate::currency::gain_loss_account(ctx, &currency, true, gain)?;
+                crate::currency::post_gain_loss(ctx, &txn, posting_date, &doc_no, &party_acc, &acc, realized, ty)?;
+            }
+        }
         t.set("Remaining Amount", dec(rem + on_target));
         if (rem + on_target).is_zero() {
             t.set("Open", Value::Bool(false));
@@ -226,7 +315,7 @@ pub fn unapply(ctx: &mut Ctx, side: &Side, entry_no: i64) -> Result<Json> {
     let originals: Vec<Record> = ctx
         .db
         .rows(&dt.name)
-        .filter(|d| d.get("Application No.").as_int() == app_no && d.str("Entry Type") == "Application" && !d.get("Unapplied").as_bool())
+        .filter(|d| d.get("Application No.").as_int() == app_no && is_application_part(d.str("Entry Type")) && !d.get("Unapplied").as_bool())
         .cloned()
         .collect();
     let txn = Txn::new(ctx, "UNAPPLY", "", "");
@@ -234,20 +323,29 @@ pub fn unapply(ctx: &mut Ctx, side: &Side, entry_no: i64) -> Result<Json> {
     for o in originals {
         let le = o.get(entry_field(side)).as_int();
         let amount = o.get("Amount").as_dec();
+        let amount_lcy = o.get("Amount (LCY)").as_dec();
         let new_no = detailed(
             ctx,
             side,
             txn.no,
             le,
-            "Application",
+            o.str("Entry Type"),
             ctx.work_date,
             o.str("Document Type"),
             o.str("Document No."),
             o.str(side.ledger_party),
-            -amount,
+            (-amount, -amount_lcy),
             o.get(applied_field(side)).as_int(),
             app_no,
         )?;
+        // A gain or loss of the application goes back off the G/L too.
+        let ty = o.str("Entry Type");
+        if ty != "Application" && !amount_lcy.is_zero() {
+            let entry = ledger_entry(ctx, side, le)?;
+            let party_acc = crate::currency::party_account(ctx, side, &entry)?;
+            let acc = crate::currency::gain_loss_account(ctx, entry.str("Currency Code"), ty.starts_with("Realized"), ty.ends_with("Gain"))?;
+            crate::currency::post_gain_loss(ctx, &txn, ctx.work_date, o.str("Document No."), &party_acc, &acc, -amount_lcy, &format!("Unapply {ty}"))?;
+        }
         let mut undo = ctx.get(&dt.name, &erpcraft_meta::Key(vec![Value::Int(new_no)]))?;
         undo.set("Unapplied", Value::Bool(true));
         undo.set("Unapplied by Entry No.", Value::Int(o.get("Entry No.").as_int()));
@@ -257,7 +355,7 @@ pub fn unapply(ctx: &mut Ctx, side: &Side, entry_no: i64) -> Result<Json> {
         orig.set("Unapplied by Entry No.", Value::Int(new_no));
         ctx.db.modify(dt, orig)?;
         let mut e = ledger_entry(ctx, side, le)?;
-        let rem = e.get("Remaining Amount").as_dec() - amount;
+        let rem = e.get("Remaining Amount").as_dec() - if ty == "Application" { amount } else { Decimal::ZERO };
         e.set("Remaining Amount", dec(rem));
         e.set("Open", Value::Bool(!rem.is_zero()));
         e.set("Closed by Entry No.", Value::Int(0));

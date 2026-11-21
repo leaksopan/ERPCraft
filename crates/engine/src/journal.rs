@@ -215,7 +215,10 @@ pub fn check(ctx: &Ctx, template: &str, batch: &str) -> Result<Vec<String>> {
 struct Effect<'a> {
     account_type: &'a str,
     account_no: &'a str,
+    /// In the line's currency.
     amount: Decimal,
+    /// In LCY: what the G/L gets.
+    lcy: Decimal,
 }
 
 /// Posts every line of the batch; documents become transactions; posted lines are deleted.
@@ -261,13 +264,21 @@ pub fn post(ctx: &mut Ctx, template: &str, batch: &str) -> Result<Json> {
         for l in doc_lines {
             let amount = l.get("Amount").as_dec();
             let desc = l.str("Description").to_string();
-            let mut sides = vec![Effect { account_type: l.str("Account Type"), account_no: l.str("Account No."), amount }];
+            // A line in a currency: its amount converts at the line's factor (or the rate of the day).
+            let currency = l.str("Currency Code").to_string();
+            let factor = match (currency.is_empty(), l.get("Currency Factor").as_dec()) {
+                (true, _) => Decimal::ONE,
+                (false, f) if !f.is_zero() => f,
+                (false, _) => crate::currency::factor(ctx, &currency, *date)?,
+            };
+            let lcy = crate::currency::to_lcy(amount, factor);
+            let mut sides = vec![Effect { account_type: l.str("Account Type"), account_no: l.str("Account No."), amount, lcy }];
             if !l.str("Bal. Account No.").is_empty() {
-                sides.push(Effect { account_type: l.str("Bal. Account Type"), account_no: l.str("Bal. Account No."), amount: -amount });
+                sides.push(Effect { account_type: l.str("Bal. Account Type"), account_no: l.str("Bal. Account No."), amount: -amount, lcy: -lcy });
             }
             for s in sides {
                 if s.account_type == "Fixed Asset" {
-                    let (lines, specs) = crate::fa::journal_effect(ctx, l, s.account_no, s.amount)?;
+                    let (lines, specs) = crate::fa::journal_effect(ctx, l, s.account_no, s.lcy)?;
                     gl.extend(lines);
                     fa_specs.extend(specs);
                     continue;
@@ -278,7 +289,7 @@ pub fn post(ctx: &mut Ctx, template: &str, batch: &str) -> Result<Json> {
                     "Bank Account" => bank_gl_account(ctx, s.account_no)?,
                     _ => s.account_no.to_string(),
                 };
-                gl.push(GlLine { account: gl_account, amount: s.amount, vat_amount: Decimal::ZERO, description: desc.clone(), gen_posting_type: "" });
+                gl.push(GlLine { account: gl_account, amount: s.lcy, vat_amount: Decimal::ZERO, description: desc.clone(), gen_posting_type: "" });
                 if s.account_type != "G/L Account" {
                     party_effects.push((l, s));
                 }
@@ -300,7 +311,7 @@ pub fn post(ctx: &mut Ctx, template: &str, batch: &str) -> Result<Json> {
                     } else {
                         (l.str("Account Type"), l.str("Account No."))
                     };
-                    post_bank_entry(ctx, &txn, s.account_no, *date, l.str("Document Type"), doc_no, desc, s.amount, bal_type, bal_no)?;
+                    post_bank_entry(ctx, &txn, s.account_no, *date, l.str("Document Type"), doc_no, desc, s.lcy, bal_type, bal_no)?;
                 }
                 t => {
                     let Some(side) = side_of(t) else { continue };
@@ -317,8 +328,9 @@ pub fn post(ctx: &mut Ctx, template: &str, batch: &str) -> Result<Json> {
                             doc_no,
                             ext_doc_no: l.str("External Document No."),
                             description: desc,
-                            currency: "",
+                            currency: l.str("Currency Code"),
                             amount: s.amount,
+                            amount_lcy: s.lcy,
                             sales_purch: Decimal::ZERO,
                             due_date: l.get("Due Date").as_date().or(Some(*date)),
                             person: "",

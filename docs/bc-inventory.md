@@ -17,7 +17,7 @@ orders this list into phases.
 | CRM | 1 | 163 | 0 | 36 |
 | CashFlow | 0 | 22 | 0 | 3 |
 | CostAccounting | 0 | 30 | 0 | 21 |
-| Finance | 28 | 344 | 1 | 86 |
+| Finance | 30 | 344 | 1 | 86 |
 | FinancialMgt | 0 | 1 | 0 | 0 |
 | FixedAssets | 11 | 61 | 1 | 38 |
 | Foundation | 5 | 58 | 0 | 2 |
@@ -38,7 +38,7 @@ orders this list into phases.
 | Utilities | 0 | 12 | 0 | 2 |
 | Warehouse | 0 | 144 | 0 | 35 |
 | eServices | 0 | 25 | 0 | 0 |
-| **Base Application** | **119** | **2638** | **16** | **659** |
+| **Base Application** | **121** | **2638** | **16** | **659** |
 
 ### (root)
 
@@ -746,7 +746,7 @@ Pages 0 / 30, reports 0 / 21.
 
 ### Finance
 
-Pages 28 / 344, reports 1 / 86.
+Pages 30 / 344, reports 1 / 86.
 
 <details><summary>Finance / AllocationAccount: pages 0 / 5, reports 0 / 0</summary>
 
@@ -816,13 +816,13 @@ Pages 28 / 344, reports 1 / 86.
 
 </details>
 
-<details><summary>Finance / Currency: pages 1 / 8, reports 0 / 2</summary>
+<details><summary>Finance / Currency: pages 3 / 8, reports 0 / 2</summary>
 
 - [x] Page 5 Currencies (List)
 - [ ] Page 106 Exchange Rate Adjmt. Register (List)
 - [ ] Page 186 Exch.Rate Adjmt. Ledg.Entries (List)
-- [ ] Page 483 Currency Exchange Rates (List)
-- [ ] Page 495 Currency Card (Card)
+- [x] Page 483 Currency Exchange Rates (List)
+- [x] Page 495 Currency Card (Card)
 - [ ] Page 511 Change Exchange Rate (StandardDialog)
 - [ ] Page 1650 Curr. Exch. Rate Service List (List)
 - [ ] Page 1651 Curr. Exch. Rate Service Card (Card)

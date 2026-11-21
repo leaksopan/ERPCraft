@@ -28,6 +28,7 @@ pub mod party_stats;
 pub mod item_stats;
 pub mod fin_reports;
 pub mod fiscal;
+pub mod currency;
 mod error;
 pub mod fa;
 pub mod item_journal;

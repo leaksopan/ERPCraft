@@ -147,6 +147,8 @@ pub fn setup(ctx: &mut Ctx) -> Result<()> {
         ("40300", "Sales - Workshop Services", "Posting", "Income Statement", "Income", ""),
         ("40400", "Sales Returns & Allowances", "Posting", "Income Statement", "Income", ""),
         ("40500", "Gain on Disposal of Assets", "Posting", "Income Statement", "Income", ""),
+        ("40600", "Realized Exchange Rate Gains", "Posting", "Income Statement", "Income", ""),
+        ("40700", "Unrealized Exchange Rate Gains", "Posting", "Income Statement", "Income", ""),
         ("40999", "Total Revenue", "End-Total", "Income Statement", "Income", "40100..40999"),
         ("50100", "Cost of Goods Sold", "Begin-Total", "Income Statement", "Cost of Goods Sold", ""),
         ("50200", "COGS - Spare Parts", "Posting", "Income Statement", "Cost of Goods Sold", ""),
@@ -159,6 +161,8 @@ pub fn setup(ctx: &mut Ctx) -> Result<()> {
         ("60400", "Salaries & Wages", "Posting", "Income Statement", "Expense", ""),
         ("60500", "Depreciation Expense", "Posting", "Income Statement", "Expense", ""),
         ("60600", "Loss on Disposal of Assets", "Posting", "Income Statement", "Expense", ""),
+        ("60700", "Realized Exchange Rate Losses", "Posting", "Income Statement", "Expense", ""),
+        ("60800", "Unrealized Exchange Rate Losses", "Posting", "Income Statement", "Expense", ""),
         ("60999", "Total Operating Expenses", "End-Total", "Income Statement", "Expense", "60100..60999"),
         ("99999", "NET INCOME", "Total", "Income Statement", "", "40000..69999"),
     ];
@@ -240,8 +244,22 @@ pub fn setup(ctx: &mut Ctx) -> Result<()> {
     for (code, formula, desc) in [("COD", "0D", "Cash on delivery"), ("14 DAYS", "14D", "Net 14 days"), ("30 DAYS", "30D", "Net 30 days"), ("CM", "CM", "End of current month")] {
         raw(ctx, "Payment Terms", json!({"Code": code, "Due Date Calculation": formula, "Description": desc}))?;
     }
-    for (code, desc, sym) in [("USD", "US Dollar", "$"), ("EUR", "Euro", "â‚¬"), ("SGD", "Singapore Dollar", "S$")] {
-        raw(ctx, "Currency", json!({"Code": code, "Description": desc, "Symbol": sym}))?;
+    // Currencies with their gain / loss accounts and rates (IDR per unit) for 2025 and 2026.
+    for (code, desc, sym, r2025, r2026) in [("USD", "US Dollar", "$", 15_500, 16_000), ("EUR", "Euro", "€", 16_800, 17_500), ("SGD", "Singapore Dollar", "S$", 11_500, 12_000)] {
+        raw(
+            ctx,
+            "Currency",
+            json!({"Code": code, "Description": desc, "Symbol": sym, "Realized Gains Acc.": "40600", "Unrealized Gains Acc.": "40700",
+                   "Realized Losses Acc.": "60700", "Unrealized Losses Acc.": "60800", "Amount Rounding Precision": 0.01, "Invoice Rounding Precision": 0.01}),
+        )?;
+        for (date, rate) in [("2025-01-01", r2025), ("2026-01-01", r2026)] {
+            raw(
+                ctx,
+                "Currency Exchange Rate",
+                json!({"Currency Code": code, "Starting Date": date, "Exchange Rate Amount": 1, "Relational Exch. Rate Amount": rate,
+                       "Adjustment Exch. Rate Amount": 1, "Relational Adjmt Exch Rate Amt": rate}),
+            )?;
+        }
     }
     for (code, desc) in [("PCS", "Piece"), ("SET", "Set"), ("LTR", "Liter"), ("HOUR", "Hour")] {
         raw(ctx, "Unit of Measure", json!({"Code": code, "Description": desc}))?;
@@ -416,7 +434,7 @@ fn demo_financial_reports(ctx: &mut Ctx) -> Result<()> {
         ("11", "Sales - Spare Parts", "Posting Accounts", "40200", true, false, 1, ""),
         ("12", "Sales - Workshop Services", "Posting Accounts", "40300", true, false, 1, ""),
         ("13", "Sales Returns & Allowances", "Posting Accounts", "40400", true, false, 1, ""),
-        ("14", "Other Income", "Posting Accounts", "40500", true, false, 1, ""),
+        ("14", "Other Income", "Posting Accounts", "40500..40799", true, false, 1, ""),
         ("19", "Total Revenue", "Formula", "11..14", false, true, 0, ""),
         ("20", "Cost of Goods Sold", "Posting Accounts", "50200..50400", false, false, 0, ""),
         ("30", "Gross Profit", "Formula", "19-20", false, true, 0, ""),
@@ -425,7 +443,7 @@ fn demo_financial_reports(ctx: &mut Ctx) -> Result<()> {
         ("42", "Utilities", "Posting Accounts", "60300", false, false, 1, ""),
         ("43", "Salaries & Wages", "Posting Accounts", "60400", false, false, 1, ""),
         ("44", "Depreciation", "Posting Accounts", "60500", false, false, 1, ""),
-        ("45", "Loss on Disposal of Assets", "Posting Accounts", "60600", false, false, 1, ""),
+        ("45", "Other Expenses", "Posting Accounts", "60600..60899", false, false, 1, ""),
         ("49", "Total Operating Expenses", "Formula", "41..45", false, true, 0, ""),
         ("50", "Net Income", "Formula", "30-49", false, true, 0, ""),
     ];

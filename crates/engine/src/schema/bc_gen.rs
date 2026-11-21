@@ -297,6 +297,10 @@ pub fn extend(m: &mut Metadata) {
         "Currency",
         &[
             ("Code", "Code", "Specifies a currency code that you can select. The code must comply with ISO 4217.", 0),
+            ("Unrealized Gains Acc.", "Unrealized Gains Acc.", "Specifies the general ledger account number to which unrealized exchange rate gains will be posted when the Adjust Exchange Rates batch job is run.", 0),
+            ("Realized Gains Acc.", "Realized Gains Acc.", "Specifies the general ledger account number to which realized exchange rate gains will be posted.", 0),
+            ("Unrealized Losses Acc.", "Unrealized Losses Acc.", "Specifies the general ledger account number to which unrealized exchange rate losses will be posted when the Adjust Exchange Rates batch job is run.", 0),
+            ("Realized Losses Acc.", "Realized Losses Acc.", "Specifies the general ledger account number to which realized exchange rate losses will be posted.", 0),
             ("Description", "Description", "Specifies a text to describe the currency code.", 0),
             ("Symbol", "Symbol", "Specifies the symbol for the currency, for example, $ for US dollars.", 0),
         ],
@@ -309,23 +313,39 @@ pub fn extend(m: &mut Metadata) {
             F::date("Last Date Adjusted").read_only().tooltip("Specifies when the exchange rates were last adjusted, that is, the last date on which the Adjust Exchange Rates batch job was run."),
             F::code("ISO Code", 3).tooltip("Specifies a three-letter currency code defined in ISO 4217."),
             F::code("ISO Numeric Code", 3).tooltip("Specifies a three-digit code number defined in ISO 4217."),
-            F::code("Unrealized Gains Acc.", 20).relation("G/L Account").tooltip("Specifies the general ledger account number to which unrealized exchange rate gains will be posted when the Adjust Exchange Rates batch job is run."),
-            F::code("Realized Gains Acc.", 20).relation("G/L Account").tooltip("Specifies the general ledger account number to which realized exchange rate gains will be posted."),
-            F::code("Unrealized Losses Acc.", 20).relation("G/L Account").tooltip("Specifies the general ledger account number to which unrealized exchange rate losses will be posted when the Adjust Exchange Rates batch job is run."),
-            F::code("Realized Losses Acc.", 20).relation("G/L Account").tooltip("Specifies the general ledger account number to which realized exchange rate losses will be posted."),
             F::decimal("Invoice Rounding Precision").auto_format(1).tooltip("Specifies the size of the interval to be used when rounding amounts in this currency. You can specify invoice rounding for each currency in the Currency table."),
             F::option("Invoice Rounding Type", &["Nearest", "Up", "Down"]).tooltip("Specifies whether an invoice amount will be rounded up or down. The program uses this information together with the interval for rounding that you have specified in the Invoice Rounding Precision field."),
             F::decimal("Amount Rounding Precision").auto_format(1).tooltip("Specifies the size of the interval to be used when rounding amounts in this currency."),
             F::decimal("Unit-Amount Rounding Precision").auto_format(2).tooltip("Specifies the size of the interval to be used when rounding unit amounts (that is, item prices per unit) in this currency."),
             F::text("Amount Decimal Places", 5).tooltip("Specifies the number of decimal places the program will display for amounts in this currency."),
             F::text("Unit-Amount Decimal Places", 5).tooltip("Specifies the number of decimal places the program will display for amounts in this currency."),
+            F::code("Realized G/L Gains Account", 20).relation("G/L Account").tooltip("Specifies the general ledger account to post exchange rate gains to, for currency adjustments between LCY and the additional reporting currency."),
+            F::code("Realized G/L Losses Account", 20).relation("G/L Account").tooltip("Specifies the general ledger account to post exchange rate gains to for currency adjustments between LCY and the additional reporting currency."),
             F::decimal("Appln. Rounding Precision").auto_format(1).tooltip("Specifies the size of the interval that will be allowed as a rounding difference when you apply entries in different currencies to one another."),
             F::boolean("EMU Currency").tooltip("Specifies whether the currency is an EMU currency, for example DEM or EUR."),
+            F::code("Residual Gains Account", 20).relation("G/L Account").tooltip("Specifies the general ledger account to post residual amount gains to, if you post in the general ledger application area in both LCY and an additional reporting currency."),
+            F::code("Residual Losses Account", 20).relation("G/L Account").tooltip("Specifies the general ledger account to post residual amount losses to, if you post in the general ledger application area in both LCY and an additional reporting currency."),
             F::code("Conv. LCY Rndg. Debit Acc.", 20).relation("G/L Account").tooltip("Specifies conversion information that must also contain a debit account if you wish to insert correction lines for rounding differences in the general journals using the Insert Conv. LCY Rndg. Lines function."),
             F::code("Conv. LCY Rndg. Credit Acc.", 20).relation("G/L Account").tooltip("Specifies conversion information that must also contain a credit account if you wish to insert correction lines for rounding differences in the general journals using the Insert Conv. LCY Rndg. Lines function."),
+            F::decimal("Max. VAT Difference Allowed").auto_format(1).tooltip("Specifies the maximum VAT correction amount allowed for the currency."),
+            F::option("VAT Rounding Type", &["Nearest", "Up", "Down"]).tooltip("Specifies how the program will round VAT when calculated for this currency."),
             F::decimal("Payment Tolerance %").read_only().tooltip("Specifies the percentage that the payment or refund is allowed to be, less than the amount on the invoice or credit memo."),
             F::decimal("Max. Payment Tolerance Amount").read_only().auto_format(1).tooltip("Specifies the maximum allowed amount that the payment or refund can differ from the amount on the invoice or credit memo."),
             F::option("Currency Symbol Position", &["Default", "Before Amount", "After Amount"]).tooltip("Specifies the position of the currency symbol in relation to the amount."),
+        ],
+    );
+    relabel(
+        m,
+        "Currency Exchange Rate",
+        &[
+            ("Currency Code", "Currency Code", "Specifies the code of the currency on this line.", 0),
+            ("Starting Date", "Starting Date", "Specifies the date on which the exchange rate on this line comes into effect.", 0),
+            ("Exchange Rate Amount", "Exchange Rate Amount", "Specifies the amounts that are used to calculate exchange rates for the currency on this line.", 0),
+            ("Adjustment Exch. Rate Amount", "Adjustment Exch. Rate Amount", "Specifies the amounts that are used to calculate exchange rates that will be used by the Adjust Exchange Rates batch job.", 0),
+            ("Relational Currency Code", "Relational Currency Code", "Specifies how you want to set up the two currencies, one of the currencies can be LCY, for which you want to register exchange rates.", 0),
+            ("Relational Exch. Rate Amount", "Relational Exch. Rate Amount", "Specifies the amounts that are used to calculate exchange rates for the foreign currency on this line.", 0),
+            ("Fix Exchange Rate Amount", "Fix Exchange Rate Amount", "Specifies if the currency's exchange rate can be changed on invoices and journal lines.", 0),
+            ("Relational Adjmt Exch Rate Amt", "Relational Adjmt Exch Rate Amt", "Specifies the amounts that are used to calculate exchange rates that will be used by the Adjust Exchange Rates batch job.", 0),
         ],
     );
     relabel(
@@ -558,6 +578,8 @@ pub fn extend(m: &mut Metadata) {
             ("Transaction No.", "Transaction No.", "Specifies the transaction number that groups related G/L entries from the same posting.", 0),
             ("Debit Amount", "Debit Amount", "Specifies the total of the ledger entries that represent debits.", 1),
             ("Credit Amount", "Credit Amount", "Specifies the total of the ledger entries that represent credits.", 1),
+            ("Debit Amount (LCY)", "Debit Amount (LCY)", "Specifies the total of the ledger entries that represent debits, expressed in LCY.", 1),
+            ("Credit Amount (LCY)", "Credit Amount (LCY)", "Specifies the total of the ledger entries that represent credits, expressed in LCY.", 1),
             ("Initial Entry Due Date", "Initial Entry Due Date", "Specifies the date on which the initial entry is due for payment.", 0),
             ("Unapplied", "Unapplied", "Specifies whether the entry has been unapplied (undone) from the Unapply Customer Entries window by the entry no. shown in the Unapplied by Entry No. field.", 0),
             ("Unapplied by Entry No.", "Unapplied by Entry No.", "Specifies the number of the correcting entry, if the original entry has been unapplied (undone) from the Unapply Customer Entries window.", 0),
@@ -568,8 +590,6 @@ pub fn extend(m: &mut Metadata) {
         "Detailed Cust. Ledg. Entry",
         vec![
             F::code("Currency Code", 10).relation("Currency").tooltip("Specifies the code for the currency if the amount is in a foreign currency."),
-            F::decimal("Debit Amount (LCY)").auto_format(1).tooltip("Specifies the total of the ledger entries that represent debits, expressed in LCY."),
-            F::decimal("Credit Amount (LCY)").auto_format(1).tooltip("Specifies the total of the ledger entries that represent credits, expressed in LCY."),
         ],
     );
     relabel(
@@ -589,6 +609,8 @@ pub fn extend(m: &mut Metadata) {
             ("Transaction No.", "Transaction No.", "Specifies the transaction number that groups related G/L entries from the same posting.", 0),
             ("Debit Amount", "Debit Amount", "Specifies the total of the ledger entries that represent debits.", 1),
             ("Credit Amount", "Credit Amount", "Specifies the total of the ledger entries that represent credits.", 1),
+            ("Debit Amount (LCY)", "Debit Amount (LCY)", "", 1),
+            ("Credit Amount (LCY)", "Credit Amount (LCY)", "", 1),
             ("Initial Entry Due Date", "Initial Entry Due Date", "Specifies the date on which the initial entry is due for payment.", 0),
             ("Unapplied", "Unapplied", "Specifies whether the entry has been unapplied (undone) from the Unapply Vendor Entries window by the entry no. shown in the Unapplied by Entry No. field.", 0),
             ("Unapplied by Entry No.", "Unapplied by Entry No.", "Specifies the number of the correcting entry, if the original entry has been unapplied (undone) from the Unapply Vendor Entries window.", 0),
@@ -599,8 +621,6 @@ pub fn extend(m: &mut Metadata) {
         "Detailed Vendor Ledg. Entry",
         vec![
             F::code("Currency Code", 10).relation("Currency").tooltip("Specifies the code for the currency if the amount is in a foreign currency."),
-            F::decimal("Debit Amount (LCY)").auto_format(1),
-            F::decimal("Credit Amount (LCY)").auto_format(1),
         ],
     );
     relabel(
@@ -1071,6 +1091,7 @@ pub fn extend(m: &mut Metadata) {
             ("Document No.", "Document No.", "Specifies a document number for the journal line.", 0),
             ("Description", "Description", "Specifies a description of the entry.", 0),
             ("Bal. Account No.", "Bal. Account No.", "Specifies the number of the general ledger, customer, vendor, or bank account that the balancing entry is posted to, such as a cash account for cash purchases.", 0),
+            ("Currency Code", "Currency Code", "Specifies the code of the currency for the amounts on the journal line.", 0),
             ("Amount", "Amount", "Specifies the total amount (including VAT) that the journal line consists of.", 1),
             ("Debit Amount", "Debit Amount", "Specifies the total of the ledger entries that represent debits.", 1),
             ("Credit Amount", "Credit Amount", "Specifies the total of the ledger entries that represent credits.", 1),
@@ -1088,8 +1109,6 @@ pub fn extend(m: &mut Metadata) {
         m,
         "Gen. Journal Line",
         vec![
-            F::code("Currency Code", 10).relation("Currency").tooltip("Specifies the code of the currency for the amounts on the journal line."),
-            F::decimal("Amount (LCY)").auto_format(1),
             F::code("Posting Group", 20).tooltip("Specifies the posting group that will be used in posting the journal line.The field is used only if the account type is either customer or vendor."),
             F::code("Shortcut Dimension 1 Code", 20).tooltip("Specifies the code for Shortcut Dimension 1, which is one of two global dimension codes that you set up in the General Ledger Setup window."),
             F::code("Shortcut Dimension 2 Code", 20).tooltip("Specifies the code for Shortcut Dimension 2, which is one of two global dimension codes that you set up in the General Ledger Setup window."),
@@ -3066,6 +3085,31 @@ pub fn extend(m: &mut Metadata) {
     columns(m, "currencies", &["Code", "Description", "ISO Code", "ISO Numeric Code", "Symbol", "Currency Symbol Position", "EMU Currency", "Realized Gains Acc.", "Realized Losses Acc.", "Unrealized Gains Acc.", "Unrealized Losses Acc.", "Amount Rounding Precision", "Amount Decimal Places", "Invoice Rounding Precision", "Invoice Rounding Type", "Unit-Amount Rounding Precision", "Unit-Amount Decimal Places", "Appln. Rounding Precision", "Conv. LCY Rndg. Debit Acc.", "Conv. LCY Rndg. Credit Acc.", "Last Date Adjusted", "Last Date Modified", "Payment Tolerance %", "Max. Payment Tolerance Amount"]);
     layout(
         m,
+        "currency-card",
+        &[
+            Tab {
+                caption: "General",
+                fields: &["Code", "Description", "ISO Code", "ISO Numeric Code", "Symbol", "Unrealized Gains Acc.", "Realized Gains Acc.", "Unrealized Losses Acc.", "Realized Losses Acc.", "EMU Currency", "Last Date Modified", "Last Date Adjusted", "Payment Tolerance %", "Max. Payment Tolerance Amount"],
+                promoted: &["Code", "Description", "EMU Currency", "Last Date Adjusted"],
+                ..Tab::default()
+            },
+            Tab {
+                caption: "Rounding",
+                fields: &["Invoice Rounding Precision", "Invoice Rounding Type", "Amount Rounding Precision", "Amount Decimal Places", "Unit-Amount Rounding Precision", "Unit-Amount Decimal Places", "Appln. Rounding Precision", "Conv. LCY Rndg. Debit Acc.", "Conv. LCY Rndg. Credit Acc.", "Max. VAT Difference Allowed", "VAT Rounding Type"],
+                promoted: &["Invoice Rounding Precision", "Invoice Rounding Type", "Max. VAT Difference Allowed", "VAT Rounding Type"],
+                ..Tab::default()
+            },
+            Tab {
+                caption: "Reporting",
+                fields: &["Realized G/L Gains Account", "Realized G/L Losses Account", "Residual Gains Account", "Residual Losses Account"],
+                promoted: &["Realized G/L Gains Account", "Realized G/L Losses Account", "Residual Gains Account", "Residual Losses Account"],
+                ..Tab::default()
+            },
+        ],
+    );
+    columns(m, "currency-exchange-rates", &["Starting Date", "Currency Code", "Relational Currency Code", "Exchange Rate Amount", "Relational Exch. Rate Amount", "Adjustment Exch. Rate Amount", "Relational Adjmt Exch Rate Amt", "Fix Exchange Rate Amount"]);
+    layout(
+        m,
         "customer-card",
         &[
             Tab {
@@ -4540,6 +4584,20 @@ pub fn extend(m: &mut Metadata) {
         "column-layout-names",
         &[
             ("Process", &["Edit Column Definition"]),
+        ],
+    );
+    categories(
+        m,
+        "currencies",
+        &[
+            ("Process", &["Exch. &Rates"]),
+        ],
+    );
+    categories(
+        m,
+        "currency-card",
+        &[
+            ("Process", &["Exch. &Rates"]),
         ],
     );
     categories(

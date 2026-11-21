@@ -338,6 +338,15 @@ pub fn post_document(ctx: &mut Ctx, side: &Side, doc_type: &str, no: &str, mode:
         refuse!("There is nothing to post.");
     }
     let description = header.str("Posting Description").to_string();
+    // A document in a currency: amounts convert line by line at its factor; the party entry
+    // keeps the currency amount and the sum of the lines in LCY.
+    let currency_code = header.str("Currency Code").to_string();
+    let factor = match (currency_code.is_empty(), header.get("Currency Factor").as_dec()) {
+        (true, _) => Decimal::ONE,
+        (false, f) if !f.is_zero() => f,
+        (false, _) => crate::currency::factor(ctx, &currency_code, posting_date)?,
+    };
+    let lcy = |d: Decimal| crate::currency::to_lcy(d, factor);
     let mut result = serde_json::Map::new();
     let mut messages = Vec::new();
     // Item ledger entry per line created by shipping now (an invoice-only posting has none).
@@ -370,7 +379,7 @@ pub fn post_document(ctx: &mut Ctx, side: &Side, doc_type: &str, no: &str, mode:
                 let (qty, cost) = if side.sales {
                     (-q, round_amount(-q * it.get("Unit Cost").as_dec()))
                 } else {
-                    (q, portion(l, "Amount", q))
+                    (q, lcy(portion(l, "Amount", q)))
                 };
                 ile = post_item_entry(ctx, side, &it, posting_date, ile_doc, &shipment_no, l.str("Description"), l.str("Location Code"), qty, cost, Decimal::ZERO, l.get("Unit of Measure Code"), &party_no)?;
                 if !side.sales {
@@ -415,14 +424,20 @@ pub fn post_document(ctx: &mut Ctx, side: &Side, doc_type: &str, no: &str, mode:
         let mut gl: Vec<GlLine> = Vec::new();
         let mut fa_specs: Vec<crate::fa::FaEntrySpec> = Vec::new();
         let (mut total_amount, mut total_incl) = (Decimal::ZERO, Decimal::ZERO);
+        let (mut total_amount_lcy, mut total_incl_lcy) = (Decimal::ZERO, Decimal::ZERO);
 
         for l in lines.iter().filter(|l| !to_invoice(l).is_zero()) {
             let qty = to_invoice(l);
-            let amount = portion(l, "Amount", qty);
-            let incl = portion(l, "Amount Including VAT", qty);
+            let amount_fcy = portion(l, "Amount", qty);
+            let incl_fcy = portion(l, "Amount Including VAT", qty);
+            total_amount += amount_fcy;
+            total_incl += incl_fcy;
+            // From here on: LCY.
+            let amount = lcy(amount_fcy);
+            let incl = lcy(incl_fcy);
             let vat = incl - amount;
-            total_amount += amount;
-            total_incl += incl;
+            total_amount_lcy += amount;
+            total_incl_lcy += incl;
             let line_no = l.get("Line No.").as_int();
             let gen_key = Key(vec![l.get("Gen. Bus. Posting Group").clone(), l.get("Gen. Prod. Posting Group").clone()]);
             let inventory_item = is_item_inventory(ctx, l)?;
@@ -492,12 +507,12 @@ pub fn post_document(ctx: &mut Ctx, side: &Side, doc_type: &str, no: &str, mode:
             pl.set("Quantity", dec(qty));
             pl.set("Line Amount", dec(portion(l, "Line Amount", qty)));
             pl.set("Line Discount Amount", dec(portion(l, "Line Discount Amount", qty)));
-            pl.set("Amount", dec(amount));
-            pl.set("Amount Including VAT", dec(incl));
+            pl.set("Amount", dec(amount_fcy));
+            pl.set("Amount Including VAT", dec(incl_fcy));
             ctx.db.insert(plt, pl)?;
         }
 
-        gl.push(GlLine { account: party_account, amount: g * total_incl, vat_amount: Decimal::ZERO, description: description.clone(), gen_posting_type: "" });
+        gl.push(GlLine { account: party_account, amount: g * total_incl_lcy, vat_amount: Decimal::ZERO, description: description.clone(), gen_posting_type: "" });
         let source_type = if side.sales { "Customer" } else { "Vendor" };
         post_gl(
             ctx,
@@ -525,7 +540,8 @@ pub fn post_document(ctx: &mut Ctx, side: &Side, doc_type: &str, no: &str, mode:
                 description: &description,
                 currency: &currency,
                 amount: g * total_incl,
-                sales_purch: if side.sales { g * total_amount } else { -g * total_amount },
+                amount_lcy: g * total_incl_lcy,
+                sales_purch: if side.sales { g * total_amount_lcy } else { -g * total_amount_lcy },
                 due_date: due,
                 person: &person,
                 posting_group: &group,

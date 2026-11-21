@@ -287,7 +287,11 @@ fn validate_header(ctx: &mut Ctx, side: &Side, t: &TableDef, r: &mut Record, fie
             apply_bill_to(ctx, side, r)
         }
         f if f == side.bill_no => apply_bill_to(ctx, side, r),
-        "Posting Date" | "Document Date" | "Payment Terms Code" => update_due_date(ctx, r),
+        "Posting Date" => {
+            update_currency_factor(ctx, r)?;
+            update_due_date(ctx, r)
+        }
+        "Document Date" | "Payment Terms Code" => update_due_date(ctx, r),
         "Location Code" => {
             test_field_eq(t, r, "Status", "Open")?;
             let lt = ctx.table(side.line)?;
@@ -301,9 +305,11 @@ fn validate_header(ctx: &mut Ctx, side: &Side, t: &TableDef, r: &mut Record, fie
             }
             Ok(())
         }
-        "Prices Including VAT" | "VAT Bus. Posting Group" | "Gen. Bus. Posting Group" | "Currency Code" => {
+        "Currency Code" => {
+            update_currency_factor(ctx, r)?;
             update_lines(ctx, side, r)
         }
+        "Prices Including VAT" | "VAT Bus. Posting Group" | "Gen. Bus. Posting Group" => update_lines(ctx, side, r),
         _ => Ok(()),
     }
 }
@@ -327,7 +333,20 @@ fn apply_bill_to(ctx: &mut Ctx, side: &Side, r: &mut Record) -> Result<()> {
         r.set("VAT Registration No.", bill.get("VAT Registration No.").clone());
     }
     update_due_date(ctx, r)?;
+    update_currency_factor(ctx, r)?;
     update_lines(ctx, side, r)
+}
+
+/// BC's UpdateCurrencyFactor: the rate of the posting date (or work date); 0 for LCY.
+fn update_currency_factor(ctx: &Ctx, r: &mut Record) -> Result<()> {
+    let code = r.str("Currency Code").to_string();
+    if code.is_empty() {
+        r.set("Currency Factor", dec(Decimal::ZERO));
+        return Ok(());
+    }
+    let date = r.get("Posting Date").as_date().unwrap_or(ctx.work_date);
+    r.set("Currency Factor", dec(crate::currency::factor(ctx, &code, date)?));
+    Ok(())
 }
 
 fn update_due_date(ctx: &Ctx, r: &mut Record) -> Result<()> {
@@ -407,6 +426,9 @@ fn validate_line(ctx: &mut Ctx, side: &Side, r: &mut Record, field: &str, old: &
                         }
                     };
                     let price = convert_price(base_price, item.get("Price Includes VAT").as_bool() && side.sales, header.get("Prices Including VAT").as_bool(), vat);
+                    // In the document's currency (BC: the LCY price times the currency factor).
+                    let f = header.get("Currency Factor").as_dec();
+                    let price = if header.str("Currency Code").is_empty() || f.is_zero() { price } else { (price * f).round_dp(5) };
                     r.set(side.price, dec(price));
                 }
                 "G/L Account" => {

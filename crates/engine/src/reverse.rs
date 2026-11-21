@@ -109,6 +109,7 @@ pub fn reverse(ctx: &mut Ctx, txn_no: i64) -> Result<Json> {
                     description: &format!("Reversal of {}", e.str("Description")),
                     currency: e.str("Currency Code"),
                     amount: -amount,
+                    amount_lcy: -e.get("Amount (LCY)").as_dec(),
                     sales_purch: -e.get(if side.sales { "Sales (LCY)" } else { "Purchase (LCY)" }).as_dec(),
                     due_date: e.get("Due Date").as_date(),
                     person: e.str(side.person),

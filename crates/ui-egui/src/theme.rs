@@ -32,6 +32,8 @@ pub struct Tokens {
     pub link: Color32,
     pub link_selected: Color32,
     pub header_hover: Color32,
+    /// BC's input border (edit mode).
+    pub input_border: Color32,
 }
 
 pub const TOKENS: Tokens = Tokens {
@@ -61,6 +63,7 @@ pub const TOKENS: Tokens = Tokens {
     link: Color32::from_rgb(0x00, 0x7E, 0x87),
     link_selected: Color32::from_rgb(0x00, 0x68, 0x6F),
     header_hover: Color32::from_rgb(0xF3, 0xF2, 0xF1),
+    input_border: Color32::from_rgb(0x8D, 0x95, 0xA0),
 };
 
 pub const BODY: f32 = 13.5;

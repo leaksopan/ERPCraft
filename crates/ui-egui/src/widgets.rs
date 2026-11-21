@@ -179,12 +179,29 @@ pub fn field_editor(
         }
         _ => {
             let mut out = None;
-            ui.horizontal(|ui| {
-                ui.spacing_mut().item_spacing.x = 2.0;
-                let is_date = f.ty == FieldType::Date;
-                let lookup_w = if lookup.is_some() || is_date { 24.0 } else { 0.0 };
+            // BC's input: one 29 px box with a 1 px border; the calendar or lookup icon sits inside
+            // it on the right.
+            let is_date = f.ty == FieldType::Date;
+            let icon_w = if lookup.is_some() || is_date { 26.0 } else { 0.0 };
+            let focused = ui.memory(|m| m.has_focus(ui.make_persistent_id(id)));
+            let border = if focused { TOKENS.accent } else { TOKENS.input_border };
+            egui::Frame::new()
+                .fill(TOKENS.page)
+                .stroke(Stroke::new(1.0, border))
+                .corner_radius(2)
+                .inner_margin(egui::Margin { left: 4, right: 2, top: 0, bottom: 0 })
+                .show(ui, |ui| {
+                ui.set_width((width - 8.0).max(16.0));
+                ui.horizontal_centered(|ui| {
+                ui.set_height(27.0);
+                ui.spacing_mut().item_spacing.x = 0.0;
+                flat(ui);
                 let buf = bufs.entry(id.to_string()).or_insert_with(|| shown.clone());
-                let mut te = egui::TextEdit::singleline(buf).desired_width((width - lookup_w).max(16.0)).id_salt(id);
+                let mut te = egui::TextEdit::singleline(buf).frame(egui::Frame::NONE)
+                    .margin(egui::Margin::ZERO)
+                    .align(egui::Align2::LEFT_CENTER)
+                    .desired_width((width - 10.0 - icon_w).max(16.0))
+                    .id_salt(id);
                 if is_numeric(&f.ty) {
                     te = te.align(egui::Align2::RIGHT_CENTER);
                 }
@@ -197,7 +214,7 @@ pub fn field_editor(
                     bufs.remove(id);
                 }
                 if is_date {
-                    ui.menu_button("📅", |ui| {
+                    ui.menu_button(RichText::new("📅").color(TOKENS.text_dim), |ui| {
                         if let Some(d) = calendar(ui, id, v.as_date()) {
                             out = Some(json!(d.format("%Y-%m-%d").to_string()));
                             ui.close();
@@ -210,7 +227,7 @@ pub fn field_editor(
                     }
                 }
                 if let Some(values) = lookup {
-                    ui.menu_button("▾", |ui| {
+                    ui.menu_button(RichText::new("∨").color(TOKENS.text_dim), |ui| {
                         ui.set_min_width(260.0);
                         egui::ScrollArea::vertical().max_height(320.0).show(ui, |ui| {
                             if ui.selectable_label(false, RichText::new("(blank)").italics()).clicked() {
@@ -230,7 +247,8 @@ pub fn field_editor(
                         bufs.remove(id);
                     }
                 }
-            });
+                });
+                });
             out
         }
     }

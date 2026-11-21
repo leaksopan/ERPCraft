@@ -387,6 +387,7 @@ pub fn master_data(ctx: &mut Ctx) -> Result<()> {
     for (no, desc) in [("FREIGHT", "Freight charges"), ("INSURANCE", "Transport insurance")] {
         raw(ctx, "Item Charge", json!({"No.": no, "Description": desc, "Gen. Prod. Posting Group": "PARTS", "VAT Prod. Posting Group": "STANDARD", "Search Description": desc.to_uppercase()}))?;
     }
+    raw(ctx, "Standard Cost Worksheet Name", json!({"Name": "DEFAULT", "Description": "Default worksheet"}))?;
     // Counting periods for cycle counting.
     for (code, desc, freq) in [("FAST", "Fast moving items", 12), ("SLOW", "Slow moving items", 2)] {
         raw(ctx, "Phys. Invt. Counting Period", json!({"Code": code, "Description": desc, "Count Frequency per Year": freq}))?;

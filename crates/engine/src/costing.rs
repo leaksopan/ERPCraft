@@ -141,8 +141,52 @@ fn entry_cost(ctx: &Ctx, ile_no: i64) -> Decimal {
         .sum()
 }
 
-/// BC's Adjust Cost - Item Entries for average costing: walking each item's entries by date, an
-/// outbound entry is valued at the running average of what came in before it; a transfer's
+/// Takes `qty` out of the cost layers (oldest first for FIFO, newest first for LIFO); what the
+/// layers cannot cover is valued at `fallback` per unit. Returns the cost taken.
+fn take_layers(layers: &mut VecDeque<(Decimal, Decimal)>, qty: Decimal, lifo: bool, fallback: Decimal) -> Decimal {
+    let mut need = qty;
+    let mut cost = Decimal::ZERO;
+    while need > Decimal::ZERO {
+        let layer = if lifo { layers.back_mut() } else { layers.front_mut() };
+        let Some(l) = layer else {
+            cost += need * fallback;
+            break;
+        };
+        let take = need.min(l.0);
+        let part = if take == l.0 { l.1 } else { round_amount(l.1 * take / l.0) };
+        cost += part;
+        l.0 -= take;
+        l.1 -= part;
+        need -= take;
+        if l.0 <= Decimal::ZERO {
+            if lifo {
+                layers.pop_back();
+            } else {
+                layers.pop_front();
+            }
+        }
+    }
+    cost
+}
+
+/// Spreads a revaluation over the open cost layers by quantity (the last taking the rounding).
+fn revalue_layers(layers: &mut VecDeque<(Decimal, Decimal)>, amount: Decimal) {
+    let total: Decimal = layers.iter().map(|l| l.0).sum();
+    if total <= Decimal::ZERO {
+        return;
+    }
+    let mut left = amount;
+    let n = layers.len();
+    for (i, l) in layers.iter_mut().enumerate() {
+        let share = if i + 1 == n { left } else { round_amount(amount * l.0 / total) };
+        l.1 += share;
+        left -= share;
+    }
+}
+
+/// BC's Adjust Cost - Item Entries: walking each item's entries by date, an outbound entry is
+/// valued at the running average of what came in before it (Average), at the cost layers it
+/// uses up (FIFO / LIFO; Specific as FIFO), or at the standard cost (Standard); a transfer's
 /// receipt takes its shipment's cost. Differences become adjustment value entries.
 fn adjust_cost(ctx: &mut Ctx, p: &Json) -> Result<Json> {
     let only = opt_str(p, "item_no").map(str::to_string);
@@ -163,6 +207,9 @@ fn adjust_cost(ctx: &mut Ctx, p: &Json) -> Result<Json> {
             continue;
         }
         let standard = item.str("Costing Method") == "Standard";
+        let layered = matches!(item.str("Costing Method"), "FIFO" | "LIFO" | "Specific");
+        let lifo = item.str("Costing Method") == "LIFO";
+        let mut layers: VecDeque<(Decimal, Decimal)> = VecDeque::new();
         let (mut qty, mut cost) = (Decimal::ZERO, Decimal::ZERO);
         let mut shipped: HashMap<String, VecDeque<Decimal>> = HashMap::new();
         // Revaluations: (valuation date, the newest entry before it, amount).
@@ -181,6 +228,9 @@ fn adjust_cost(ctx: &mut Ctx, p: &Json) -> Result<Json> {
             while let Some(&(rd, after, amount)) = revals.front() {
                 if rd < d || (rd == d && after < n) {
                     cost += amount;
+                    if layered {
+                        revalue_layers(&mut layers, amount);
+                    }
                     revals.pop_front();
                 } else {
                     break;
@@ -190,9 +240,10 @@ fn adjust_cost(ctx: &mut Ctx, p: &Json) -> Result<Json> {
             let current = entry_cost(ctx, e.get("Entry No.").as_int());
             let transfer = e.str("Entry Type") == "Transfer";
             let target = if q < Decimal::ZERO {
-                // Outbound: the running average (standard cost for standard items).
+                // Outbound: the running average (standard cost for standard items, the cost
+                // layers for FIFO / LIFO).
                 let unit = if standard { item.get("Standard Cost").as_dec() } else if qty > Decimal::ZERO { cost / qty } else { item.get("Unit Cost").as_dec() };
-                let t = round_amount(q * unit);
+                let t = if layered { -round_amount(take_layers(&mut layers, -q, lifo, item.get("Unit Cost").as_dec())) } else { round_amount(q * unit) };
                 if transfer {
                     shipped.entry(e.str("Document No.").to_string()).or_default().push_back(-t / -q);
                 }
@@ -204,6 +255,9 @@ fn adjust_cost(ctx: &mut Ctx, p: &Json) -> Result<Json> {
                 None
             };
             let value = target.unwrap_or(current);
+            if layered && q > Decimal::ZERO {
+                layers.push_back((q, value));
+            }
             if let Some(t) = target {
                 let diff = t - current;
                 if !diff.is_zero() {
@@ -237,7 +291,20 @@ fn adjust_cost(ctx: &mut Ctx, p: &Json) -> Result<Json> {
             qty += q;
             cost += value;
         }
-        cost += revals.iter().map(|r| r.2).sum::<Decimal>();
+        for r in &revals {
+            cost += r.2;
+            if layered {
+                revalue_layers(&mut layers, r.2);
+            }
+        }
+        if layered {
+            // FIFO / LIFO: the unit cost is the average of what is left on the layers.
+            let (lq, lc) = layers.iter().fold((Decimal::ZERO, Decimal::ZERO), |a, l| (a.0 + l.0, a.1 + l.1));
+            if lq > Decimal::ZERO {
+                qty = lq;
+                cost = lc;
+            }
+        }
         if !standard && qty > Decimal::ZERO {
             let mut i = ctx.get_code(ITEM, &no)?;
             i.set("Unit Cost", dec((cost / qty).round_dp(5)));

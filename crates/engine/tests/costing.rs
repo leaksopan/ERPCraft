@@ -71,3 +71,57 @@ fn without_automatic_cost_posting_the_cost_waits_for_post_inventory_cost() {
     assert_eq!(pending["entries"], r["adjusted"], "{pending}");
     assert_eq!(s.run("inventory.post_cost_to_gl", &json!({})).unwrap()["entries"], 0);
 }
+
+/// Buys `qty` of `item` at `unit` on `date`.
+fn buy_at(s: &mut Session, item: &str, qty: i64, unit: i64, date: &str) {
+    let buy = s.run("purchase.document.new", &json!({"document_type": "Invoice", "vendor_no": "10000", "lines": [{"no": item, "quantity": qty}]})).unwrap();
+    let bno = buy["no"].as_str().unwrap().to_string();
+    s.run("record.validate", &json!({"table": "Purchase Header", "key": ["Invoice", bno], "field": "Posting Date", "value": date})).unwrap();
+    let line = &s.run("record.list", &json!({"table": "Purchase Line", "filters": {"Document No.": bno}})).unwrap()["records"][0];
+    s.run("record.validate", &json!({"table": "Purchase Line", "key": ["Invoice", bno, line["Line No."]], "field": "Direct Unit Cost", "value": unit})).unwrap();
+    s.run("purchase.document.post", &json!({"document_type": "Invoice", "no": bno})).unwrap();
+}
+
+fn layered_sale_cost(method: &str) -> (f64, f64) {
+    let mut s = Session::in_memory();
+    s.run("company.init", &json!({"demo": true})).unwrap();
+    s.run("item.copy", &json!({"no": "1300", "target_no": "FX"})).unwrap();
+    s.run("record.validate", &json!({"table": "Item", "key": "FX", "field": "Costing Method", "value": method})).unwrap();
+    buy_at(&mut s, "FX", 10, 100_000, "2026-11-19");
+    buy_at(&mut s, "FX", 10, 200_000, "2026-11-20");
+    let sale = s.run("sales.document.new", &json!({"document_type": "Invoice", "customer_no": "10000", "lines": [{"no": "FX", "quantity": 15}]})).unwrap();
+    let posted = s.run("sales.document.post", &json!({"document_type": "Invoice", "no": sale["no"]})).unwrap();
+    s.run("inventory.adjust_cost", &json!({"item_no": "FX"})).unwrap();
+    let cost = sum(&mut s, "Item Ledger Entry", json!({"Document No.": posted["posted_no"]}), "Cost Amount (Actual)");
+    let unit = d(&s.run("record.get", &json!({"table": "Item", "key": "FX"})).unwrap()["Unit Cost"]);
+    // Adjusting again changes nothing.
+    assert_eq!(s.run("inventory.adjust_cost", &json!({"item_no": "FX"})).unwrap()["adjusted"], 0);
+    (cost, unit)
+}
+
+#[test]
+fn fifo_and_lifo_use_up_the_cost_layers() {
+    assert_eq!(layered_sale_cost("FIFO"), (-2_000_000.0, 200_000.0), "10 at 100,000 then 5 at 200,000; 5 at 200,000 left");
+    assert_eq!(layered_sale_cost("LIFO"), (-2_500_000.0, 100_000.0), "10 at 200,000 then 5 at 100,000; 5 at 100,000 left");
+}
+
+#[test]
+fn the_standard_cost_worksheet_revalues_standard_items() {
+    let mut s = Session::in_memory();
+    s.run("company.init", &json!({"demo": true})).unwrap();
+    s.run("item.copy", &json!({"no": "1300", "target_no": "ST"})).unwrap();
+    s.run("record.validate", &json!({"table": "Item", "key": "ST", "field": "Costing Method", "value": "Standard"})).unwrap();
+    s.run("record.validate", &json!({"table": "Item", "key": "ST", "field": "Standard Cost", "value": 100_000})).unwrap();
+    buy_at(&mut s, "ST", 10, 100_000, "2026-11-20");
+    s.run("standard_cost.suggest_item", &json!({"item_no": "ST", "standard_cost_factor": 1.1, "rounding_precision": 1000})).unwrap();
+    let l = s.run("record.get", &json!({"table": "Standard Cost Worksheet", "key": ["DEFAULT", "Item", "ST"]})).unwrap();
+    assert_eq!((d(&l["Standard Cost"]), d(&l["New Standard Cost"])), (100_000.0, 110_000.0));
+    let r = s.run("standard_cost.implement", &json!({"document_no": "STD-1"})).unwrap();
+    assert_eq!(r["revaluation_lines"], 1, "{r}");
+    assert_eq!(d(&s.run("record.get", &json!({"table": "Item", "key": "ST"})).unwrap()["Standard Cost"]), 110_000.0);
+    let j = &s.run("record.list", &json!({"table": "Item Journal Line", "filters": {"Journal Template Name": "REVAL"}})).unwrap()["records"][0];
+    assert_eq!((d(&j["Inventory Value (Calculated)"]), d(&j["Inventory Value (Revalued)"])), (1_000_000.0, 1_100_000.0));
+    s.run("item_journal.post", &json!({"template": "REVAL", "batch": "DEFAULT"})).unwrap();
+    assert_eq!(sum(&mut s, "Value Entry", json!({"Item No.": "ST"}), "Cost Amount (Actual)"), 1_100_000.0);
+    assert!(s.run("standard_cost.implement", &json!({})).unwrap_err().message.contains("nothing to implement"));
+}

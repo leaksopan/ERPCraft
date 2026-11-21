@@ -117,6 +117,7 @@ pub fn register(m: &mut Metadata) {
                     L::new("Posted Transfer Receipts", "posted-transfer-receipts"),
                     L::new("Stockkeeping Units", "stockkeeping-unit-list"),
                     L::new("Revaluation Journals", "revaluation-journal"),
+                    L::new("Standard Cost Worksheet", "standard-cost-worksheet"),
                     L::new("Physical Inventory Orders", "physical-inventory-orders"),
                     L::new("Phys. Inventory Recordings", "phys-inventory-recording-list"),
                     L::new("Posted Phys. Invt. Orders", "posted-phys-invt-order-list"),

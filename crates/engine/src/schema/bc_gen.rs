@@ -1751,6 +1751,7 @@ pub fn extend(m: &mut Metadata) {
             ("Unit Cost", "Unit Cost", "Specifies the cost of one unit of the item or resource on the line.", 2),
             ("Standard Cost", "Standard Cost", "Specifies the unit cost that is used as an estimation to be adjusted with variances later. It is typically used in assembly and production where costs can vary.", 2),
             ("Last Direct Cost", "Last Direct Cost", "Specifies the most recent direct unit cost of the item.", 2),
+            ("Indirect Cost %", "Indirect Cost %", "Specifies the percentage of the item's last purchase cost that includes indirect costs, such as freight that is associated with the purchase of the item.", 0),
             ("Vendor No.", "Vendor No.", "Specifies the vendor code of who supplies this item by default.", 0),
             ("Vendor Item No.", "Vendor Item No.", "Specifies the number that the vendor uses for this item.", 0),
             ("Lead Time Calculation", "Lead Time Calculation", "Specifies a date formula for the amount of time it takes to replenish the item.", 0),
@@ -1784,6 +1785,7 @@ pub fn extend(m: &mut Metadata) {
             ("Next Counting End Date", "Next Counting End Date", "Specifies the ending date of the next counting period.", 0),
             ("Sales Blocked", "Sales Blocked", "Specifies that transactions with the item cannot be sold, for example, because the item is in quarantine.", 0),
             ("Purchasing Blocked", "Purchasing Blocked", "Specifies that the item cannot be entered on purchase documents, except return orders and credit memos, and journals.", 0),
+            ("Overhead Rate", "Overhead Rate", "Specifies the item's indirect cost as an absolute amount.", 2),
         ],
     );
     fields(
@@ -1795,7 +1797,6 @@ pub fn extend(m: &mut Metadata) {
             F::code("Item Disc. Group", 20).tooltip("Specifies an item group code that can be used as a criterion to grant a discount when the item is sold to a certain customer."),
             F::boolean("Allow Invoice Disc.").tooltip("Specifies if the item should be included in the calculation of an invoice discount on documents where the item is traded."),
             F::option("Price/Profit Calculation", &["Profit=Price-Cost", "Price=Cost+Profit", "No Relationship"]).tooltip("Specifies the relationship between the Unit Cost, Unit Price, and Profit Percentage fields associated with this item."),
-            F::decimal("Indirect Cost %").tooltip("Specifies the percentage of the item's last purchase cost that includes indirect costs, such as freight that is associated with the purchase of the item."),
             F::boolean("Cost is Adjusted").read_only().tooltip("Specifies whether the item's unit cost has been adjusted, either automatically or manually."),
             F::decimal("Gross Weight").tooltip("Specifies the gross weight of the item."),
             F::decimal("Net Weight").tooltip("Specifies the net weight of the item."),
@@ -3732,6 +3733,31 @@ pub fn extend(m: &mut Metadata) {
             ("Blocked", "Blocked", "Specifies that the related record is blocked from being posted in transactions, for example a customer that is declared insolvent or an item that is placed in quarantine.", 0),
             ("Inventory", "Inventory", "Specifies the inventory quantity of the specified serial number.", 0),
             ("Expired Inventory", "Expired Inventory", "Specifies the inventory of the serial number with an expiration date before the posting date on the associated document.", 0),
+        ],
+    );
+    relabel(
+        m,
+        "Standard Cost Worksheet",
+        &[
+            ("Type", "Type", "Specifies the type of worksheet line.", 0),
+            ("No.", "No.", "Specifies the number of the involved entry or record, according to the specified number series.", 0),
+            ("Description", "Description", "Specifies the description of the worksheet line.", 0),
+            ("Implemented", "Implemented", "Specifies that you have run the Implement Standard Cost Changes batch job.", 0),
+            ("Replenishment System", "Replenishment System", "Specifies the replenishment method for the items, for example, purchase or prod. order.", 0),
+            ("Standard Cost", "Standard Cost", "Specifies the unit cost that is used as an estimation to be adjusted with variances later. It is typically used in assembly and production where costs can vary.", 2),
+            ("New Standard Cost", "New Standard Cost", "Specifies the updated value based on either the batch job or what you have entered manually.", 2),
+            ("Indirect Cost %", "Indirect Cost %", "Specifies the percentage of the item's last purchase cost that includes indirect costs, such as freight that is associated with the purchase of the item.", 0),
+            ("New Indirect Cost %", "New Indirect Cost %", "Specifies the updated value based on either the batch job or what you have entered manually.", 0),
+            ("Overhead Rate", "Overhead Rate", "Specifies the overhead rate.", 0),
+            ("New Overhead Rate", "New Overhead Rate", "Specifies the updated value based on either the batch job or what you have entered manually.", 0),
+        ],
+    );
+    relabel(
+        m,
+        "Standard Cost Worksheet Name",
+        &[
+            ("Name", "Name", "Specifies the name of the worksheet.", 0),
+            ("Description", "Description", "Specifies the description of the worksheet.", 0),
         ],
     );
     relabel(
@@ -5832,6 +5858,8 @@ pub fn extend(m: &mut Metadata) {
         ],
     );
     columns(m, "serial-no-information-list", &["Serial No.", "Description", "Blocked"]);
+    columns(m, "standard-cost-worksheet", &["Type", "No.", "Description", "Standard Cost", "New Standard Cost", "Indirect Cost %", "New Indirect Cost %", "Overhead Rate", "New Overhead Rate", "Implemented", "Replenishment System"]);
+    columns(m, "standard-cost-worksheet-names", &["Name", "Description"]);
     layout(
         m,
         "stockkeeping-unit-card",

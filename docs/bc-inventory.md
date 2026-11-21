@@ -23,7 +23,7 @@ orders this list into phases.
 | Foundation | 8 | 58 | 0 | 2 |
 | HumanResources | 0 | 57 | 0 | 15 |
 | Integration | 0 | 87 | 0 | 0 |
-| Inventory | 61 | 312 | 1 | 101 |
+| Inventory | 63 | 312 | 1 | 101 |
 | Invoicing | 0 | 7 | 0 | 0 |
 | Manufacturing | 0 | 134 | 0 | 50 |
 | Modules | 2 | 93 | 0 | 1 |
@@ -38,7 +38,7 @@ orders this list into phases.
 | Utilities | 0 | 12 | 0 | 2 |
 | Warehouse | 0 | 144 | 0 | 35 |
 | eServices | 0 | 25 | 0 | 0 |
-| **Base Application** | **203** | **2638** | **16** | **659** |
+| **Base Application** | **205** | **2638** | **16** | **659** |
 
 ### (root)
 
@@ -1754,7 +1754,7 @@ Pages 0 / 87, reports 0 / 0.
 
 ### Inventory
 
-Pages 61 / 312, reports 1 / 101.
+Pages 63 / 312, reports 1 / 101.
 
 <details><summary>Inventory / Analysis: pages 0 / 34, reports 0 / 8</summary>
 
@@ -1851,7 +1851,7 @@ Pages 61 / 312, reports 1 / 101.
 
 </details>
 
-<details><summary>Inventory / Costing: pages 0 / 13, reports 0 / 7</summary>
+<details><summary>Inventory / Costing: pages 2 / 13, reports 0 / 7</summary>
 
 - [ ] Page 2875 Cost Adj. Scheduling Wizard (NavigatePage)
 - [ ] Page 5801 Cost Adjustment Overview (List)
@@ -1862,8 +1862,8 @@ Pages 61 / 312, reports 1 / 101.
 - [ ] Page 5812 Cost Adj. Statistics Factbox (CardPart)
 - [ ] Page 5815 Avg. Cost Adjmt. Entry Points (List)
 - [ ] Page 5816 Inventory Adjmt. Entry Orders (List)
-- [ ] Page 5840 Standard Cost Worksheet Names (List)
-- [ ] Page 5841 Standard Cost Worksheet (Worksheet)
+- [x] Page 5840 Standard Cost Worksheet Names (List)
+- [x] Page 5841 Standard Cost Worksheet (Worksheet)
 - [ ] Page 5842 Cost Adjmt. Action Messages (List)
 - [ ] Page 5847 Average Cost Calc. Overview (List)
 - [ ] Report 795 Adjust Cost - Item Entries (Report)

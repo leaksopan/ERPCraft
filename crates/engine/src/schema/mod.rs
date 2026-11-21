@@ -10,6 +10,7 @@ pub mod fiscal;
 pub mod currency;
 pub mod vat;
 pub mod bank_rec;
+pub mod reminders;
 pub mod finance;
 pub mod fixed_assets;
 pub mod inventory;
@@ -44,6 +45,7 @@ pub fn hand_written() -> Metadata {
     currency::register(&mut m);
     vat::register(&mut m);
     bank_rec::register(&mut m);
+    reminders::register(&mut m);
     inventory::register(&mut m);
     fixed_assets::register(&mut m);
     dimensions::register(&mut m);

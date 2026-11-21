@@ -90,6 +90,10 @@ pub fn setup(ctx: &mut Ctx) -> Result<()> {
         ("G-JNL", "General Journal", "G00001"),
         ("G-RCPT", "Cash Receipts Journal", "GR00001"),
         ("G-PMT", "Payment Journal", "GP00001"),
+        ("S-REM", "Reminders", "S-REM1001"),
+        ("S-IREM", "Issued Reminders", "S-IREM1001"),
+        ("S-FIN", "Finance Charge Memos", "S-FIN1001"),
+        ("S-IFIN", "Issued Finance Charge Memos", "S-IFIN1001"),
     ];
     for (code, desc, start) in series {
         raw(ctx, "No. Series", json!({"Code": code, "Description": desc, "Starting No.": start, "Increment-by No.": 1, "Default Nos.": true}))?;
@@ -100,6 +104,7 @@ pub fn setup(ctx: &mut Ctx) -> Result<()> {
         "Sales & Receivables Setup",
         json!({"Primary Key": "", "Customer Nos.": "CUST", "Quote Nos.": "S-QUO", "Order Nos.": "S-ORD", "Invoice Nos.": "S-INV",
                "Credit Memo Nos.": "S-CR", "Return Order Nos.": "S-RET", "Posted Invoice Nos.": "PS-INV", "Posted Credit Memo Nos.": "PS-CR", "Posted Shipment Nos.": "PS-SHPT",
+               "Reminder Nos.": "S-REM", "Issued Reminder Nos.": "S-IREM", "Fin. Chrg. Memo Nos.": "S-FIN", "Issued Fin. Chrg. M. Nos.": "S-IFIN",
                "Credit Warnings": "Both Warnings", "Stockout Warning": true}),
     )?;
     raw(
@@ -150,6 +155,8 @@ pub fn setup(ctx: &mut Ctx) -> Result<()> {
         ("40500", "Gain on Disposal of Assets", "Posting", "Income Statement", "Income", ""),
         ("40600", "Realized Exchange Rate Gains", "Posting", "Income Statement", "Income", ""),
         ("40700", "Unrealized Exchange Rate Gains", "Posting", "Income Statement", "Income", ""),
+        ("40800", "Reminder Fees", "Posting", "Income Statement", "Income", ""),
+        ("40900", "Finance Charge Interest", "Posting", "Income Statement", "Income", ""),
         ("40999", "Total Revenue", "End-Total", "Income Statement", "Income", "40100..40999"),
         ("50100", "Cost of Goods Sold", "Begin-Total", "Income Statement", "Cost of Goods Sold", ""),
         ("50200", "COGS - Spare Parts", "Posting", "Income Statement", "Cost of Goods Sold", ""),
@@ -239,7 +246,18 @@ pub fn setup(ctx: &mut Ctx) -> Result<()> {
     raw(ctx, "Gen. Journal Template", json!({"Name": "ASSETS", "Description": "Fixed Asset G/L Journal", "Type": "Assets", "No. Series": "FA-JNL", "Source Code": "FAGLJNL"}))?;
     raw(ctx, "Gen. Journal Batch", json!({"Journal Template Name": "ASSETS", "Name": "DEFAULT", "Description": "Default journal", "No. Series": "FA-JNL"}))?;
     fixed_asset_setup(ctx)?;
-    raw(ctx, "Customer Posting Group", json!({"Code": "DOMESTIC", "Description": "Domestic customers", "Receivables Account": "10200"}))?;
+    raw(ctx, "Customer Posting Group", json!({"Code": "DOMESTIC", "Description": "Domestic customers", "Receivables Account": "10200", "Additional Fee Account": "40800", "Interest Account": "40900"}))?;
+    // Reminder terms (three levels, a fee from the second) and finance charge terms of 1.5% a month.
+    raw(ctx, "Reminder Terms", json!({"Code": "DOMESTIC", "Description": "Domestic customers", "Post Additional Fee": true, "Post Interest": true, "Max. No. of Reminders": 3}))?;
+    for (no, grace, fee, due) in [(1, "5D", 0, "7D"), (2, "7D", 50_000, "7D"), (3, "7D", 100_000, "5D")] {
+        raw(ctx, "Reminder Level", json!({"Reminder Terms Code": "DOMESTIC", "No.": no, "Grace Period": grace, "Additional Fee (LCY)": fee, "Due Date Calculation": due}))?;
+    }
+    raw(
+        ctx,
+        "Finance Charge Terms",
+        json!({"Code": "1.5 DOM.", "Description": "1.5% for domestic customers", "Interest Rate": 1.5, "Interest Period (Days)": 30, "Interest Calculation Method": "Average Daily Balance",
+               "Grace Period": "5D", "Due Date Calculation": "1M", "Post Interest": true, "Post Additional Fee": true, "Line Description": "%1 %2 is overdue"}),
+    )?;
     raw(ctx, "Vendor Posting Group", json!({"Code": "DOMESTIC", "Description": "Domestic vendors", "Payables Account": "20200"}))?;
     raw(ctx, "Bank Account Posting Group", json!({"Code": "OPERATING", "Description": "Operating accounts", "G/L Account No.": "10120"}))?;
     for (code, formula, desc) in [("COD", "0D", "Cash on delivery"), ("14 DAYS", "14D", "Net 14 days"), ("30 DAYS", "30D", "Net 30 days"), ("CM", "CM", "End of current month")] {
@@ -435,7 +453,7 @@ fn demo_financial_reports(ctx: &mut Ctx) -> Result<()> {
         ("11", "Sales - Spare Parts", "Posting Accounts", "40200", true, false, 1, ""),
         ("12", "Sales - Workshop Services", "Posting Accounts", "40300", true, false, 1, ""),
         ("13", "Sales Returns & Allowances", "Posting Accounts", "40400", true, false, 1, ""),
-        ("14", "Other Income", "Posting Accounts", "40500..40799", true, false, 1, ""),
+        ("14", "Other Income", "Posting Accounts", "40500..40998", true, false, 1, ""),
         ("19", "Total Revenue", "Formula", "11..14", false, true, 0, ""),
         ("20", "Cost of Goods Sold", "Posting Accounts", "50200..50400", false, false, 0, ""),
         ("30", "Gross Profit", "Formula", "19-20", false, true, 0, ""),

@@ -32,13 +32,13 @@ orders this list into phases.
 | Projects | 0 | 135 | 0 | 40 |
 | Purchases | 25 | 153 | 5 | 51 |
 | RoleCenters | 0 | 16 | 0 | 0 |
-| Sales | 25 | 222 | 8 | 78 |
+| Sales | 41 | 222 | 8 | 78 |
 | Service | 0 | 192 | 0 | 55 |
 | System | 4 | 173 | 0 | 15 |
 | Utilities | 0 | 12 | 0 | 2 |
 | Warehouse | 0 | 144 | 0 | 35 |
 | eServices | 0 | 25 | 0 | 0 |
-| **Base Application** | **131** | **2638** | **16** | **659** |
+| **Base Application** | **147** | **2638** | **16** | **659** |
 
 ### (root)
 
@@ -3270,7 +3270,7 @@ Pages 0 / 16, reports 0 / 0.
 
 ### Sales
 
-Pages 25 / 222, reports 8 / 78.
+Pages 41 / 222, reports 8 / 78.
 
 <details><summary>Sales / Analysis: pages 0 / 18, reports 0 / 2</summary>
 
@@ -3425,18 +3425,18 @@ Pages 25 / 222, reports 8 / 78.
 
 </details>
 
-<details><summary>Sales / FinanceCharge: pages 0 / 16, reports 0 / 7</summary>
+<details><summary>Sales / FinanceCharge: pages 8 / 16, reports 0 / 7</summary>
 
-- [ ] Page 6 Finance Charge Terms (List)
-- [ ] Page 444 Reminder/Fin. Charge Entries (List)
+- [x] Page 6 Finance Charge Terms (List)
+- [x] Page 444 Reminder/Fin. Charge Entries (List)
 - [ ] Page 445 Finance Charge Text (List)
-- [ ] Page 446 Finance Charge Memo (Document)
-- [ ] Page 447 Finance Charge Memo Lines (ListPart)
-- [ ] Page 448 Finance Charge Memo List (List)
+- [x] Page 446 Finance Charge Memo (Document)
+- [x] Page 447 Finance Charge Memo Lines (ListPart)
+- [x] Page 448 Finance Charge Memo List (List)
 - [ ] Page 449 Finance Charge Memo Statistics (Card)
-- [ ] Page 450 Issued Finance Charge Memo (Document)
-- [ ] Page 451 Issued Fin. Charge Memo Lines (ListPart)
-- [ ] Page 452 Issued Fin. Charge Memo List (List)
+- [x] Page 450 Issued Finance Charge Memo (Document)
+- [x] Page 451 Issued Fin. Charge Memo Lines (ListPart)
+- [x] Page 452 Issued Fin. Charge Memo List (List)
 - [ ] Page 453 Issued Fin. Charge Memo Stat. (Card)
 - [ ] Page 454 Fin. Charge Comment Sheet (List)
 - [ ] Page 455 Fin. Charge Comment List (List)
@@ -3533,18 +3533,18 @@ Pages 25 / 222, reports 8 / 78.
 
 </details>
 
-<details><summary>Sales / Reminder: pages 0 / 47, reports 0 / 7</summary>
+<details><summary>Sales / Reminder: pages 8 / 47, reports 0 / 7</summary>
 
-- [ ] Page 431 Reminder Terms (List)
-- [ ] Page 432 Reminder Levels (List)
+- [x] Page 431 Reminder Terms (List)
+- [x] Page 432 Reminder Levels (List)
 - [ ] Page 433 Reminder Text (List)
-- [ ] Page 434 Reminder (Document)
-- [ ] Page 435 Reminder Lines (ListPart)
-- [ ] Page 436 Reminder List (List)
+- [x] Page 434 Reminder (Document)
+- [x] Page 435 Reminder Lines (ListPart)
+- [x] Page 436 Reminder List (List)
 - [ ] Page 437 Reminder Statistics (Card)
-- [ ] Page 438 Issued Reminder (Document)
-- [ ] Page 439 Issued Reminder Lines (ListPart)
-- [ ] Page 440 Issued Reminder List (List)
+- [x] Page 438 Issued Reminder (Document)
+- [x] Page 439 Issued Reminder Lines (ListPart)
+- [x] Page 440 Issued Reminder List (List)
 - [ ] Page 441 Issued Reminder Statistics (Card)
 - [ ] Page 442 Reminder Comment Sheet (List)
 - [ ] Page 443 Reminder Comment List (List)

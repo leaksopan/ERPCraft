@@ -27,7 +27,7 @@ Each target is checked by a script or a screenshot, not by eye.
 | 3 | Every W1 app's pages and reports exist (or are decided out) | inventory, W1 apps section | 0 / ~1,700 pages |
 | 4 | Every page we have matches BC's structure | `cargo run -p bc-parity -- --summary --check` exits 0 | ✅ blocking 0 |
 | 5 | Every field BC shows on our pages exists | "needs table field" = 0 | 67 |
-| 6 | Every action BC offers on our pages exists and works | "actions missing" = 0 | 1,254 |
+| 6 | Every action BC offers on our pages exists and works | "actions missing" = 0 | 1,332 |
 | 7 | Every page looks and behaves like BC | [visual checklist](#visual-parity-checklist) | 7 pages |
 | 8 | Every function has tests | `cargo test --workspace` | ✅ 27 suites |
 
@@ -86,7 +86,7 @@ The order follows impact for Auto Craft (a workshop and auto-parts business): mo
 - [ ] VAT: statements, VAT returns, VAT entries, VAT rate change, VAT registration numbers (VAT entries, statements with preview, Calc. and Post VAT Settlement done; VAT returns, rate change, unrealized VAT, reversing VAT entries to do)
 - [ ] **Recurring journals**, allocations, allocation accounts, deferrals with Deferral Schedule
 - [ ] **Bank account reconciliation**, payment reconciliation journal, bank statement import, check printing (bank account reconciliation with Suggest Lines, Match Automatically, Post and bank account statements done; payment reconciliation journal, statement import, checks to do)
-- [ ] **Reminders and finance charge memos**, customer statements
+- [x] **Reminders and finance charge memos**, customer statements (reminder terms and levels, Create / Suggest / Issue, finance charge terms with interest, Issue, Reminder/Fin. Charge Entries, Statement with aging)
 - [ ] Payment tolerance and discount, payment methods, payment terms with discount
 - [ ] Intercompany partners, IC inbox and outbox, consolidation
 - [ ] Every Finance and Bank report in the inventory

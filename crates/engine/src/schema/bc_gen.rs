@@ -501,6 +501,7 @@ pub fn extend(m: &mut Metadata) {
             ("Customer Posting Group", "Customer Posting Group", "Specifies the customer's market type to link business transactions to.", 0),
             ("Currency Code", "Currency Code", "Specifies the default currency for the customer.", 0),
             ("Payment Terms Code", "Payment Terms Code", "Specifies a code that indicates the payment terms that you require of the customer.", 0),
+            ("Fin. Charge Terms Code", "Fin. Charge Terms Code", "Specifies the code for the involved finance charges in case of late payment.", 0),
             ("Salesperson Code", "Salesperson Code", "Specifies a code for the salesperson who normally handles this customer's account.", 0),
             ("Country/Region Code", "Country/Region Code", "Specifies the country/region of the address.", 0),
             ("Blocked", "Blocked", "Specifies which transactions with the customer that cannot be processed, for example, because the customer is insolvent.", 0),
@@ -519,6 +520,7 @@ pub fn extend(m: &mut Metadata) {
             ("County", "County", "Specifies the state, province or county as a part of the address.", 0),
             ("E-Mail", "Email", "Specifies the customer's email address.", 0),
             ("Home Page", "Home Page", "Specifies the customer's home page address.", 0),
+            ("Reminder Terms Code", "Reminder Terms Code", "Specifies how reminders about late payments are handled for this customer.", 0),
             ("VAT Bus. Posting Group", "VAT Bus. Posting Group", "Specifies the customer's VAT specification to link transactions made for this customer to.", 0),
             ("Outstanding Orders (LCY)", "Outstanding Orders (LCY)", "Specifies your expected sales income from the customer in LCY based on ongoing sales orders.", 1),
             ("Mobile Phone No.", "Mobile Phone No.", "Specifies the customer's mobile telephone number.", 0),
@@ -533,7 +535,6 @@ pub fn extend(m: &mut Metadata) {
             F::code("Customer Price Group", 10).tooltip("Specifies the customer price group code, which you can use to set up special sales prices in the Sales Prices window."),
             F::code("Language Code", 10).tooltip("Specifies the language that is used when translating specified text on documents to foreign business partner, such as an item description on an order confirmation."),
             F::text("Registration Number", 50).caption("Registration No.").tooltip("Specifies the registration number of the customer. You can enter a maximum of 20 characters, both numbers and letters."),
-            F::code("Fin. Charge Terms Code", 10).tooltip("Specifies the code for the involved finance charges in case of late payment."),
             F::code("Shipment Method Code", 10).tooltip("Specifies which shipment method to use when you ship items to the customer."),
             F::code("Shipping Agent Code", 10).tooltip("Specifies which shipping company is used when you ship items to the customer."),
             F::code("Invoice Disc. Code", 20).relation("Customer").tooltip("Specifies a code for the invoice discount terms that you have defined for the customer."),
@@ -548,7 +549,6 @@ pub fn extend(m: &mut Metadata) {
             F::code("GLN", 13).tooltip("Specifies the customer in connection with electronic document sending."),
             F::text("EORI Number", 40).tooltip("Specifies the Economic Operators Registration and Identification number that is used when you exchange information with the customs authorities due to trade into or out of the European Union."),
             F::boolean("Use GLN in Electronic Document").caption("Use GLN in Electronic Documents").tooltip("Specifies whether the GLN is used in electronic documents as a party identification number."),
-            F::code("Reminder Terms Code", 10).tooltip("Specifies how reminders about late payments are handled for this customer."),
             F::code("Tax Area Code", 20).tooltip("Specifies the tax area that is used to calculate and post sales tax."),
             F::boolean("Tax Liable").tooltip("Specifies if the customer or vendor is liable for sales tax."),
             F::option("Reserve", &["Never", "Optional", "Always"]).tooltip("Specifies whether items will never, automatically (Always), or optionally be reserved for this customer. Optional means that you must manually reserve items for this customer."),
@@ -580,6 +580,8 @@ pub fn extend(m: &mut Metadata) {
         &[
             ("Code", "Code", "Specifies the identifier for the customer posting group. This is what you choose when you assign the group to an entity or document.", 0),
             ("Receivables Account", "Receivables Account", "Specifies the general ledger account to use when you post receivables from customers in this posting group.", 0),
+            ("Additional Fee Account", "Additional Fee Account", "Specifies the general ledger account to use when you post additional fees from reminders and finance charge memos for customers in this posting group.", 0),
+            ("Interest Account", "Interest Account", "Specifies the general ledger account to use when you post interest from reminders and finance charge memos for customers in this posting group.", 0),
             ("Description", "Description", "Specifies the description for the customer posting group.", 0),
         ],
     );
@@ -590,8 +592,6 @@ pub fn extend(m: &mut Metadata) {
             F::code("Service Charge Acc.", 20).relation("G/L Account").tooltip("Specifies the general ledger account to use when you post service charges for customers in this posting group."),
             F::code("Payment Disc. Debit Acc.", 20).relation("G/L Account").tooltip("Specifies the general ledger account to use when you post payment discounts granted to customers in this posting group."),
             F::code("Invoice Rounding Account", 20).relation("G/L Account").tooltip("Specifies the general ledger account to use when you post amounts that result from invoice rounding when you post transactions for customers."),
-            F::code("Additional Fee Account", 20).relation("G/L Account").tooltip("Specifies the general ledger account to use when you post additional fees from reminders and finance charge memos for customers in this posting group."),
-            F::code("Interest Account", 20).relation("G/L Account").tooltip("Specifies the general ledger account to use when you post interest from reminders and finance charge memos for customers in this posting group."),
             F::code("Debit Curr. Appln. Rndg. Acc.", 20).relation("G/L Account").tooltip("Specifies the general ledger account to use when you post rounding differences. These differences can occur when you apply entries in different currencies to one another."),
             F::code("Credit Curr. Appln. Rndg. Acc.", 20).relation("G/L Account").tooltip("Specifies the general ledger account to use when you post rounding differences. These differences can occur when you apply entries in different currencies to one another."),
             F::code("Debit Rounding Account", 20).relation("G/L Account").tooltip("Specifies the general ledger account to use when you post rounding differences from a remaining amount."),
@@ -893,6 +893,80 @@ pub fn extend(m: &mut Metadata) {
             ("Name", "Name", "Specifies the name of the fixed asset subclass.", 0),
             ("FA Class Code", "FA Class Code", "Specifies the class that the subclass belongs to.", 0),
             ("Default FA Posting Group", "Default FA Posting Group", "Specifies the posting group that is used when posting fixed assets that belong to this subclass.", 0),
+        ],
+    );
+    relabel(
+        m,
+        "Finance Charge Memo Header",
+        &[
+            ("No.", "No.", "Specifies the number of the involved entry or record, according to the specified number series.", 0),
+            ("Customer No.", "Customer No.", "Specifies the number of the customer you want to create a finance charge memo for.", 0),
+            ("Name", "Name", "Specifies the name of the customer the finance charge memo is for.", 0),
+            ("Address", "Address", "Specifies the address of the customer the finance charge memo is for.", 0),
+            ("Post Code", "Post Code", "Specifies the postal code.", 0),
+            ("City", "City", "Specifies the city name of the customer the finance charge memo is for.", 0),
+            ("Currency Code", "Currency Code", "Specifies the currency code of the finance charge memo.", 0),
+            ("Your Reference", "Your Reference", "Specifies the customer's reference. The content will be printed on the related document.", 0),
+            ("Customer Posting Group", "Customer Posting Group", "Specifies the customer's market type to link business transactions to.", 0),
+            ("Posting Date", "Posting Date", "Specifies the date when the finance charge memo should be issued.", 0),
+            ("Document Date", "Document Date", "Specifies the date when the related document was created.", 0),
+            ("Due Date", "Due Date", "Specifies when payment of the amount on the finance charge memo is due.", 0),
+            ("Fin. Charge Terms Code", "Fin. Charge Terms Code", "Specifies the code for the involved finance charges in case of late payment.", 0),
+            ("Interest Amount", "Interest Amount", "Specifies the total of the interest amounts on the finance charge memo lines.", 1),
+            ("Additional Fee", "Additional Fee", "Specifies the total of the additional fee amounts on the finance charge memo lines.", 1),
+        ],
+    );
+    fields(
+        m,
+        "Finance Charge Memo Header",
+        vec![
+            F::text("Address 2", 50).tooltip("Specifies additional address information."),
+            F::text("Contact", 100).tooltip("Specifies the name of the person you regularly contact when you communicate with the customer the finance charge memo is for."),
+            F::code("Shortcut Dimension 1 Code", 20).tooltip("Specifies the code for Shortcut Dimension 1, which is one of two global dimension codes that you set up in the General Ledger Setup window."),
+            F::code("Shortcut Dimension 2 Code", 20).tooltip("Specifies the code for Shortcut Dimension 2, which is one of two global dimension codes that you set up in the General Ledger Setup window."),
+            F::code("Company Bank Account Code", 20).tooltip("Specifies the bank account to use for bank information when the document is printed."),
+            F::code("Assigned User ID", 50).relation("User Setup").tooltip("Specifies the ID of the user who is responsible for the document."),
+        ],
+    );
+    relabel(
+        m,
+        "Finance Charge Memo Line",
+        &[
+            ("Type", "Type", "Specifies the line type.", 0),
+            ("Posting Date", "Posting Date", "Specifies the posting date of the customer ledger entry that this finance charge memo line is for.", 0),
+            ("Document Date", "Document Date", "Specifies the date when the related document was created.", 0),
+            ("Due Date", "Due Date", "Specifies the due date of the customer ledger entry this finance charge memo line is for.", 0),
+            ("Document Type", "Document Type", "Specifies the document type of the customer ledger entry this finance charge memo line is for.", 0),
+            ("Document No.", "Document No.", "Specifies the document number of the customer ledger entry this finance charge memo line is for.", 0),
+            ("Description", "Description", "Specifies an entry description, based on the contents of the Type field.", 0),
+            ("Original Amount", "Original Amount", "Specifies the original amount of the customer ledger entry that this finance charge memo line is for.", 1),
+            ("Remaining Amount", "Remaining Amount", "Specifies the remaining amount of the customer ledger entry this finance charge memo line is for.", 1),
+            ("No.", "No.", "Specifies the number of the involved entry or record, according to the specified number series.", 0),
+            ("Amount", "Amount", "Specifies the amount in the currency that is represented by the currency code on the finance charge memo header.", 1),
+        ],
+    );
+    relabel(
+        m,
+        "Finance Charge Terms",
+        &[
+            ("Code", "Code", "Specifies a code for the finance charge terms.", 0),
+            ("Interest Rate", "Interest Rate", "Specifies the percentage to use to calculate interest for this finance charge code.", 0),
+            ("Description", "Description", "Specifies a description of the finance charge terms.", 0),
+            ("Interest Calculation Method", "Interest Calculation Method", "Specifies the interest calculation method for this set of finance charge terms.", 0),
+            ("Grace Period", "Grace Period", "Specifies the grace period length for this set of finance charge terms.", 0),
+            ("Due Date Calculation", "Due Date Calculation", "Specifies a formula that determines how to calculate the due date of the finance charge memo.", 0),
+            ("Post Interest", "Post Interest", "Specifies whether or not interest listed on the finance charge memo should be posted to the general ledger and customer accounts when the finance charge memo is issued.", 0),
+            ("Post Additional Fee", "Post Additional Fee", "Specifies whether or not any additional fee listed on the finance charge memo should be posted to the general ledger and customer accounts when the memo is issued.", 0),
+            ("Line Description", "Line Description", "Specifies a description to be used in the Description field on the finance charge memo lines.", 0),
+        ],
+    );
+    fields(
+        m,
+        "Finance Charge Terms",
+        vec![
+            F::option("Interest Calculation", &["Open Entries", "Closed Entries", "All Entries"]).tooltip("Specifies which entries should be used in interest calculation on finance charge memos."),
+            F::boolean("Add. Line Fee in Interest").tooltip("Specifies that any additional fees are included in the interest calculation for the finance charge."),
+            F::text("Detailed Lines Description", 100).tooltip("Specifies a description to be used in the Description field on the finance charge memo lines if multiple interest rates are set up for different payment delay periods and the description must show the sum of these."),
         ],
     );
     relabel(
@@ -1486,6 +1560,112 @@ pub fn extend(m: &mut Metadata) {
             F::code("Posted Phys. Invt. Order Nos.", 20).tooltip("Specifies the number series that will be used to assign numbers to physical inventory orders when they are posted."),
             F::text("Package Caption", 30).tooltip("Specifies the alternative caption of Package tracking dimension that you want to use for captions for this dimension. For example, Size."),
             F::code("Item Group Dimension Code", 20).relation("Dimension").tooltip("Specifies the dimension code that you want to use for product groups in analysis reports."),
+        ],
+    );
+    relabel(
+        m,
+        "Issued Fin. Charge Memo Header",
+        &[
+            ("No.", "No.", "Specifies the number of the involved entry or record, according to the specified number series.", 0),
+            ("Customer No.", "Customer No.", "Specifies the customer number the finance charge memo is for.", 0),
+            ("Name", "Name", "Specifies the name of the customer the finance charge memo is for.", 0),
+            ("Address", "Address", "Specifies the address of the customer the finance charge memo is for.", 0),
+            ("Post Code", "Post Code", "Specifies the postal code.", 0),
+            ("City", "City", "Specifies the city name of the customer the finance charge memo is for.", 0),
+            ("Currency Code", "Currency Code", "Specifies the code of the currency that the issued finance charge memo is in.", 0),
+            ("Your Reference", "Your Reference", "Specifies the customer's reference. The content will be printed on the related document.", 0),
+            ("Customer Posting Group", "Customer Posting Group", "Specifies the customer'Â\u{8d}s market type to link business transactions to.", 0),
+            ("Posting Date", "Posting Date", "Specifies the posting date that the finance charge memo was issued on.", 0),
+            ("Document Date", "Document Date", "Specifies the date when the related document was created.", 0),
+            ("Due Date", "Due Date", "Specifies the date when payment of the finance charge memo is due.", 0),
+            ("Fin. Charge Terms Code", "Fin. Charge Terms Code", "Specifies the code for the involved finance charges in case of late payment.", 0),
+            ("Interest Amount", "Interest Amount", "Specifies the total of the interest amounts on the finance charge memo lines.", 1),
+            ("Additional Fee", "Additional Fee", "Specifies the total of the additional fee amounts on the finance charge memo lines.", 1),
+            ("Pre-Assigned No.", "Pre-Assigned No.", "Specifies the number of the finance charge memo.", 0),
+        ],
+    );
+    fields(
+        m,
+        "Issued Fin. Charge Memo Header",
+        vec![
+            F::text("Address 2", 50).tooltip("Specifies additional address information."),
+            F::text("Contact", 100).tooltip("Specifies the name of the person you regularly contact when you communicate with the customer the finance charge memo is for."),
+            F::code("Shortcut Dimension 1 Code", 20).tooltip("Specifies the code for Shortcut Dimension 1, which is one of two global dimension codes that you set up in the General Ledger Setup window."),
+            F::code("Shortcut Dimension 2 Code", 20).tooltip("Specifies the code for Shortcut Dimension 2, which is one of two global dimension codes that you set up in the General Ledger Setup window."),
+            F::integer("No. Printed").tooltip("Specifies how many times the document has been printed."),
+            F::boolean("Canceled").tooltip("Specifies if the issued finance charge memo has been canceled."),
+            F::code("Company Bank Account Code", 20).tooltip("Specifies the bank account to use for bank information when the document is printed."),
+        ],
+    );
+    relabel(
+        m,
+        "Issued Fin. Charge Memo Line",
+        &[
+            ("Type", "Type", "Specifies the line type.", 0),
+            ("Posting Date", "Posting Date", "Specifies the posting date of the customer ledger entry that this finance charge memo line is for.", 0),
+            ("Document Date", "Document Date", "Specifies the date when the related document was created.", 0),
+            ("Due Date", "Due Date", "Specifies the due date of the customer ledger entry this finance charge memo line is for.", 0),
+            ("Document Type", "Document Type", "Specifies the document type of the customer ledger entry this finance charge memo line is for.", 0),
+            ("Document No.", "Document No.", "Specifies the document number of the customer ledger entry this finance charge memo line is for.", 0),
+            ("Description", "Description", "Specifies an entry description, based on the contents of the Type field.", 0),
+            ("Original Amount", "Original Amount", "Specifies the original amount of the customer ledger entry that this finance charge memo line is for.", 1),
+            ("Remaining Amount", "Remaining Amount", "Specifies the remaining amount of the customer ledger entry this finance charge memo line is for.", 1),
+            ("No.", "No.", "Specifies the number of the involved entry or record, according to the specified number series.", 0),
+            ("Amount", "Amount", "Specifies the amount in the currency of the finance charge memo.", 1),
+        ],
+    );
+    relabel(
+        m,
+        "Issued Reminder Header",
+        &[
+            ("No.", "No.", "Specifies the number of the involved entry or record, according to the specified number series.", 0),
+            ("Customer No.", "Customer No.", "Specifies the customer number the reminder is for.", 0),
+            ("Name", "Name", "Specifies the name of the customer the reminder is for.", 0),
+            ("Address", "Address", "Specifies the address of the customer the reminder is for.", 0),
+            ("Post Code", "Post Code", "Specifies the postal code.", 0),
+            ("City", "City", "Specifies the city name of the customer the reminder is for.", 0),
+            ("Currency Code", "Currency Code", "Specifies the currency code of the issued reminder.", 0),
+            ("Your Reference", "Your Reference", "Specifies the customer's reference. The content will be printed on the related document.", 0),
+            ("Posting Date", "Posting Date", "Specifies the posting date that the reminder was issued on.", 0),
+            ("Document Date", "Document Date", "Specifies the date when the related document was created.", 0),
+            ("Due Date", "Due Date", "Specifies the date when payment of the amount on the reminder is due.", 0),
+            ("Reminder Terms Code", "Reminder Terms Code", "Specifies the reminder terms code for the reminder.", 0),
+            ("Reminder Level", "Reminder Level", "Specifies the reminder's level.", 0),
+            ("Remaining Amount", "Remaining Amount", "Specifies the total of the remaining amounts on the reminder lines.", 1),
+            ("Additional Fee", "Additional Fee", "Specifies the total of the additional fee amounts on the reminder lines.", 1),
+            ("Pre-Assigned No.", "Pre-Assigned No.", "Specifies the number of the reminder from which the issued reminder was created.", 0),
+        ],
+    );
+    fields(
+        m,
+        "Issued Reminder Header",
+        vec![
+            F::text("Address 2", 50).tooltip("Specifies additional address information."),
+            F::text("Contact", 100).tooltip("Specifies the name of the person you regularly contact when you communicate with the customer the reminder is for."),
+            F::code("Shortcut Dimension 1 Code", 20).tooltip("Specifies the code for Shortcut Dimension 1, which is one of two global dimension codes that you set up in the General Ledger Setup window."),
+            F::code("Shortcut Dimension 2 Code", 20).tooltip("Specifies the code for Shortcut Dimension 2, which is one of two global dimension codes that you set up in the General Ledger Setup window."),
+            F::code("Fin. Charge Terms Code", 10).relation("Finance Charge Terms").tooltip("Specifies the code for the involved finance charges in case of late payment."),
+            F::integer("No. Printed").tooltip("Specifies how many times the document has been printed."),
+            F::boolean("Canceled").tooltip("Specifies if the issued reminder has been canceled."),
+            F::code("Company Bank Account Code", 20).tooltip("Specifies the bank account to use for bank information when the document is printed."),
+        ],
+    );
+    relabel(
+        m,
+        "Issued Reminder Line",
+        &[
+            ("Type", "Type", "Specifies the line type.", 0),
+            ("No. of Reminders", "No. of Reminders", "Specifies a number that indicates the reminder level.", 0),
+            ("Posting Date", "Posting Date", "Specifies the posting date of the customer ledger entry that this reminder line is for.", 0),
+            ("Document Date", "Document Date", "Specifies the date when the related document was created.", 0),
+            ("Due Date", "Due Date", "Specifies the due date of the customer ledger entry this reminder line is for.", 0),
+            ("Document Type", "Document Type", "Specifies the document type of the customer ledger entry this reminder line is for.", 0),
+            ("Document No.", "Document No.", "Specifies the document number of the customer ledger entry this reminder line is for.", 0),
+            ("Description", "Description", "Specifies an entry description, based on the contents of the Type field.", 0),
+            ("Original Amount", "Original Amount", "Specifies the original amount of the customer ledger entry that this reminder line is for.", 1),
+            ("Remaining Amount", "Remaining Amount", "Specifies the remaining amount of the customer ledger entry this reminder line is for.", 1),
+            ("No.", "No.", "Specifies the number of the involved entry or record, according to the specified number series.", 0),
+            ("Amount", "Amount", "Specifies the amount in the currency of the reminder.", 1),
         ],
     );
     relabel(
@@ -2234,6 +2414,121 @@ pub fn extend(m: &mut Metadata) {
     );
     relabel(
         m,
+        "Reminder Header",
+        &[
+            ("No.", "No.", "Specifies the number of the involved entry or record, according to the specified number series.", 0),
+            ("Customer No.", "Customer No.", "Specifies the number of the customer you want to post a reminder for.", 0),
+            ("Name", "Name", "Specifies the name of the customer the reminder is for.", 0),
+            ("Address", "Address", "Specifies the address of the customer the reminder is for.", 0),
+            ("Post Code", "Post Code", "Specifies the postal code.", 0),
+            ("City", "City", "Specifies the city name of the customer the reminder is for.", 0),
+            ("Currency Code", "Currency Code", "Specifies the currency code of the reminder.", 0),
+            ("Your Reference", "Your Reference", "Specifies the customer's reference. The content will be printed on the related document.", 0),
+            ("Posting Date", "Posting Date", "Specifies the date when the reminder should be issued.", 0),
+            ("Document Date", "Document Date", "Specifies the date when the related document was created.", 0),
+            ("Due Date", "Due Date", "Specifies when payment of the amount on the reminder is due.", 0),
+            ("Reminder Terms Code", "Reminder Terms Code", "Specifies how reminders about late payments are handled for this customer.", 0),
+            ("Reminder Level", "Reminder Level", "Specifies the reminder's level.", 0),
+            ("Remaining Amount", "Remaining Amount", "Specifies the total of the remaining amounts on the reminder lines.", 1),
+            ("Additional Fee", "Additional Fee", "Specifies the total of the additional fee amounts on the reminder lines.", 1),
+        ],
+    );
+    fields(
+        m,
+        "Reminder Header",
+        vec![
+            F::text("Address 2", 50).tooltip("Specifies additional address information."),
+            F::text("Contact", 100).tooltip("Specifies the name of the person you regularly contact when you communicate with the customer the reminder is for."),
+            F::code("Shortcut Dimension 1 Code", 20).tooltip("Specifies the code for Shortcut Dimension 1, which is one of two global dimension codes that you set up in the General Ledger Setup window."),
+            F::code("Shortcut Dimension 2 Code", 20).tooltip("Specifies the code for Shortcut Dimension 2, which is one of two global dimension codes that you set up in the General Ledger Setup window."),
+            F::code("Fin. Charge Terms Code", 10).relation("Finance Charge Terms").tooltip("Specifies the code for the involved finance charges in case of late payment."),
+            F::boolean("Use Header Level").tooltip("Specifies that the condition of the level for the Reminder Level field is applied to all suggested reminder lines."),
+            F::code("Company Bank Account Code", 20).tooltip("Specifies the bank account to use for bank information when the document is printed."),
+            F::code("Assigned User ID", 50).relation("User Setup").tooltip("Specifies the ID of the user who is responsible for the document."),
+        ],
+    );
+    relabel(
+        m,
+        "Reminder Level",
+        &[
+            ("Reminder Terms Code", "Reminder Terms Code", "Specifies the reminder terms code for the reminder.", 0),
+            ("No.", "No.", "Specifies the number of the involved entry or record, according to the specified number series.", 0),
+            ("Grace Period", "Grace Period", "Specifies the length of the grace period for this reminder level.", 0),
+            ("Calculate Interest", "Calculate Interest", "Specifies whether interest should be calculated on the reminder lines.", 0),
+            ("Due Date Calculation", "Due Date Calculation", "Specifies a formula that determines how to calculate the due date on the reminder.", 0),
+        ],
+    );
+    fields(
+        m,
+        "Reminder Level",
+        vec![
+            F::decimal("Add. Fee per Line Amount (LCY)").auto_format(2),
+            F::text("Add. Fee per Line Description", 100).tooltip("Specifies a description of the additional fee."),
+            F::option("Add. Fee Calculation Type", &["Fixed", "Single Dynamic", "Accumulated Dynamic"]).tooltip("Specifies how the additional fee is calculated. Fixed: The Additional Fee values on the line on the Reminder Levels page are used. Dynamics Single: The per-line values on the Additional Fee Setup page are used. Accumulated Dynamic: The values on the Additional Fee Setup page are used."),
+        ],
+    );
+    relabel(
+        m,
+        "Reminder Line",
+        &[
+            ("Type", "Type", "Specifies the line type.", 0),
+            ("No. of Reminders", "No. of Reminders", "Specifies a number that indicates the reminder level.", 0),
+            ("Posting Date", "Posting Date", "Specifies the posting date of the customer ledger entry that this reminder line is for.", 0),
+            ("Document Date", "Document Date", "Specifies the date when the related document was created.", 0),
+            ("Due Date", "Due Date", "Specifies the due date of the customer ledger entry this reminder line is for.", 0),
+            ("Document Type", "Document Type", "Specifies the document type of the customer ledger entry this reminder line is for.", 0),
+            ("Document No.", "Document No.", "Specifies the document number of the customer ledger entry this reminder line is for.", 0),
+            ("Description", "Description", "Specifies an entry description, based on the contents of the Type field.", 0),
+            ("Original Amount", "Original Amount", "Specifies the original amount of the customer ledger entry that this reminder line is for.", 1),
+            ("Remaining Amount", "Remaining Amount", "Specifies the remaining amount of the customer ledger entry this reminder line is for.", 1),
+            ("No.", "No.", "Specifies the number of the involved entry or record, according to the specified number series.", 0),
+            ("Amount", "Amount", "Specifies the amount in the currency that is represented by the currency code on the reminder header.", 1),
+        ],
+    );
+    relabel(
+        m,
+        "Reminder Terms",
+        &[
+            ("Code", "Code", "Specifies a code to identify this set of reminder terms.", 0),
+            ("Description", "Description", "Specifies a description of the reminder terms.", 0),
+            ("Post Interest", "Post Interest", "Specifies whether to post any interest listed on the reminder to the general ledger and customer accounts.", 0),
+            ("Post Additional Fee", "Post Additional Fee", "Specifies whether to post any additional fee listed on the reminder to the general ledger and customer accounts", 0),
+            ("Max. No. of Reminders", "Max. No. of Reminders", "Specifies the maximum number of reminders that can be created for an invoice.", 0),
+        ],
+    );
+    fields(
+        m,
+        "Reminder Terms",
+        vec![
+            F::boolean("Post Add. Fee per Line").tooltip("Specifies whether to post any additional fee listed on the finance charge memo to the general ledger and customer accounts when the memo is issued."),
+            F::text("Note About Line Fee on Report", 150).tooltip("Specifies that any notes about line fees will be added to the reminder."),
+        ],
+    );
+    relabel(
+        m,
+        "Reminder/Fin. Charge Entry",
+        &[
+            ("Entry No.", "Entry No.", "Specifies the number of the entry, as assigned from the specified number series when the entry was created.", 0),
+            ("Type", "Type", "Specifies whether the entry comes from a reminder or a finance charge memo.", 0),
+            ("No.", "No.", "Specifies the number of the involved entry or record, according to the specified number series.", 0),
+            ("Reminder Level", "Reminder Level", "Specifies the reminder level if the Type field contains Reminder.", 0),
+            ("Posting Date", "Posting Date", "Specifies the posting date of the reminder or finance charge memo.", 0),
+            ("Interest Posted", "Interest Posted", "Specifies whether or not interest was posted to the customer account and a general ledger account when the reminder or finance charge memo was issued.", 0),
+            ("Customer Entry No.", "Customer Entry No.", "Specifies the number of the customer ledger entry on the reminder line or finance charge memo line.", 0),
+            ("Remaining Amount", "Remaining Amount", "Specifies the remaining amount of the customer ledger entry this reminder or finance charge memo entry is for.", 1),
+        ],
+    );
+    fields(
+        m,
+        "Reminder/Fin. Charge Entry",
+        vec![
+            F::option("Document Type", &["", "Payment", "Invoice", "Credit Memo", "Finance Charge Memo", "Reminder", "Refund"]).tooltip("Specifies the document type of the customer entry on the reminder line or finance charge memo line."),
+            F::code("Document No.", 20).tooltip("Specifies the document number of the customer entry on the reminder line or finance charge memo line."),
+            F::boolean("Canceled").tooltip("Specifies if the issued reminder or finance charge has been canceled."),
+        ],
+    );
+    relabel(
+        m,
         "Sales & Receivables Setup",
         &[
             ("Credit Warnings", "Credit Warnings", "Specifies whether to warn about the customer's status when you create a sales order or invoice.", 0),
@@ -2247,6 +2542,10 @@ pub fn extend(m: &mut Metadata) {
             ("Credit Memo Nos.", "Credit Memo Nos.", "Specifies the code for the number series that will be used to assign numbers to sales credit memos.", 0),
             ("Posted Credit Memo Nos.", "Posted Credit Memo Nos.", "Specifies the code for the number series that will be used to assign numbers to posted sales credit memos.", 0),
             ("Posted Shipment Nos.", "Posted Shipment Nos.", "Specifies the code for the number series that will be used to assign numbers to posted shipments.", 0),
+            ("Reminder Nos.", "Reminder Nos.", "Specifies the code for the number series that will be used to assign numbers to reminders.", 0),
+            ("Issued Reminder Nos.", "Issued Reminder Nos.", "Specifies the code for the number series that will be used to assign numbers to issued reminders.", 0),
+            ("Fin. Chrg. Memo Nos.", "Fin. Chrg. Memo Nos.", "Specifies the code for the number series that will be used to assign numbers to finance charge memos.", 0),
+            ("Issued Fin. Chrg. M. Nos.", "Issued Fin. Chrg. M. Nos.", "Specifies the code for the number series that will be used to assign numbers to issued finance charge memos.", 0),
             ("Return Order Nos.", "Return Order Nos.", "Specifies the code for the number series that will be used to assign numbers to new sales return orders.", 0),
         ],
     );
@@ -2257,10 +2556,6 @@ pub fn extend(m: &mut Metadata) {
             F::option("Discount Posting", &["No Discounts", "Invoice Discounts", "Line Discounts", "All Discounts"]).tooltip("Specifies the type of sales discounts to post separately. No Discounts: Discounts are not posted separately but instead will subtract the discount before posting. Invoice Discounts: The invoice discount and invoice amount are posted simultaneously, based on the Sales Inv. Disc. Account field in the General Posting Setup window. Line Discounts: The line discount and the invoice amount will be posted simultaneously, based on Sales Line Disc. Account field in the General Posting Setup window. All Discounts: The invoice and line discounts and the invoice amount will be posted simultaneously, based on the Sales Inv. Disc. Account field and Sales Line. Disc. Account fields in the General Posting Setup window."),
             F::boolean("Shipment on Invoice").tooltip("Specifies if a posted shipment and a posted invoice are automatically created when you post an invoice."),
             F::boolean("Invoice Rounding").tooltip("Specifies if amounts are rounded for sales invoices. Rounding is applied as specified in the Inv. Rounding Precision (LCY) field in the General Ledger Setup window. "),
-            F::code("Reminder Nos.", 20).tooltip("Specifies the code for the number series that will be used to assign numbers to reminders."),
-            F::code("Issued Reminder Nos.", 20).tooltip("Specifies the code for the number series that will be used to assign numbers to issued reminders."),
-            F::code("Fin. Chrg. Memo Nos.", 20).tooltip("Specifies the code for the number series that will be used to assign numbers to finance charge memos."),
-            F::code("Issued Fin. Chrg. M. Nos.", 20).tooltip("Specifies the code for the number series that will be used to assign numbers to issued finance charge memos."),
             F::code("Posted Prepmt. Inv. Nos.", 20).tooltip("Specifies the code for the number series that will be used to assign numbers to posted sales prepayment invoices."),
             F::code("Posted Prepmt. Cr. Memo Nos.", 20).tooltip("Specifies the code for the number series that will be used to assign numbers to posted sales prepayment credit memos."),
             F::code("Blanket Order Nos.", 20).tooltip("Specifies the code for the number series that will be used to assign numbers to blanket sales orders."),
@@ -3380,6 +3675,28 @@ pub fn extend(m: &mut Metadata) {
         ],
     );
     columns(m, "fa-subclasses", &["Code", "Name", "FA Class Code", "Default FA Posting Group"]);
+    columns(m, "fin-charge-memo-subform", &["Type", "No.", "Document Type", "Document No.", "Due Date", "Description", "Remaining Amount", "Amount"]);
+    layout(
+        m,
+        "finance-charge-memo",
+        &[
+            Tab {
+                caption: "General",
+                fields: &["Customer No.", "Name", "Address", "Address 2", "Post Code", "City", "Contact", "Your Reference", "Posting Date", "Document Date", "Assigned User ID"],
+                promoted: &["Customer No.", "Name", "Posting Date"],
+                additional: &["Your Reference"],
+                ..Tab::default()
+            },
+            Tab {
+                caption: "Posting",
+                fields: &["Fin. Charge Terms Code", "Due Date", "Currency Code", "Company Bank Account Code", "Shortcut Dimension 1 Code", "Shortcut Dimension 2 Code", "Customer Posting Group"],
+                promoted: &["Fin. Charge Terms Code", "Due Date", "Currency Code", "Company Bank Account Code"],
+                ..Tab::default()
+            },
+        ],
+    );
+    columns(m, "finance-charge-memo-list", &["No.", "Customer No.", "Name", "Currency Code", "Interest Amount", "Assigned User ID"]);
+    columns(m, "finance-charge-terms", &["Code", "Description", "Interest Calculation", "Interest Calculation Method", "Interest Rate", "Interest Period (Days)", "Minimum Amount (LCY)", "Additional Fee (LCY)", "Grace Period", "Due Date Calculation", "Line Description", "Detailed Lines Description", "Post Interest", "Post Additional Fee", "Add. Line Fee in Interest"]);
     columns(m, "financial-reports", &["Name", "Description", "CategoryCode", "Financial Report Row Group", "Financial Report Column Group", "DimPerspective", "Status", "Internal Description"]);
     layout(
         m,
@@ -3540,6 +3857,47 @@ pub fn extend(m: &mut Metadata) {
             },
         ],
     );
+    columns(m, "issued-fin-charge-memo-lines", &["Type", "No.", "Document Type", "Document No.", "Due Date", "Description", "Remaining Amount", "Amount"]);
+    columns(m, "issued-fin-charge-memo-list", &["No.", "Customer No.", "Name", "Currency Code", "Interest Amount", "Canceled"]);
+    layout(
+        m,
+        "issued-finance-charge-memo",
+        &[
+            Tab {
+                caption: "General",
+                fields: &["No.", "Customer No.", "Name", "Address", "Address 2", "Post Code", "City", "Contact", "Your Reference", "Posting Date", "Document Date", "Pre-Assigned No.", "No. Printed", "Canceled"],
+                promoted: &["No.", "Customer No.", "Name", "Posting Date"],
+                additional: &["Your Reference"],
+                ..Tab::default()
+            },
+            Tab {
+                caption: "Posting",
+                fields: &["Fin. Charge Terms Code", "Due Date", "Currency Code", "Company Bank Account Code", "Shortcut Dimension 1 Code", "Shortcut Dimension 2 Code"],
+                promoted: &["Fin. Charge Terms Code", "Due Date", "Currency Code", "Company Bank Account Code"],
+                ..Tab::default()
+            },
+        ],
+    );
+    layout(
+        m,
+        "issued-reminder",
+        &[
+            Tab {
+                caption: "General",
+                fields: &["No.", "Customer No.", "Name", "Address", "Address 2", "Post Code", "City", "Contact", "Your Reference", "Posting Date", "Document Date", "Pre-Assigned No.", "Reminder Level", "No. Printed", "Canceled"],
+                additional: &["Your Reference"],
+                ..Tab::default()
+            },
+            Tab {
+                caption: "Posting",
+                fields: &["Reminder Terms Code", "Fin. Charge Terms Code", "Due Date", "Currency Code", "Company Bank Account Code", "Shortcut Dimension 1 Code", "Shortcut Dimension 2 Code"],
+                promoted: &["Company Bank Account Code"],
+                ..Tab::default()
+            },
+        ],
+    );
+    columns(m, "issued-reminder-lines", &["Type", "No.", "Document Type", "Document No.", "Due Date", "Description", "Remaining Amount", "Amount"]);
+    columns(m, "issued-reminder-list", &["No.", "Customer No.", "Name", "Currency Code", "Remaining Amount", "Canceled"]);
     layout(
         m,
         "item-card",
@@ -4031,6 +4389,30 @@ pub fn extend(m: &mut Metadata) {
             },
         ],
     );
+    layout(
+        m,
+        "reminder",
+        &[
+            Tab {
+                caption: "General",
+                fields: &["Customer No.", "Name", "Address", "Address 2", "Post Code", "City", "Contact", "Your Reference", "Posting Date", "Document Date", "Reminder Level", "Use Header Level", "Assigned User ID"],
+                promoted: &["Customer No.", "Name", "Reminder Level"],
+                additional: &["Your Reference"],
+                ..Tab::default()
+            },
+            Tab {
+                caption: "Posting",
+                fields: &["Reminder Terms Code", "Fin. Charge Terms Code", "Due Date", "Currency Code", "Company Bank Account Code", "Shortcut Dimension 1 Code", "Shortcut Dimension 2 Code"],
+                promoted: &["Reminder Terms Code", "Fin. Charge Terms Code", "Due Date", "Currency Code", "Company Bank Account Code"],
+                ..Tab::default()
+            },
+        ],
+    );
+    columns(m, "reminder-fin-charge-entries", &["Posting Date", "Type", "No.", "Customer Entry No.", "Document Type", "Document No.", "Interest Posted", "Remaining Amount", "Reminder Level", "Canceled", "Entry No."]);
+    columns(m, "reminder-levels", &["Reminder Terms Code", "No.", "Grace Period", "Due Date Calculation", "Calculate Interest", "Additional Fee (LCY)", "Add. Fee per Line Amount (LCY)", "Add. Fee Calculation Type", "Add. Fee per Line Description"]);
+    columns(m, "reminder-list", &["No.", "Customer No.", "Name", "Currency Code", "Remaining Amount", "Assigned User ID"]);
+    columns(m, "reminder-subform", &["Type", "No.", "Document Type", "Document No.", "Due Date", "Description", "Remaining Amount", "Amount"]);
+    columns(m, "reminder-terms", &["Code", "Description", "Max. No. of Reminders", "Post Interest", "Post Additional Fee", "Post Add. Fee per Line", "Minimum Amount (LCY)", "Note About Line Fee on Report"]);
     columns(m, "requests-to-approve", &["Sender ID", "Due Date", "Status", "Amount", "Amount (LCY)", "Currency Code"]);
     columns(m, "sales-comment-sheet", &["Date", "Comment"]);
     layout(
@@ -4349,6 +4731,10 @@ pub fn extend(m: &mut Metadata) {
             Nav { caption: "Quotes", page: "sales-quotes", link: &[("Sell-to Customer No.", "No.")], shortcut: "" },
             Nav { caption: "Invoices", page: "sales-invoice-list", link: &[("Sell-to Customer No.", "No.")], shortcut: "" },
             Nav { caption: "Orders", page: "sales-order-list", link: &[("Sell-to Customer No.", "No.")], shortcut: "" },
+            Nav { caption: "Issued &Reminders", page: "issued-reminder-list", link: &[("Customer No.", "No.")], shortcut: "" },
+            Nav { caption: "Issued &Finance Charge Memos", page: "issued-fin-charge-memo-list", link: &[("Customer No.", "No.")], shortcut: "" },
+            Nav { caption: "Reminder", page: "reminder", link: &[("Customer No.", "No.")], shortcut: "" },
+            Nav { caption: "Finance Charge Memo", page: "finance-charge-memo", link: &[("Customer No.", "No.")], shortcut: "" },
             Nav { caption: "Post Cash Receipts", page: "cash-receipt-journal", link: &[], shortcut: "" },
         ],
     );
@@ -4356,6 +4742,7 @@ pub fn extend(m: &mut Metadata) {
         m,
         "customer-ledger-entries",
         &[
+            Nav { caption: "Reminder/Fin. Charge Entries", page: "reminder-fin-charge-entries", link: &[("Customer Entry No.", "Entry No.")], shortcut: "" },
             Nav { caption: "Customer", page: "customer-card", link: &[("No.", "Customer No.")], shortcut: "Shift+F7" },
         ],
     );
@@ -4367,6 +4754,10 @@ pub fn extend(m: &mut Metadata) {
             Nav { caption: "Dimensions-Single", page: "default-dimensions", link: &[("No.", "No.")], shortcut: "Alt+D" },
             Nav { caption: "Quotes", page: "sales-quotes", link: &[("Sell-to Customer No.", "No.")], shortcut: "" },
             Nav { caption: "Orders", page: "sales-order-list", link: &[("Sell-to Customer No.", "No.")], shortcut: "" },
+            Nav { caption: "Issued &Reminders", page: "issued-reminder-list", link: &[("Customer No.", "No.")], shortcut: "" },
+            Nav { caption: "Issued &Finance Charge Memos", page: "issued-fin-charge-memo-list", link: &[("Customer No.", "No.")], shortcut: "" },
+            Nav { caption: "Reminder", page: "reminder", link: &[("Customer No.", "No.")], shortcut: "" },
+            Nav { caption: "Finance Charge Memo", page: "finance-charge-memo", link: &[("Customer No.", "No.")], shortcut: "" },
             Nav { caption: "Cash Receipt Journal", page: "cash-receipt-journal", link: &[], shortcut: "" },
         ],
     );
@@ -4386,6 +4777,20 @@ pub fn extend(m: &mut Metadata) {
             Nav { caption: "FA Subclasses", page: "fa-subclasses", link: &[], shortcut: "" },
             Nav { caption: "FA Locations", page: "fa-locations", link: &[], shortcut: "" },
             Nav { caption: "FA Posting Groups", page: "fa-posting-groups", link: &[], shortcut: "" },
+        ],
+    );
+    actions(
+        m,
+        "finance-charge-memo",
+        &[
+            Nav { caption: "C&ustomer", page: "customer-list", link: &[("No.", "Customer No.")], shortcut: "" },
+        ],
+    );
+    actions(
+        m,
+        "finance-charge-memo-list",
+        &[
+            Nav { caption: "C&ustomer", page: "customer-list", link: &[("No.", "Customer No.")], shortcut: "" },
         ],
     );
     actions(
@@ -4484,6 +4889,34 @@ pub fn extend(m: &mut Metadata) {
             Nav { caption: "Inventory Posting Setup", page: "inventory-posting-setup", link: &[], shortcut: "" },
             Nav { caption: "Inventory Posting Groups", page: "inventory-posting-groups", link: &[], shortcut: "" },
             Nav { caption: "Item Journal Templates", page: "item-journal-templates", link: &[], shortcut: "" },
+        ],
+    );
+    actions(
+        m,
+        "issued-fin-charge-memo-list",
+        &[
+            Nav { caption: "C&ustomer", page: "customer-list", link: &[("No.", "Customer No.")], shortcut: "" },
+        ],
+    );
+    actions(
+        m,
+        "issued-finance-charge-memo",
+        &[
+            Nav { caption: "C&ustomer", page: "customer-list", link: &[("No.", "Customer No.")], shortcut: "" },
+        ],
+    );
+    actions(
+        m,
+        "issued-reminder",
+        &[
+            Nav { caption: "C&ustomer", page: "customer-list", link: &[("No.", "Customer No.")], shortcut: "" },
+        ],
+    );
+    actions(
+        m,
+        "issued-reminder-list",
+        &[
+            Nav { caption: "C&ustomer", page: "customer-list", link: &[("No.", "Customer No.")], shortcut: "" },
         ],
     );
     actions(
@@ -4624,6 +5057,20 @@ pub fn extend(m: &mut Metadata) {
     );
     actions(
         m,
+        "reminder",
+        &[
+            Nav { caption: "C&ustomer", page: "customer-card", link: &[("No.", "Customer No.")], shortcut: "" },
+        ],
+    );
+    actions(
+        m,
+        "reminder-list",
+        &[
+            Nav { caption: "C&ustomer", page: "customer-list", link: &[("No.", "Customer No.")], shortcut: "" },
+        ],
+    );
+    actions(
+        m,
         "sales-credit-memos",
         &[
             Nav { caption: "Co&mments", page: "sales-comment-sheet", link: &[("Document Type", "Document Type"), ("No.", "No.")], shortcut: "" },
@@ -4665,6 +5112,7 @@ pub fn extend(m: &mut Metadata) {
         &[
             Nav { caption: "Customer Posting Groups", page: "customer-posting-groups", link: &[], shortcut: "" },
             Nav { caption: "Payment Terms", page: "payment-terms", link: &[], shortcut: "" },
+            Nav { caption: "Finance Charge Terms", page: "finance-charge-terms", link: &[], shortcut: "" },
         ],
     );
     actions(
@@ -4718,6 +5166,7 @@ pub fn extend(m: &mut Metadata) {
         ],
     );
     mirror(m, "bank-acc-reconciliation-list", "bank-acc-reconciliation", &["P&ost"]);
+    mirror(m, "finance-charge-memo-list", "finance-charge-memo", &["Issue"]);
     mirror(m, "posted-purchase-credit-memos", "posted-purchase-credit-memo", &["Attach as PDF"]);
     mirror(m, "posted-purchase-invoices", "posted-purchase-invoice", &["Attach as PDF"]);
     mirror(m, "posted-purchase-receipts", "posted-purchase-receipt", &["&Print"]);
@@ -4728,6 +5177,7 @@ pub fn extend(m: &mut Metadata) {
     mirror(m, "purchase-invoices", "purchase-invoice", &["Approvals", "Send A&pproval Request", "Cancel Approval Re&quest"]);
     mirror(m, "purchase-order-list", "purchase-order", &["Approvals", "Attach as PDF", "Send A&pproval Request", "Cancel Approval Re&quest"]);
     mirror(m, "purchase-quotes", "purchase-quote", &["Approvals", "Attach as PDF", "Send A&pproval Request", "Cancel Approval Re&quest"]);
+    mirror(m, "reminder-list", "reminder", &["Suggest Reminder Lines", "Issue"]);
     mirror(m, "sales-credit-memos", "sales-credit-memo", &["Approvals", "Send A&pproval Request", "Cancel Approval Re&quest"]);
     mirror(m, "sales-invoice-list", "sales-invoice", &["Approvals", "Send A&pproval Request", "Cancel Approval Re&quest"]);
     mirror(m, "sales-order-list", "sales-order", &["Approvals", "Send A&pproval Request", "Cancel Approval Re&quest", "Attach as PDF"]);
@@ -4828,8 +5278,9 @@ pub fn extend(m: &mut Metadata) {
         m,
         "customer-card",
         &[
-            ("New Document", &["Sales Quote", "Sales Order", "Sales Invoice", "Sales Credit Memo"]),
+            ("New Document", &["Sales Quote", "Sales Order", "Sales Invoice", "Sales Credit Memo", "Reminder"]),
             ("Customer", &["Ledger E&ntries", "Dimensions", "Statistics", "Attachments", "Co&mments"]),
+            ("Report", &["Statement"]),
         ],
     );
     categories(
@@ -4837,15 +5288,16 @@ pub fn extend(m: &mut Metadata) {
         "customer-ledger-entries",
         &[
             ("Process", &["Apply Entries", "Unapply Entries", "Find entries...", "Reverse Transaction"]),
-            ("Entry", &["Dimensions", "Set Dimension Filter", "Detailed &Ledger Entries", "Customer"]),
+            ("Entry", &["Dimensions", "Set Dimension Filter", "Reminder/Fin. Charge Entries", "Detailed &Ledger Entries", "Customer"]),
         ],
     );
     categories(
         m,
         "customer-list",
         &[
-            ("New Document", &["Sales Quote", "Sales Order", "Sales Invoice", "Sales Credit Memo"]),
+            ("New Document", &["Sales Quote", "Sales Order", "Sales Invoice", "Sales Credit Memo", "Reminder"]),
             ("Customer", &["Ledger E&ntries", "Statistics", "Dimensions-&Multiple", "Dimensions-Single", "Co&mments", "Quotes", "Orders"]),
+            ("Report", &["Statement"]),
         ],
     );
     categories(
@@ -4891,6 +5343,22 @@ pub fn extend(m: &mut Metadata) {
             ("General", &["FA Classes", "FA Subclasses", "FA Locations"]),
             ("Depreciation", &["Depreciation Books"]),
             ("Posting", &["FA Posting Groups"]),
+        ],
+    );
+    categories(
+        m,
+        "finance-charge-memo",
+        &[
+            ("Process", &["Issue"]),
+            ("Memo", &["C&ustomer"]),
+        ],
+    );
+    categories(
+        m,
+        "finance-charge-memo-list",
+        &[
+            ("Process", &["Create Finance Charge Memos", "Issue"]),
+            ("Memo", &["C&ustomer"]),
         ],
     );
     categories(
@@ -4991,6 +5459,34 @@ pub fn extend(m: &mut Metadata) {
             ("General", &["Units of Measure"]),
             ("Posting", &["Inventory Posting Setup", "Inventory Posting Groups"]),
             ("Journal Templates", &["Item Journal Templates"]),
+        ],
+    );
+    categories(
+        m,
+        "issued-fin-charge-memo-list",
+        &[
+            ("Memo", &["C&ustomer"]),
+        ],
+    );
+    categories(
+        m,
+        "issued-finance-charge-memo",
+        &[
+            ("Memo", &["C&ustomer"]),
+        ],
+    );
+    categories(
+        m,
+        "issued-reminder",
+        &[
+            ("Reminder", &["C&ustomer"]),
+        ],
+    );
+    categories(
+        m,
+        "issued-reminder-list",
+        &[
+            ("Reminder", &["C&ustomer"]),
         ],
     );
     categories(
@@ -5253,6 +5749,28 @@ pub fn extend(m: &mut Metadata) {
     );
     categories(
         m,
+        "reminder",
+        &[
+            ("Process", &["Issue", "Suggest Reminder Lines", "C&ustomer"]),
+        ],
+    );
+    categories(
+        m,
+        "reminder-list",
+        &[
+            ("Process", &["Create Reminders", "Issue", "Suggest Reminder Lines"]),
+            ("Reminder", &["C&ustomer"]),
+        ],
+    );
+    categories(
+        m,
+        "reminder-terms",
+        &[
+            ("Process", &["&Levels"]),
+        ],
+    );
+    categories(
+        m,
         "requests-to-approve",
         &[
             ("Process", &["Approve", "Reject", "Delegate"]),
@@ -5344,7 +5862,7 @@ pub fn extend(m: &mut Metadata) {
         "sales-receivables-setup",
         &[
             ("Customer Groups", &["Customer Posting Groups"]),
-            ("Payments", &["Payment Terms"]),
+            ("Payments", &["Payment Terms", "Finance Charge Terms"]),
         ],
     );
     categories(
@@ -5529,6 +6047,15 @@ pub fn extend(m: &mut Metadata) {
             ("Shortcut Dimension 8 Code", "dimension-set-entries", &[("Dimension Set ID", "Dimension Set ID")], &[("Global Dimension No.", "8")]),
         ],
     );
+    calcs(
+        m,
+        "Finance Charge Memo Header",
+        vec![
+            ("Remaining Amount", CalcFormula::new(CalcFunc::Sum, "Finance Charge Memo Line", "Remaining Amount", &[("Finance Charge Memo No.", "No.")], &[])),
+            ("Interest Amount", CalcFormula::new(CalcFunc::Sum, "Finance Charge Memo Line", "Amount", &[("Finance Charge Memo No.", "No.")], &[("Type", "Customer Ledger Entry")])),
+            ("Additional Fee", CalcFormula::new(CalcFunc::Sum, "Finance Charge Memo Line", "Amount", &[("Finance Charge Memo No.", "No.")], &[("Type", "G/L Account")])),
+        ],
+    );
     drilldowns(
         m,
         "G/L Account",
@@ -5547,6 +6074,14 @@ pub fn extend(m: &mut Metadata) {
             ("Shortcut Dimension 6 Code", "dimension-set-entries", &[("Dimension Set ID", "Dimension Set ID")], &[("Global Dimension No.", "6")]),
             ("Shortcut Dimension 7 Code", "dimension-set-entries", &[("Dimension Set ID", "Dimension Set ID")], &[("Global Dimension No.", "7")]),
             ("Shortcut Dimension 8 Code", "dimension-set-entries", &[("Dimension Set ID", "Dimension Set ID")], &[("Global Dimension No.", "8")]),
+        ],
+    );
+    calcs(
+        m,
+        "Issued Fin. Charge Memo Header",
+        vec![
+            ("Interest Amount", CalcFormula::new(CalcFunc::Sum, "Issued Fin. Charge Memo Line", "Amount", &[("Finance Charge Memo No.", "No.")], &[("Type", "Customer Ledger Entry")])),
+            ("Additional Fee", CalcFormula::new(CalcFunc::Sum, "Issued Fin. Charge Memo Line", "Amount", &[("Finance Charge Memo No.", "No.")], &[("Type", "G/L Account")])),
         ],
     );
     calcs(

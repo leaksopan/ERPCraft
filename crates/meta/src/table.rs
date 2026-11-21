@@ -47,6 +47,37 @@ pub struct DrillDown {
     pub fixed: Vec<(String, String)>,
 }
 
+/// What a CalcFormula computes over the rows it selects.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum CalcFunc {
+    Sum,
+    Count,
+    Exist,
+    Lookup,
+    Min,
+    Max,
+    Average,
+}
+
+/// AL `CalcFormula`: `sum("Cust. Ledger Entry".Amount where("Customer No." = field("No.")))`.
+/// `link` is (row field, this record's field); `fixed` is (row field, filter expression).
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct CalcFormula {
+    pub func: CalcFunc,
+    pub table: String,
+    /// The summed / looked-up field; empty for Count and Exist.
+    pub field: String,
+    pub link: Vec<(String, String)>,
+    pub fixed: Vec<(String, String)>,
+}
+
+impl CalcFormula {
+    pub fn new(func: CalcFunc, table: &str, field: &str, link: &[(&str, &str)], fixed: &[(&str, &str)]) -> Self {
+        let pairs = |s: &[(&str, &str)]| s.iter().map(|(a, b)| ((*a).to_string(), (*b).to_string())).collect();
+        Self { func, table: table.to_string(), field: field.to_string(), link: pairs(link), fixed: pairs(fixed) }
+    }
+}
+
 /// AL `FieldClass`: a stored field, or one the engine calculates when a record is read.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum FieldClass {
@@ -70,6 +101,8 @@ pub struct FieldDef {
     /// 0 = as many decimals as the value has (up to 5), like BC's default.
     pub auto_format: u8,
     pub drilldown: Option<DrillDown>,
+    /// A FlowField's formula; the engine evaluates it unless hand-written code sets the field.
+    pub calc: Option<CalcFormula>,
 }
 
 impl FieldDef {
@@ -85,6 +118,7 @@ impl FieldDef {
             tooltip: String::new(),
             auto_format: 0,
             drilldown: None,
+            calc: None,
         }
     }
 
@@ -121,6 +155,13 @@ impl FieldDef {
     pub fn flow(mut self) -> Self {
         self.class = FieldClass::FlowField;
         self.editable = false;
+        self
+    }
+    /// A FlowField computed by `formula`.
+    pub fn calc(mut self, formula: CalcFormula) -> Self {
+        self.class = FieldClass::FlowField;
+        self.editable = false;
+        self.calc = Some(formula);
         self
     }
     pub fn read_only(mut self) -> Self {

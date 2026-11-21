@@ -38,7 +38,7 @@ pub fn hand_written() -> Metadata {
 
 /// Helpers the generated `bc_gen.rs` calls.
 mod gen_support {
-    use erpcraft_meta::{ActionArea, ActionDef, DrillDown, FieldDef, GroupDef, Metadata};
+    use erpcraft_meta::{ActionArea, ActionDef, CalcFormula, DrillDown, FieldDef, GroupDef, Metadata};
 
     /// Appends the fields a table doesn't have yet; hand-written definitions win.
     pub fn fields(m: &mut Metadata, table: &str, fields: Vec<FieldDef>) {
@@ -143,6 +143,16 @@ mod gen_support {
         for (field, page, link, fixed) in drills {
             if let Some(f) = t.fields.iter_mut().find(|f| f.name == *field) {
                 f.drilldown = Some(DrillDown { page: (*page).to_string(), link: pairs(link), fixed: pairs(fixed) });
+            }
+        }
+    }
+
+    /// Gives hand-written FlowFields BC's CalcFormula (hand-written calculations still win).
+    pub fn calcs(m: &mut Metadata, table: &str, formulas: Vec<(&str, CalcFormula)>) {
+        let Some(t) = m.tables.get_mut(table) else { return };
+        for (field, c) in formulas {
+            if let Some(f) = t.fields.iter_mut().find(|f| f.name == field && f.calc.is_none()) {
+                f.calc = Some(c);
             }
         }
     }

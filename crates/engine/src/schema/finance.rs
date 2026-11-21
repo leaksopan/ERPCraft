@@ -122,6 +122,8 @@ fn tables(m: &mut Metadata) {
                     F::integer("Unapplied by Entry No."),
                     F::date("Initial Entry Due Date"),
                     F::code("User ID", 50),
+                    // BC: the entry counts in the ledger entry's amounts (not an application).
+                    F::boolean("Ledger Entry Amount").read_only(),
                 ])
                 .key(&["Entry No."])
                 .pages(if party_table == CUSTOMER { "detailed-cust-ledger-entries" } else { "detailed-vendor-ledger-entries" }, None),

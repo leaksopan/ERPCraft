@@ -487,7 +487,11 @@ pub enum CalcSrc {
 /// `sum("Cust. Ledger Entry"."Amount" where("Customer No." = field("No."), Open = const(true)))`.
 #[derive(Debug, PartialEq)]
 pub struct CalcFormula {
+    /// `sum`, `count`, `exist`, `lookup`, `min`, `max`, `average`.
+    pub func: String,
     pub table: String,
+    /// The value field (`"Amount (LCY)"`); empty for count / exist.
+    pub field: String,
     pub clauses: Vec<(String, CalcSrc)>,
 }
 
@@ -499,7 +503,10 @@ pub fn calc_formula(v: &str) -> Option<CalcFormula> {
         Some(i) => (&inner[..i], inner.get(i + 7..inner.len().saturating_sub(1)).unwrap_or("")),
         None => (inner, ""),
     };
-    let table = split_all(target.trim(), '.').first().map(|t| unquote(t))?;
+    let parts = split_all(target.trim(), '.');
+    let table = parts.first().map(|t| unquote(t))?;
+    let field = parts.get(1).map(|f| unquote(f)).unwrap_or_default();
+    let func = v.get(..v.find('(')?)?.trim().to_ascii_lowercase();
     let mut out = Vec::new();
     for c in split_all(clauses, ',').into_iter().filter(|c| !c.is_empty()) {
         let (lhs, rhs) = c.split_once('=')?;
@@ -508,12 +515,13 @@ pub fn calc_formula(v: &str) -> Option<CalcFormula> {
         let src = match kind.as_str() {
             "field" => CalcSrc::Field(unquote(arg)),
             "const" => CalcSrc::Expr(unquote(arg).trim_matches('\'').to_string()),
-            "filter" => CalcSrc::Expr(arg.trim().to_string()),
+            // AL quotes option names in filters ("Initial Entry"|Application); ERPCraft's syntax doesn't.
+            "filter" => CalcSrc::Expr(arg.trim().replace('"', "")),
             _ => continue,
         };
         out.push((unquote(lhs), src));
     }
-    Some(CalcFormula { table, clauses: out })
+    Some(CalcFormula { func, table, field, clauses: out })
 }
 
 pub fn al_table(src: &str) -> Option<AlTable> {
@@ -687,7 +695,7 @@ page 21 "Customer Card"
         let c = calc_formula(r#"sum("Detailed Cust. Ledg. Entry"."Amount (LCY)" where("Customer No." = field("No."),
             "Currency Code" = field("Currency Filter"), "Excluded from calculation" = const(false), Amount = filter(<>0)))"#)
         .unwrap();
-        assert_eq!(c.table, "Detailed Cust. Ledg. Entry");
+        assert_eq!((c.func.as_str(), c.table.as_str(), c.field.as_str()), ("sum", "Detailed Cust. Ledg. Entry", "Amount (LCY)"));
         assert_eq!(
             c.clauses,
             vec![

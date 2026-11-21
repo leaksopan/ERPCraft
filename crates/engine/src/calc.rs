@@ -1,10 +1,12 @@
 //! FlowFields (AL `CalcFields`): values summed from other tables when a record is read.
 
 use chrono::NaiveDate;
-use erpcraft_meta::{Record, Value};
+use erpcraft_meta::{CalcFunc, Record, TableDef, Value};
 use rust_decimal::Decimal;
+use rust_decimal::prelude::ToPrimitive;
 
 use crate::db::Database;
+use crate::filter;
 use crate::schema::tables::{
     BANK_ACCOUNT, BANK_LEDGER, CUST_LEDGER, CUSTOMER, GL_ACCOUNT, GL_ENTRY, ITEM, ITEM_LEDGER, PURCH_CR_HEADER,
     PURCH_CR_LINE, PURCH_HEADER, PURCH_INV_HEADER, PURCH_INV_LINE, PURCH_LINE, SALES_CR_HEADER, SALES_CR_LINE,
@@ -15,8 +17,50 @@ fn sum<'a>(rows: impl Iterator<Item = &'a Record>, field: &str) -> Decimal {
     rows.map(|r| r.get(field).as_dec()).sum()
 }
 
-/// Calculates every FlowField of `r` (a record of `table`).
+/// Same value for a filter link: compared as text, case-insensitively (Code fields).
+fn same(a: &Value, b: &Value) -> bool {
+    a.to_string().eq_ignore_ascii_case(&b.to_string())
+}
+
+/// Evaluates every FlowField of `r` that has a CalcFormula. Fields the formula can't resolve
+/// (unknown table or field) keep their value.
+fn calc_formulas(db: &Database, t: &TableDef, r: &mut Record) {
+    for f in t.fields.iter().filter(|f| f.is_flow()) {
+        let Some(c) = &f.calc else { continue };
+        let Some(target) = crate::schema::base_app().table(&c.table) else { continue };
+        let rows: Vec<&Record> = db
+            .rows(&target.name)
+            .filter(|row| c.link.iter().all(|(tf, own)| same(row.get(tf), r.get(own))))
+            .filter(|row| c.fixed.iter().all(|(tf, expr)| target.field(tf).is_none_or(|fd| filter::matches(&fd.ty, row.get(tf), expr))))
+            .collect();
+        let num = |row: &&Record| row.get(&c.field).as_dec();
+        let v = match c.func {
+            CalcFunc::Sum => Value::Dec(rows.iter().map(num).sum()),
+            CalcFunc::Count => Value::Int(i64::try_from(rows.len()).unwrap_or(i64::MAX)),
+            CalcFunc::Exist => Value::Bool(!rows.is_empty()),
+            CalcFunc::Lookup => rows.first().map_or_else(|| Value::default_for(&f.ty), |row| row.get(&c.field).clone()),
+            CalcFunc::Min => rows.iter().map(|row| row.get(&c.field).clone()).min().unwrap_or_else(|| Value::default_for(&f.ty)),
+            CalcFunc::Max => rows.iter().map(|row| row.get(&c.field).clone()).max().unwrap_or_else(|| Value::default_for(&f.ty)),
+            CalcFunc::Average => {
+                let n = Decimal::from(rows.len());
+                Value::Dec(if n.is_zero() { Decimal::ZERO } else { rows.iter().map(num).sum::<Decimal>() / n })
+            }
+        };
+        // Integer FlowFields (Count, or a sum of Integer fields) stay integers.
+        let v = match (&f.ty, v) {
+            (erpcraft_meta::FieldType::Integer, Value::Dec(d)) => Value::Int(d.trunc().to_i64().unwrap_or(0)),
+            (_, v) => v,
+        };
+        r.set(&f.name, v);
+    }
+}
+
+/// Calculates every FlowField of `r` (a record of `table`): first from CalcFormulas, then the
+/// hand-written rules below, which win where BC's formula needs more than ERPCraft stores.
 pub fn calc_fields(db: &Database, work_date: NaiveDate, table: &str, r: &mut Record) {
+    if let Some(t) = crate::schema::base_app().table(table) {
+        calc_formulas(db, t, r);
+    }
     let no = r.str("No.").to_string();
     let set = |r: &mut Record, f: &str, d: Decimal| r.set(f, Value::Dec(d));
     match table {

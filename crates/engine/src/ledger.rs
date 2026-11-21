@@ -137,6 +137,8 @@ fn detailed(
     d.set("Entry No.", Value::Int(no));
     d.set(entry_field(side), Value::Int(ledger_entry));
     d.set("Entry Type", Value::text(entry_type));
+    // SetLedgerEntryAmount (BC's OnInsert): applications don't count in the entry's amounts.
+    d.set("Ledger Entry Amount", Value::Bool(!matches!(entry_type, "Application" | "Appln. Rounding")));
     d.set("Posting Date", Value::Date(posting_date));
     d.set("Document Type", Value::text(doc_type));
     d.set("Document No.", Value::text(doc_no));

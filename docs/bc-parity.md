@@ -42,6 +42,10 @@ This rewrites `crates/engine/src/schema/bc_gen.rs` from `schema::hand_written()`
 - **List columns.** The columns in BC's order.
 - **Navigation actions.** For example "Ledger Entries", when the target page exists here and its `RunPageLink` fields resolve.
 - **Action bar categories.** BC's `area(Promoted)` groups. "Process" shows as Home, and everything else is under "More options".
+- **FlowFields.**
+  - BC's `CalcFormula` (sum, count, exist, lookup, min, max, average) on new and hand-written FlowFields. The engine evaluates it whenever a record is read, then hand-written calculations in `calc.rs` override it where BC needs more than ERPCraft stores.
+  - Filters on FlowFilter fields are dropped, since those are empty by default.
+  - A fixed filter on a field ERPCraft doesn't store is kept only when that field's default value passes it, as with `Excluded from calculation = false`. Otherwise the formula is left out rather than giving a wrong sum.
 - **FlowField drill-downs.**
   - Source: each FlowField's `CalcFormula`, which names a table, opened on that table's `DrillDownPageId` with the formula's filters.
   - Dropped filters: those on FlowFilter fields (Date Filter and the like), and those on fields the target table here doesn't have.
@@ -56,6 +60,20 @@ The tool links the engine, which includes the current `bc_gen.rs`. If you change
 - **Currency in captions.** "(LCY)" shows as the G/L Setup's Local Currency Symbol, for example "Balance (Rp)".
 - **Card dialog.** It covers everything below the black app bar.
 - **Wide lists.** They scroll sideways.
+
+## Not covered yet
+
+About 100 page fields still need BC subsystems ERPCraft doesn't have:
+
+- dimensions (Shortcut Dimension 3–8);
+- reservations and item charges;
+- archived documents;
+- cancelled and corrective documents;
+- Dataverse coupling;
+- assembly BOMs;
+- Media and system fields.
+
+`cargo run -p bc-parity` lists them per page.
 
 ## The list grid
 

@@ -161,8 +161,32 @@ fn action_bar(app: &mut ErpApp, ui: &mut Ui, page: &PageDef, table: &TableDef, s
         let id = egui::Id::unique(("worksheet_tab", &page.id));
         let home = tabs.iter().position(|t| t.caption == "Home").map_or(0, |i| i + 1);
         let mut current = ui.ctx().data(|d| d.get_temp::<usize>(id)).unwrap_or(home).min(tabs.len());
+        // The batch the worksheet shows (BC's Batch Name / Name field above the lines).
+        if let Some(v) = page.view.iter().find(|v| v.field.ends_with("Batch Name") || v.field.ends_with("Worksheet Name") || v.field == "Journal Batch Name") {
+            let label = if v.field.contains("Batch") { "Batch Name" } else { "Name" };
+            ui.horizontal(|ui| {
+                ui.add_sized([180.0, 26.0], egui::Label::new(RichText::new(format!("{label} {}", ".".repeat(24))).color(TOKENS.text_dim)));
+                ui.add(egui::TextEdit::singleline(&mut v.value.clone()).desired_width(300.0).interactive(false));
+            });
+        }
+        // One category only: Manage, then its actions on the same row, as BC shows it.
+        let single = tabs.len() == 1 && tabs[0].caption == "Home";
+        if single && current > 1 {
+            current = 1;
+        }
         ui.horizontal(|ui| {
             widgets::flat(ui);
+            if single {
+                let sel = current == 0;
+                let r = ui.add(egui::Button::new(RichText::new("Manage").color(if sel { TOKENS.accent } else { TOKENS.text })).frame(false));
+                if r.clicked() {
+                    current = if sel { 1 } else { 0 };
+                }
+                crate::card::action_row(ui, &tabs[0], &mut run);
+                let all: Vec<&ActionDef> = page.actions.iter().collect();
+                action_menu(ui, "⋯", &all, &mut run);
+                return;
+            }
             let captions: Vec<String> = std::iter::once("Manage".to_string()).chain(tabs.iter().map(|t| t.caption.clone())).collect();
             for (i, c) in captions.iter().enumerate() {
                 let sel = i == current;
@@ -180,6 +204,9 @@ fn action_bar(app: &mut ErpApp, ui: &mut Ui, page: &PageDef, table: &TableDef, s
         ui.horizontal(|ui| {
             widgets::flat(ui);
             ui.set_min_height(32.0);
+            if single && current != 0 {
+                return;
+            }
             if current == 0 {
                 if page.editable && widgets::action_button(ui, "+", "New Line").clicked() && inline_edit {
                     app.dialog = Some(Dialog::new_record(page, table, &state.filters));

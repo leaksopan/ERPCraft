@@ -35,6 +35,8 @@ const FALSE_BY_DEFAULT: &[&str] = &[
     "isjournaltemplnamevisible",
     "entitytextenabled",
     "paymentservicevisible",
+    // The subform's Type field (ApplicationArea Advanced) gives way to TypeAsText.
+    "not typeastextfieldvisible",
 ];
 
 #[derive(Debug, Default)]
@@ -314,7 +316,8 @@ fn al_field(n: &Node, inherited: Vis, subgroup: Option<(usize, Option<String>)>,
     let quoted = expr.len() > 1 && expr.starts_with('"') && expr.ends_with('"');
     let word = !expr.is_empty() && expr.chars().all(|c| c.is_alphanumeric() || c == '_');
     AlField {
-        source: (quoted || (rec && word)).then(|| unquote(expr)),
+        // Document subforms show Type through a text variable (TypeAsText) in the Essential experience.
+        source: if expr == "TypeAsText" { Some("Type".to_string()) } else { (quoted || (rec && word)).then(|| unquote(expr)) },
         vis: combine(inherited, visibility(n)),
         importance: n.prop("Importance").unwrap_or("Standard").to_string(),
         caption: n.prop("Caption").and_then(literal),

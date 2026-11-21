@@ -370,8 +370,49 @@ fn doc_actions(sales: bool, doc_type: &str) -> Vec<Act> {
     }
     v.push(Act::command("Release", A::Home, &format!("{p}.document.release")).shortcut("Ctrl+F9").icon("release"));
     v.push(Act::command("Reopen", A::Home, &format!("{p}.document.reopen")).icon("reopen"));
+    // BC's posting group: Post and New, Preview Posting, Test Report.
+    if doc_type != "Quote" {
+        let post_new = Act::command("Post and New", A::Process, &format!("{p}.document.post_and_new"))
+            .shortcut("Alt+F9")
+            .icon("post")
+            .tooltip(if sales { "Post the sales document and create a new, empty one." } else { "Post the purchase document and create a new, empty one." });
+        v.push(if doc_type == "Order" { post_new.ask(&["mode"]) } else { post_new.confirm("Do you want to post the document?") });
+        v.push(
+            Act::command("Preview Posting", A::Process, &format!("{p}.document.preview_post"))
+                .icon("preview")
+                .tooltip("Review the different types of entries that will be created when you post the document or journal."),
+        );
+        v.push(
+            Act::command("Test Report", A::Report, &format!("{p}.document.test_report"))
+                .icon("report")
+                .tooltip("View a test report so that you can find and correct any errors before you perform the actual posting."),
+        );
+    }
+    v.push(
+        Act::command("Copy Document", A::Process, &format!("{p}.document.copy"))
+            .icon("copy")
+            .ask(&["from_document_type", "from_no", "include_header", "recalculate_lines"])
+            .tooltip("Copy document lines and header information from another document to this document."),
+    );
     v.push(Act::command("Statistics", A::Process, &format!("{p}.document.statistics")).shortcut("F7").icon("stats"));
     v.push(Act::command("Print...", A::Report, "document.print").shortcut("Ctrl+P").icon("print").tooltip("Print the document to PDF."));
+    if sales && doc_type == "Order" {
+        v.push(Act::command("Print Confirmation", A::Report, "document.print").icon("print").tooltip("Print an order confirmation."));
+        v.push(
+            Act::command("Work Order", A::Report, "document.print")
+                .param("report", "work_order")
+                .icon("print")
+                .tooltip("Prepare to registers actual item quantities or time used in connection with the sales order."),
+        );
+    }
+    if sales && matches!(doc_type, "Order" | "Invoice" | "Quote") {
+        v.push(
+            Act::command("Pro Forma Invoice", A::Report, "document.print")
+                .param("report", "pro_forma")
+                .icon("print")
+                .tooltip("View or print the pro forma sales invoice."),
+        );
+    }
     if sales {
         v.push(Act::page("Customer", A::Navigate, "customer-card").link("No.", "Sell-to Customer No.").icon("customer"));
     } else {

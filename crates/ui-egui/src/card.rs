@@ -526,43 +526,52 @@ fn fasttab(app: &mut ErpApp, ui: &mut Ui, page: &PageDef, table: &TableDef, rec:
     }
 }
 
+/// BC's document lines (an editable ListPart): "Lines | Manage" with New Line, Delete Line and
+/// Select items; a grid with cell borders, → on the current line and its ⋮ cell shaded, values as
+/// text until a cell is clicked, and empty rows at the end to start new lines.
 fn lines_part(app: &mut ErpApp, ui: &mut Ui, host: &PageDef, header: &Record, part: &PartDef, state: &mut CardState) {
     let Some(page) = app.session.page(&part.page) else { return };
     let Some(lt) = page.source_table.as_deref().and_then(|t| app.session.table(t)) else { return };
     let filters: Vec<(String, String)> = part.link.iter().map(|(sub, host_f)| (sub.clone(), header.get(host_f).to_string())).collect();
     let lines = app.session.page_records(page, &filters, "");
     let editable = page.editable && host.editable && state.editing;
-    ui.add_space(14.0);
-    // BC's part header: the caption and a "Manage" tab, its actions on the row below; New Line
-    // and Delete Line are greyed out until the document is in edit mode.
-    ui.horizontal(|ui| {
-        widgets::flat(ui);
-        ui.label(RichText::new(&part.caption).font(theme::bold(theme::SUBTITLE)).color(TOKENS.text));
-        ui.add_space(16.0);
-        let r = ui.label(RichText::new("Manage").color(TOKENS.accent));
-        ui.painter().line_segment([r.rect.left_bottom() + vec2(0.0, 2.0), r.rect.right_bottom() + vec2(0.0, 2.0)], egui::Stroke::new(2.0, TOKENS.accent));
-    });
-    ui.add_space(4.0);
-    ui.horizontal(|ui| {
-        widgets::flat(ui);
-        ui.add_enabled_ui(editable, |ui| {
-            if widgets::action_button(ui, "+", "New Line").clicked() {
-                let mut values = serde_json::Map::new();
-                values.insert("Type".into(), json!("Item"));
-                let mut v = serde_json::Map::new();
-                for (sub, host_f) in &part.link {
-                    v.insert(sub.clone(), header.get(host_f).to_json());
-                }
-                // Key fields go in "values" too: record.new applies them before inserting.
-                for (k, val) in v {
-                    values.insert(k, val);
-                }
-                match app.session.run("record.new", &json!({"table": lt.name, "values": values})) {
-                    Ok(r) => state.selected_line = Key::from_json(lt, r.get("key").unwrap_or(&Json::Null)).ok(),
-                    Err(e) => app.error(e.message),
-                }
+    let link_values = || {
+        let mut v = serde_json::Map::new();
+        for (sub, host_f) in &part.link {
+            v.insert(sub.clone(), header.get(host_f).to_json());
+        }
+        v
+    };
+    let new_line = |app: &mut ErpApp, state: &mut CardState, cell: Option<usize>| {
+        let mut values = link_values();
+        values.insert("Type".into(), json!("Item"));
+        match app.session.run("record.new", &json!({"table": lt.name, "values": values})) {
+            Ok(r) => {
+                state.selected_line = Key::from_json(lt, r.get("key").unwrap_or(&Json::Null)).ok();
+                state.line_cell = cell;
             }
-            if widgets::action_button(ui, "🗑", "Delete Line").clicked() {
+            Err(e) => app.error(e.message),
+        }
+    };
+    let side_prefix = if lt.name.starts_with("Sales") { "sales" } else { "purchase" };
+    ui.add_space(14.0);
+    ui.horizontal(|ui| {
+        widgets::flat(ui);
+        ui.set_min_height(30.0);
+        ui.label(RichText::new(&part.caption).font(theme::bold(theme::SUBTITLE)).color(TOKENS.text));
+        widgets::vsep(ui);
+        let r = ui.label(RichText::new("Manage").color(TOKENS.accent));
+        ui.painter().line_segment([r.rect.left_bottom() + vec2(0.0, 3.0), r.rect.right_bottom() + vec2(0.0, 3.0)], egui::Stroke::new(2.0, TOKENS.accent));
+    });
+    widgets::divider(ui);
+    ui.horizontal(|ui| {
+        widgets::flat(ui);
+        ui.set_min_height(34.0);
+        ui.add_enabled_ui(editable, |ui| {
+            if widgets::action_button(ui, "⊞", "New Line").on_hover_text("Add a new line.").clicked() {
+                new_line(app, state, Some(0));
+            }
+            if widgets::action_button(ui, "✖", "Delete Line").on_hover_text("Delete the selected line.").clicked() {
                 if let Some(k) = state.selected_line.clone() {
                     app.run("record.delete", json!({"table": lt.name, "key": k.to_json()}));
                     state.selected_line = None;
@@ -570,41 +579,55 @@ fn lines_part(app: &mut ErpApp, ui: &mut Ui, host: &PageDef, header: &Record, pa
                     app.error("Select a line to delete.");
                 }
             }
+            if widgets::action_button(ui, "▤", "Select items...").on_hover_text("Add two or more items from the full list of your inventory items.").clicked() {
+                let items: Vec<(String, String, bool)> = app.session.db().rows("Item").map(|r| (r.str("No.").to_string(), r.str("Description").to_string(), false)).collect();
+                let base = json!({"document_type": header.str("Document Type"), "no": header.str("No.")});
+                app.dialog = Some(Dialog::SelectItems { command: format!("{side_prefix}.document.select_items"), base, items });
+            }
         });
     });
     let cols: Vec<&FieldDef> = page.columns.iter().filter_map(|c| lt.field(c)).collect();
     let items = table_values(app, "Item").unwrap_or_default();
     let accounts = table_values(app, "G/L Account").unwrap_or_default();
     let mut commit: Option<(Key, String, Json)> = None;
-    let height = (lines.len() as f32 * 34.0 + 72.0).clamp(110.0, 460.0);
+    let mut select: Option<(Key, Option<usize>)> = None;
+    let mut start_new: Option<usize> = None;
+    let mut delete: Option<Key> = None;
+    let blank_rows = if editable { 3 } else { 0 };
+    let total_rows = lines.len() + blank_rows;
+    let height = (total_rows as f32 * 30.0 + 64.0).clamp(110.0, 460.0);
     let mut row_tops: Vec<f32> = Vec::new();
+    let mut edges: Vec<f32> = Vec::new();
     let mut span = (f32::MAX, f32::MIN);
     let mut body_clip = egui::Rect::NOTHING;
     egui::ScrollArea::horizontal().id_salt(("lines_scroll", &part.page)).show(ui, |ui| {
         ui.set_height(height);
-        // The same grid as list pages: no column lines, one line between rows.
         ui.spacing_mut().item_spacing.y = 0.0;
         ui.visuals_mut().widgets.noninteractive.bg_stroke = egui::Stroke::NONE;
         let mut b = TableBuilder::new(ui)
             .id_salt(("lines", &part.page, header.str("No.")))
             .resizable(true)
-            .sense(Sense::click())
             .auto_shrink([false, true])
-            .cell_layout(Layout::left_to_right(Align::Center));
-        for f in &cols {
+            .cell_layout(Layout::left_to_right(Align::Center))
+            .column(Column::exact(22.0).resizable(false));
+        for (i, f) in cols.iter().enumerate() {
             let w = match f.name.as_str() {
                 "Description" => 220.0,
-                "Type" => 100.0,
+                "Type" => 120.0,
                 "No." => 100.0,
-                "Unit of Measure Code" => 70.0,
-                n if n.starts_with("Qty") || n.starts_with("Quantity") => 80.0,
-                "Line Discount %" => 70.0,
+                "Unit of Measure Code" => 80.0,
+                n if n.starts_with("Qty") || n.starts_with("Quantity") => 90.0,
+                "Line Discount %" => 80.0,
                 _ => 110.0,
             };
-            b = b.column(Column::initial(w).at_least(50.0).clip(true));
+            b = b.column(Column::initial(w).at_least(40.0).clip(true));
+            if i == 0 {
+                b = b.column(Column::exact(30.0).resizable(false));
+            }
         }
         b.header(58.0, |mut h| {
-            for f in &cols {
+            h.col(|_| {});
+            for (i, f) in cols.iter().enumerate() {
                 h.col(|ui| {
                     let layout = if f.ty.is_numeric() { Layout::bottom_up(Align::Max) } else { Layout::bottom_up(Align::Min) };
                     ui.with_layout(layout, |ui| {
@@ -612,53 +635,131 @@ fn lines_part(app: &mut ErpApp, ui: &mut Ui, host: &PageDef, header: &Record, pa
                         ui.add(egui::Label::new(RichText::new(&f.caption).size(theme::SMALL).color(TOKENS.grid_header)).wrap());
                     });
                 });
+                if i == 0 {
+                    h.col(|_| {});
+                }
             }
         })
         .body(|body| {
-            body.rows(34.0, lines.len(), |mut row| {
-                let Some(l) = lines.get(row.index()) else { return };
-                let key = l.key(lt);
-                row.set_selected(state.selected_line.as_ref() == Some(&key));
+            body.rows(30.0, total_rows, |mut row| {
+                let idx = row.index();
+                let line = lines.get(idx);
+                let key = line.map(|l| l.key(lt));
+                let current = key.is_some() && state.selected_line == key;
+                let mut track = |ui: &Ui, first: bool| {
+                    let cell = ui.max_rect();
+                    span.0 = span.0.min(cell.left());
+                    span.1 = span.1.max(cell.right());
+                    body_clip = body_clip.union(ui.clip_rect());
+                    if first {
+                        row_tops.push(cell.top());
+                    }
+                    if idx == 0 || row_tops.len() == 1 {
+                        edges.push(cell.right());
+                    }
+                };
+                row.col(|ui| {
+                    track(ui, true);
+                    if current {
+                        ui.label(RichText::new("→").color(TOKENS.text));
+                    }
+                });
                 for (i, f) in cols.iter().enumerate() {
+                    let mut clicked = false;
                     row.col(|ui| {
-                        let cell = ui.max_rect();
-                        span.0 = span.0.min(cell.left());
-                        span.1 = span.1.max(cell.right());
-                        body_clip = body_clip.union(ui.clip_rect());
-                        if i == 0 {
-                            row_tops.push(cell.top());
-                        }
-                        let wid = format!("line|{}|{}|{}", lt.name, key.display(), f.name);
+                        track(ui, false);
+                        // Clicks per cell: BC's editable grid doesn't highlight the hovered row.
+                        clicked = ui.interact(ui.max_rect(), ui.scope_id().with(("line_cell", idx, i)), Sense::click()).clicked();
+                        let Some(l) = line else { return };
                         let can_edit = editable && f.editable && !lt.primary_key.contains(&f.name);
-                        let lookup = if f.name == "No." {
-                            match l.str("Type") {
-                                "Item" => Some(&items),
-                                "G/L Account" => Some(&accounts),
-                                _ => None,
+                        let numeric = f.ty.is_numeric();
+                        if can_edit && current && state.line_cell == Some(i) {
+                            let wid = format!("line|{}|{}|{}", lt.name, key.as_ref().map(Key::display).unwrap_or_default(), f.name);
+                            let lookup = if f.name == "No." {
+                                match l.str("Type") {
+                                    "Item" => Some(&items),
+                                    "G/L Account" => Some(&accounts),
+                                    _ => None,
+                                }
+                            } else {
+                                None
+                            };
+                            let w = ui.available_width() - 4.0;
+                            if let Some(v) = widgets::field_editor(&mut app.bufs, ui, &wid, f, l.get(&f.name), true, lookup, w)
+                                && let Some(k) = &key
+                            {
+                                commit = Some((k.clone(), f.name.clone(), v));
                             }
                         } else {
-                            None
-                        };
-                        let w = ui.available_width() - 4.0;
-                        if let Some(v) = widgets::field_editor(&mut app.bufs, ui, &wid, f, l.get(&f.name), can_edit, lookup, w) {
-                            commit = Some((key.clone(), f.name.clone(), v));
+                            let text = widgets::display_field(l.get(&f.name), f);
+                            let t = RichText::new(text).size(14.0).color(TOKENS.grid_text);
+                            if numeric {
+                                ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
+                                    ui.add_space(6.0);
+                                    ui.label(t);
+                                });
+                            } else {
+                                ui.add_space(4.0);
+                                ui.label(t);
+                            }
                         }
                     });
-                }
-                if row.response().clicked() {
-                    state.selected_line = Some(key.clone());
+                    if clicked {
+                        match &key {
+                            Some(k) => select = Some((k.clone(), Some(i))),
+                            None if editable => start_new = Some(i),
+                            None => {}
+                        }
+                    }
+                    if i == 0 {
+                        row.col(|ui| {
+                            track(ui, false);
+                            let cell = ui.max_rect();
+                            if current {
+                                ui.painter().rect_filled(cell, 0.0, TOKENS.row_selected);
+                            }
+                            let Some(k) = &key else { return };
+                            let r = ui.add(egui::Button::new(RichText::new("⋮").size(16.0).color(TOKENS.grid_text)).frame(false));
+                            egui::Popup::from_toggle_button_response(&r).close_behavior(egui::PopupCloseBehavior::CloseOnClickOutside).width(200.0).show(|ui| {
+                                if ui.add_enabled(editable, egui::Button::new("✖   Delete Line").frame(false)).clicked() {
+                                    delete = Some(k.clone());
+                                    ui.close();
+                                }
+                            });
+                        });
+                    }
                 }
             });
         });
     });
     if span.0 < span.1 {
-        let painter = ui.painter().with_clip_rect(body_clip);
-        for y in row_tops.iter().copied().chain(row_tops.last().map(|y| y + 34.0)) {
-            painter.hline(egui::Rangef::new(span.0, span.1), y, egui::Stroke::new(1.0, TOKENS.grid_line));
+        // Cell borders like BC's editable grid: a line above each row and between columns.
+        let painter = ui.painter().with_clip_rect(body_clip.expand(1.0));
+        let stroke = egui::Stroke::new(1.0, TOKENS.grid_line);
+        let bottom = row_tops.last().map_or(0.0, |y| y + 30.0);
+        for y in row_tops.iter().copied().chain(std::iter::once(bottom)) {
+            painter.hline(egui::Rangef::new(span.0, span.1), y, stroke);
+        }
+        if let Some(top) = row_tops.first() {
+            let gap = 4.0;
+            for x in edges.iter().take(cols.len() + 1) {
+                painter.vline(x + gap, egui::Rangef::new(*top, bottom), stroke);
+            }
         }
     }
-    if lines.is_empty() {
-        ui.label(RichText::new("No lines yet. Use + New Line.").italics().color(TOKENS.text_dim));
+    if lines.is_empty() && !editable {
+        ui.label(RichText::new("No lines yet. Choose Edit, then New Line.").italics().color(TOKENS.text_dim));
+    }
+    if let Some((k, cell)) = select {
+        state.selected_line = Some(k);
+        state.line_cell = cell;
+    }
+    if let Some(cell) = start_new {
+        new_line(app, state, Some(cell));
+    }
+    if let Some(k) = delete {
+        app.run("record.delete", json!({"table": lt.name, "key": k.to_json()}));
+        state.selected_line = None;
     }
     if let Some((key, field, value)) = commit {
         state.selected_line = Some(key.clone());

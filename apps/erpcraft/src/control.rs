@@ -326,6 +326,7 @@ pub fn state(app: &ErpApp) -> Value {
         Some(Dialog::Confirm { text, command, .. }) => json!({"kind": "confirm", "text": text, "command": command}),
         Some(Dialog::Form { title, .. }) => json!({"kind": "form", "title": title}),
         Some(Dialog::Report { title, .. }) => json!({"kind": "report", "title": title}),
+        Some(Dialog::SelectItems { command, items, .. }) => json!({"kind": "select_items", "command": command, "items": items.len()}),
     };
     json!({
         "stack": stack,

@@ -67,13 +67,24 @@ fn date(r: &Record, f: &str) -> String {
 }
 
 /// Renders the document `key` of `table` as a PDF.
-pub fn render(ctx: &Ctx, table: &str, key: &Key) -> Result<(Vec<u8>, String, usize)> {
+pub fn render(ctx: &Ctx, table: &str, key: &Key, report: Option<&str>) -> Result<(Vec<u8>, String, usize)> {
     let t = ctx.table(table)?;
     let mut h = ctx.get(&t.name, key)?;
     calc_fields(ctx.db, ctx.work_date, &t.name, &mut h);
-    let Some(k) = kind(&t.name, h.str("Document Type")) else {
+    let Some(mut k) = kind(&t.name, h.str("Document Type")) else {
         refuse!("{} cannot be printed. Print sales and purchase documents, posted invoices, credit memos, shipments or receipts.", t.caption);
     };
+    // BC's other reports on an open sales document: Pro Forma Invoice (prices) and Work Order (no
+    // prices, for the workshop).
+    match report {
+        Some("pro_forma") if k.sales && t.name == SALES_HEADER => k.title = "Pro Forma Invoice",
+        Some("work_order") if k.sales && t.name == SALES_HEADER => {
+            k.title = "Work Order";
+            k.prices = false;
+        }
+        None | Some("default") => {}
+        Some(other) => refuse!("Report '{other}' is not available for {}. Use default, pro_forma or work_order.", t.caption),
+    }
     let company = ctx.setup(COMPANY_INFO)?;
     let lcy = match ctx.setup(GL_SETUP)?.str("LCY Code") {
         "" => "LCY".to_string(),
@@ -263,7 +274,9 @@ fn s_print() -> Json {
     json!({"type": "object", "properties": {
         "table": {"type": "string", "description": "Sales Header, Purchase Header, Sales Invoice Header, Sales Cr.Memo Header, Purch. Inv. Header, Sales Shipment Header, …"},
         "key": {"description": "the document's key, e.g. [\"Order\", \"S-ORD1001\"] or \"PS-INV103001\""},
-        "path": {"type": "string", "description": "write the PDF here (must end in .pdf); without it the PDF comes back as base64"}},
+        "path": {"type": "string", "description": "write the PDF here (must end in .pdf); without it the PDF comes back as base64"},
+        "report": {"type": "string", "enum": ["default", "pro_forma", "work_order"], "default": "default",
+                   "description": "sales documents: Pro Forma Invoice or Work Order instead of the document itself"}},
         "required": ["table", "key"]})
 }
 
@@ -271,7 +284,7 @@ fn print_document(ctx: &mut Ctx, p: &Json) -> Result<Json> {
     let table = p.get("table").and_then(Json::as_str).ok_or_else(|| EngineError::invalid("missing parameter 'table'"))?;
     let t = ctx.table(table)?;
     let key = Key::from_json(t, p.get("key").unwrap_or(&Json::Null)).map_err(EngineError::invalid)?;
-    let (bytes, title, pages) = render(ctx, &t.name, &key)?;
+    let (bytes, title, pages) = render(ctx, &t.name, &key, p.get("report").and_then(Json::as_str))?;
     let mut out = json!({"title": title, "pages": pages, "bytes": bytes.len()});
     match p.get("path").and_then(Json::as_str).map(str::trim).filter(|s| !s.is_empty()) {
         Some(path) => {

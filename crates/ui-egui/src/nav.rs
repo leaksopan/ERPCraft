@@ -38,6 +38,8 @@ pub struct CardState {
     pub table: String,
     pub key: Key,
     pub selected_line: Option<Key>,
+    /// The line cell being edited (column index), like BC's current cell in an editable part.
+    pub line_cell: Option<usize>,
     /// Cards open in view mode; ✏, a click on a field or on a FastTab header switches to edit.
     pub editing: bool,
     /// Expanded: the page dialog fills the content area (40 px inset) instead of 1328 px.
@@ -58,6 +60,7 @@ impl View {
             table,
             key,
             selected_line: None,
+            line_cell: None,
             editing: false,
             expanded: false,
             nav: None,

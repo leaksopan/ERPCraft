@@ -13,6 +13,8 @@ pub enum Dialog {
     Confirm { text: String, command: String, params: Json },
     Form { title: String, submit: Submit, fields: Vec<FormField> },
     Report { title: String, columns: Vec<String>, rows: Vec<Vec<String>> },
+    /// BC's Select items: tick items, OK adds a line for each.
+    SelectItems { command: String, base: Json, items: Vec<(String, String, bool)> },
 }
 
 pub enum Submit {
@@ -62,12 +64,19 @@ impl Dialog {
                     Json::Null => String::new(),
                     other => other.to_string(),
                 });
-                let options: Vec<String> = prop
-                    .and_then(|p| p.get("enum"))
-                    .and_then(Json::as_array)
-                    .map(|a| a.iter().filter_map(|v| v.as_str().map(str::to_string)).collect())
-                    .unwrap_or_default();
-                let default = prop.and_then(|p| p.get("default")).and_then(Json::as_str).map(str::to_string);
+                let boolean = prop.and_then(|p| p.get("type")).and_then(Json::as_str) == Some("boolean");
+                let options: Vec<String> = if boolean {
+                    vec!["Yes".to_string(), "No".to_string()]
+                } else {
+                    prop.and_then(|p| p.get("enum"))
+                        .and_then(Json::as_array)
+                        .map(|a| a.iter().filter_map(|v| v.as_str().map(str::to_string)).collect())
+                        .unwrap_or_default()
+                };
+                let default = prop.and_then(|p| p.get("default")).and_then(|d| match d {
+                    Json::Bool(b) => Some(if *b { "Yes" } else { "No" }.to_string()),
+                    other => other.as_str().map(str::to_string),
+                });
                 let value = value.filter(|v| !v.is_empty()).or(default).or_else(|| options.first().cloned()).unwrap_or_default();
                 FormField { caption: caption(&name), name, hint, value, options }
             })
@@ -225,6 +234,32 @@ pub fn show(app: &mut ErpApp, ctx: &egui::Context) {
                             }
                             Submit::NewRecord { table } => ("record.new".to_string(), json!({"table": table, "values": values})),
                         });
+                    }
+                });
+            }
+            Dialog::SelectItems { command, base, items } => {
+                ui.label(RichText::new("Select items").font(theme::bold(theme::SUBTITLE)));
+                ui.add_space(8.0);
+                egui::ScrollArea::vertical().max_height(420.0).show(ui, |ui| {
+                    egui::Grid::new("select_items").num_columns(2).spacing(vec2(14.0, 6.0)).show(ui, |ui| {
+                        for (no, desc, on) in items.iter_mut() {
+                            ui.checkbox(on, RichText::new(no.as_str()).color(TOKENS.accent));
+                            ui.label(desc.as_str());
+                            ui.end_row();
+                        }
+                    });
+                });
+                ui.add_space(12.0);
+                ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
+                    if ui.button("  Cancel  ").clicked() {
+                        keep = false;
+                    }
+                    let chosen: Vec<Json> = items.iter().filter(|(_, _, on)| *on).map(|(no, _, _)| json!(no)).collect();
+                    if ui.add_enabled(!chosen.is_empty(), egui::Button::new("  OK  ").fill(TOKENS.accent)).clicked() {
+                        keep = false;
+                        let mut p = base.as_object().cloned().unwrap_or_default();
+                        p.insert("items".into(), Json::Array(chosen));
+                        then_run = Some((command.clone(), Json::Object(p)));
                     }
                 });
             }

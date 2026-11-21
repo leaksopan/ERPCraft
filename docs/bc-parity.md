@@ -61,6 +61,24 @@ The tool links the engine, which includes the current `bc_gen.rs`. If you change
 - **Card dialog.** It covers everything below the black app bar.
 - **Wide lists.** They scroll sideways.
 
+## Document pages
+
+- **Document functions.** Sales and purchase documents have BC's posting and copy functions:
+  - Post and New (Alt+F9);
+  - Preview Posting: the entries posting would make, posted to a copy that is then discarded;
+  - Test Report: what would stop posting;
+  - Copy Document: lines and customer or vendor from another document or a posted invoice or credit memo, with or without recalculating prices;
+  - Select items.
+
+  Sales orders also print Print Confirmation, Work Order (no prices) and Pro Forma Invoice. The commands are in `crates/engine/src/doc_tools.rs`.
+- **Lines part.** It follows BC's editable subform:
+  - "Lines | Manage" with New Line, Delete Line and Select items..., greyed out until edit mode;
+  - cell borders, → on the current line and its ⋮ cell shaded;
+  - values as text until a cell is clicked, then that cell becomes an editor;
+  - three empty rows at the end, where a click starts a new line.
+- **Type column.** It comes from `TypeAsText`, as on BC's subforms.
+- **Visibility.** Page variables that are false in a standard company hide the fields they control: manual document numbers, Quote No., VAT Date, approvals, Dataverse.
+
 ## Not covered yet
 
 About 100 page fields still need BC subsystems ERPCraft doesn't have:

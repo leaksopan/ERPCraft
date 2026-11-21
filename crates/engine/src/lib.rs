@@ -18,6 +18,7 @@ pub mod db;
 mod demo;
 mod documents;
 pub mod bc;
+pub mod doc_tools;
 mod error;
 pub mod fa;
 pub mod item_journal;

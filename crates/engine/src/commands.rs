@@ -51,8 +51,8 @@ impl CommandDef {
 }
 
 /// Modules that add commands of their own (each a `static` slice of [`CommandDef`]).
-fn module_commands() -> [&'static [CommandDef]; 2] {
-    [crate::print::COMMANDS, crate::bc::COMMANDS]
+fn module_commands() -> [&'static [CommandDef]; 3] {
+    [crate::print::COMMANDS, crate::bc::COMMANDS, crate::doc_tools::COMMANDS]
 }
 
 pub fn find(id: &str) -> Option<&'static CommandDef> {
@@ -77,7 +77,7 @@ fn obj(params: &Json) -> Map<String, Json> {
     params.as_object().cloned().unwrap_or_default()
 }
 
-fn opt_str<'a>(params: &'a Json, name: &str) -> Option<&'a str> {
+pub(crate) fn opt_str<'a>(params: &'a Json, name: &str) -> Option<&'a str> {
     params.get(name).and_then(Json::as_str).map(str::trim).filter(|s| !s.is_empty())
 }
 
@@ -136,7 +136,7 @@ fn context_code(params: &Json, table: &str) -> Option<String> {
 }
 
 /// (document type, no.) from `document_type` + `no`, or from a header context.
-fn doc_ref(params: &Json, side: &Side) -> Result<(String, String)> {
+pub(crate) fn doc_ref(params: &Json, side: &Side) -> Result<(String, String)> {
     if let Some(k) = context_key(params, side.header)
         && let [t, n] = k.as_slice()
         && let (Some(t), Some(n)) = (t.as_str(), n.as_str())

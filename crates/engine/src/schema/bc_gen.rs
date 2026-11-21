@@ -3312,7 +3312,7 @@ pub fn extend(m: &mut Metadata) {
         ],
     );
     columns(m, "purchase-invoices", &["No.", "Buy-from Vendor No.", "Buy-from Vendor Name", "Vendor Invoice No.", "Location Code", "Assigned User ID", "Job Queue Status", "Amount"]);
-    columns(m, "purchase-lines", &["No.", "Item Reference No.", "Description", "Location Code", "Quantity", "Unit of Measure Code", "Direct Unit Cost", "Tax Area Code", "Tax Group Code", "Line Amount", "Non-Deductible VAT Base", "Non-Deductible VAT Amount", "Qty. to Receive", "Quantity Received", "Qty. to Invoice", "Quantity Invoiced", "Selected Alloc. Account No.", "Promised Receipt Date", "Planned Receipt Date", "Expected Receipt Date", "Shortcut Dimension 1 Code", "Shortcut Dimension 2 Code", "Over-Receipt Quantity", "Over-Receipt Code"]);
+    columns(m, "purchase-lines", &["Type", "No.", "Item Reference No.", "Description", "Location Code", "Quantity", "Unit of Measure Code", "Direct Unit Cost", "Tax Area Code", "Tax Group Code", "Line Amount", "Non-Deductible VAT Base", "Non-Deductible VAT Amount", "Qty. to Receive", "Quantity Received", "Qty. to Invoice", "Quantity Invoiced", "Selected Alloc. Account No.", "Promised Receipt Date", "Planned Receipt Date", "Expected Receipt Date", "Shortcut Dimension 1 Code", "Shortcut Dimension 2 Code", "Over-Receipt Quantity", "Over-Receipt Code"]);
     layout(
         m,
         "purchase-order",
@@ -3517,7 +3517,7 @@ pub fn extend(m: &mut Metadata) {
         ],
     );
     columns(m, "sales-invoice-list", &["No.", "Sell-to Customer No.", "Sell-to Customer Name", "External Document No.", "Sell-to Contact", "Posting Date", "Location Code", "Assigned User ID", "Due Date", "Job Queue Status", "Amount"]);
-    columns(m, "sales-lines", &["No.", "Item Reference No.", "Description", "Location Code", "Quantity", "Qty. to Assemble to Order", "Unit of Measure Code", "Unit Price", "Tax Area Code", "Tax Group Code", "Line Discount %", "Line Amount", "Selected Alloc. Account No.", "Qty. to Ship", "Quantity Shipped", "Qty. to Invoice", "Quantity Invoiced", "Shipment Date", "Shortcut Dimension 1 Code", "Shortcut Dimension 2 Code"]);
+    columns(m, "sales-lines", &["Type", "No.", "Item Reference No.", "Description", "Location Code", "Quantity", "Qty. to Assemble to Order", "Unit of Measure Code", "Unit Price", "Tax Area Code", "Tax Group Code", "Line Discount %", "Line Amount", "Selected Alloc. Account No.", "Qty. to Ship", "Quantity Shipped", "Qty. to Invoice", "Quantity Invoiced", "Shipment Date", "Shortcut Dimension 1 Code", "Shortcut Dimension 2 Code"]);
     layout(
         m,
         "sales-order",
@@ -4183,7 +4183,8 @@ pub fn extend(m: &mut Metadata) {
         m,
         "purchase-credit-memo",
         &[
-            ("Process", &["P&ost", "Re&lease", "Re&open"]),
+            ("Process", &["P&ost", "Preview Posting", "Post and New", "Re&lease", "Re&open"]),
+            ("Prepare", &["Copy Document"]),
             ("Credit Memo", &["Statistics", "Vendor"]),
         ],
     );
@@ -4192,7 +4193,7 @@ pub fn extend(m: &mut Metadata) {
         "purchase-credit-memos",
         &[
             ("Release", &["Re&lease", "Re&open"]),
-            ("Posting", &["P&ost"]),
+            ("Posting", &["P&ost", "Preview Posting"]),
             ("Credit Memo", &["Statistics", "Vendor"]),
         ],
     );
@@ -4200,7 +4201,8 @@ pub fn extend(m: &mut Metadata) {
         m,
         "purchase-invoice",
         &[
-            ("Process", &["P&ost", "Re&lease", "Re&open"]),
+            ("Process", &["P&ost", "Preview Posting", "Post and New", "Re&lease", "Re&open"]),
+            ("Prepare", &["Copy Document"]),
             ("Invoice", &["Statistics", "Vendor"]),
         ],
     );
@@ -4209,7 +4211,7 @@ pub fn extend(m: &mut Metadata) {
         "purchase-invoices",
         &[
             ("Release", &["Re&lease", "Re&open"]),
-            ("Posting", &["P&ost"]),
+            ("Posting", &["P&ost", "Preview Posting"]),
             ("Invoice", &["Statistics", "Vendor"]),
         ],
     );
@@ -4224,7 +4226,8 @@ pub fn extend(m: &mut Metadata) {
         m,
         "purchase-order",
         &[
-            ("Process", &["P&ost", "Re&lease", "Re&open"]),
+            ("Process", &["P&ost", "Preview Posting", "Post and New", "Re&lease", "Re&open"]),
+            ("Prepare", &["Copy Document"]),
             ("Print/Send", &["&Print"]),
             ("Order", &["Statistics", "Vendor", "Receipts"]),
         ],
@@ -4241,7 +4244,7 @@ pub fn extend(m: &mut Metadata) {
         "purchase-order-list",
         &[
             ("Release", &["Re&lease", "Re&open"]),
-            ("Posting", &["P&ost"]),
+            ("Posting", &["P&ost", "Preview Posting"]),
             ("Print/Send", &["&Print"]),
             ("Order", &["Statistics", "Receipts"]),
         ],
@@ -4251,6 +4254,7 @@ pub fn extend(m: &mut Metadata) {
         "purchase-quote",
         &[
             ("Process", &["Make &Order", "Re&lease", "Re&open"]),
+            ("Prepare", &["Copy Document"]),
             ("Print/Send", &["&Print"]),
             ("Quote", &["Statistics", "Vendor"]),
         ],
@@ -4283,7 +4287,8 @@ pub fn extend(m: &mut Metadata) {
         m,
         "sales-credit-memo",
         &[
-            ("Process", &["P&ost", "Re&lease", "Re&open"]),
+            ("Process", &["P&ost", "Preview Posting", "Re&lease", "Re&open"]),
+            ("Prepare", &["Copy Document"]),
             ("Credit Memo", &["Statistics", "Customer"]),
         ],
     );
@@ -4292,7 +4297,7 @@ pub fn extend(m: &mut Metadata) {
         "sales-credit-memos",
         &[
             ("Release", &["Re&lease", "Re&open"]),
-            ("Posting", &["P&ost"]),
+            ("Posting", &["P&ost", "Preview Posting"]),
             ("Credit Memo", &["Statistics", "Customer"]),
         ],
     );
@@ -4300,7 +4305,9 @@ pub fn extend(m: &mut Metadata) {
         m,
         "sales-invoice",
         &[
-            ("Process", &["P&ost", "Re&lease", "Re&open"]),
+            ("Process", &["P&ost", "Preview Posting", "Post and New", "Re&lease", "Re&open"]),
+            ("Prepare", &["Copy Document"]),
+            ("Print/Send", &["Pro Forma Invoice"]),
             ("Invoice", &["Statistics", "Customer"]),
         ],
     );
@@ -4316,7 +4323,7 @@ pub fn extend(m: &mut Metadata) {
         "sales-invoice-list",
         &[
             ("Release", &["Re&lease", "Re&open"]),
-            ("Posting", &["P&ost"]),
+            ("Posting", &["P&ost", "Preview Posting"]),
             ("Invoice", &["Statistics", "Customer", "Posted Sales Invoices"]),
         ],
     );
@@ -4331,7 +4338,9 @@ pub fn extend(m: &mut Metadata) {
         m,
         "sales-order",
         &[
-            ("Process", &["P&ost", "Re&lease", "Re&open"]),
+            ("Process", &["P&ost", "Preview Posting", "Post and New", "Re&lease", "Re&open"]),
+            ("Prepare", &["Copy Document"]),
+            ("Print/Send", &["Print Confirmation", "Work Order", "Pro Forma Invoice"]),
             ("Order", &["Statistics", "Customer", "S&hipments"]),
         ],
     );
@@ -4347,7 +4356,8 @@ pub fn extend(m: &mut Metadata) {
         "sales-order-list",
         &[
             ("Release", &["Re&lease", "Re&open"]),
-            ("Posting", &["P&ost"]),
+            ("Posting", &["P&ost", "Preview Posting"]),
+            ("Print/Send", &["Print Confirmation", "Work Order"]),
             ("Order", &["Statistics", "S&hipments"]),
         ],
     );
@@ -4356,6 +4366,7 @@ pub fn extend(m: &mut Metadata) {
         "sales-quote",
         &[
             ("Process", &["Make &Order", "Re&lease", "Re&open"]),
+            ("Prepare", &["Copy Document"]),
             ("Print/Send", &["&Print"]),
             ("Quote", &["Statistics", "Customer"]),
         ],

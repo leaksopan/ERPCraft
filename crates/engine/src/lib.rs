@@ -33,6 +33,7 @@ pub mod vat;
 pub mod bank_rec;
 pub mod reminders;
 pub mod recurring;
+pub mod item_setup;
 mod error;
 pub mod fa;
 pub mod item_journal;

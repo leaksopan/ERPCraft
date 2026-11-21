@@ -753,6 +753,49 @@ pub fn extend(m: &mut Metadata) {
     );
     relabel(
         m,
+        "Extended Text Header",
+        &[
+            ("Language Code", "Language Code", "Specifies the language that is used when translating specified text on documents to foreign business partner, such as an item description on an order confirmation.", 0),
+            ("Starting Date", "Starting Date", "Specifies a date from which the text will be used on the item, account, resource or standard text.", 0),
+            ("Ending Date", "Ending Date", "Specifies a date on which the text will no longer be used on the item, account, resource or standard text.", 0),
+            ("All Language Codes", "All Language Codes", "Specifies whether the text should be used for all language codes. If a language code has been chosen in the Language Code field, it will be overruled by this function.", 0),
+            ("Description", "Description", "Specifies the content of the extended item description.", 0),
+            ("Sales Quote", "Sales Quote", "Specifies whether the text will be available on sales quotes.", 0),
+            ("Sales Invoice", "Sales Invoice", "Specifies whether the text will be available on sales invoices.", 0),
+            ("Sales Order", "Sales Order", "Specifies whether the text will be available on sales orders.", 0),
+            ("Sales Credit Memo", "Sales Credit Memo", "Specifies whether the text will be available on sales credit memos.", 0),
+            ("Purchase Quote", "Purchase Quote", "Specifies whether the text will be available on purchase quotes.", 0),
+            ("Purchase Invoice", "Purchase Invoice", "Specifies whether the text will be available on purchase invoices.", 0),
+            ("Purchase Order", "Purchase Order", "Specifies whether the text will be available on purchase orders.", 0),
+            ("Purchase Credit Memo", "Purchase Credit Memo", "Specifies whether the text will be available on purchase credit memos.", 0),
+        ],
+    );
+    fields(
+        m,
+        "Extended Text Header",
+        vec![
+            F::boolean("Reminder").tooltip("Specifies whether the extended text will be available on reminders."),
+            F::boolean("Finance Charge Memo").tooltip("Specifies whether the extended text will be available on finance charge memos."),
+            F::boolean("Sales Blanket Order").tooltip("Specifies whether the text will be available on sales blanket orders."),
+            F::boolean("Purchase Blanket Order").tooltip("Specifies whether the text will be available on purchase blanket orders."),
+            F::boolean("Prepmt. Sales Invoice").tooltip("Specifies whether the text will be available on prepayment sales invoices."),
+            F::boolean("Prepmt. Sales Credit Memo").tooltip("Specifies whether the text will be available on prepayment sales credit memos."),
+            F::boolean("Prepmt. Purchase Invoice").tooltip("Specifies whether the text will be available on prepayment purchase invoices."),
+            F::boolean("Prepmt. Purchase Credit Memo").tooltip("Specifies whether the text will be available on prepayment purchase credit memos."),
+            F::boolean("Job").caption("Project").tooltip("Specifies whether the text will be available on projects."),
+            F::boolean("Sales Return Order").tooltip("Specifies whether the text will be available on sales return orders."),
+            F::boolean("Purchase Return Order").tooltip("Specifies whether the text will be available on purchase return orders."),
+        ],
+    );
+    relabel(
+        m,
+        "Extended Text Line",
+        &[
+            ("Text", "Text", "Specifies the text. You can use both numbers and letters. There are no restrictions as to the number of lines you can use.", 0),
+        ],
+    );
+    relabel(
+        m,
         "FA Class",
         &[
             ("Code", "Code", "Specifies a code for the class that the fixed asset belongs to.", 0),
@@ -1720,6 +1763,8 @@ pub fn extend(m: &mut Metadata) {
             ("Price Includes VAT", "Price Includes VAT", "Specifies if the Unit Price and Line Amount fields on sales document lines for this item should be shown with or without VAT.", 0),
             ("Gen. Prod. Posting Group", "Gen. Prod. Posting Group", "Specifies the item's product type to link transactions made for this item with the appropriate general ledger account according to the general posting setup.", 0),
             ("VAT Prod. Posting Group", "VAT Prod. Posting Group", "Specifies the VAT product posting group. Links business transactions made for the item, resource, or G/L account with the general ledger, to account for VAT amounts resulting from trade with that record.", 0),
+            ("Sales Unit of Measure", "Sales Unit of Measure", "Specifies the unit of measure code used when you sell the item.", 0),
+            ("Purch. Unit of Measure", "Purch. Unit of Measure", "Specifies the unit of measure code used when you purchase the item.", 0),
             ("Item Category Code", "Item Category Code", "Specifies the category that the item belongs to. Item categories also contain any assigned item attributes.", 0),
             ("Sales Blocked", "Sales Blocked", "Specifies that transactions with the item cannot be sold, for example, because the item is in quarantine.", 0),
             ("Purchasing Blocked", "Purchasing Blocked", "Specifies that the item cannot be entered on purchase documents, except return orders and credit memos, and journals.", 0),
@@ -1752,8 +1797,8 @@ pub fn extend(m: &mut Metadata) {
             F::code("GTIN", 14).tooltip("Specifies the number that is used for barcodes etc."),
             F::code("Default Deferral Template Code", 10).tooltip("Specifies the default template that governs how to defer revenues and expenses to the periods when they occurred."),
             F::code("Serial Nos.", 20).tooltip("Specifies a number series code to assign consecutive serial numbers to items produced."),
-            F::code("Sales Unit of Measure", 10).tooltip("Specifies the unit of measure code used when you sell the item."),
             F::boolean("Created From Nonstock Item").caption("Created From Catalog Item").read_only().tooltip("Specifies that the item was created from a catalog item."),
+            F::boolean("Substitutes Exist").calc(CalcFormula::new(CalcFunc::Exist, "Item Substitution", "", &[("No.", "No.")], &[("Type", "Item")])).tooltip("Specifies that a substitute exists for this item."),
             F::code("Purchasing Code", 10).tooltip("Specifies the code for a special procurement method, such as drop shipment."),
             F::code("Item Tracking Code", 10).tooltip("Specifies how serial, lot or package numbers assigned to the item are tracked in the supply chain."),
             F::code("Lot Nos.", 20).tooltip("Specifies the number series code that will be used when assigning lot numbers."),
@@ -1765,9 +1810,29 @@ pub fn extend(m: &mut Metadata) {
     );
     relabel(
         m,
+        "Item Attribute",
+        &[
+            ("Name", "Name", "Specifies the name of the item attribute.", 0),
+            ("Blocked", "Blocked", "Specifies that the attribute cannot be assigned to an item. Items to which the attribute is already assigned are not affected.", 0),
+            ("Type", "Type", "Specifies the type of the item attribute.", 0),
+            ("Unit of Measure", "Unit of Measure", "Specifies the name of the item or resource's unit of measure, such as piece or hour.", 0),
+        ],
+    );
+    relabel(
+        m,
+        "Item Attribute Value",
+        &[
+            ("Value", "Value", "Specifies the value of the item attribute.", 0),
+            ("Blocked", "Blocked", "Specifies that the attribute value cannot be assigned to an item. Items to which the attribute value is already assigned are not affected.", 0),
+            ("Attribute Name", "Attribute Name", "Specifies the name of the item attribute.", 0),
+        ],
+    );
+    relabel(
+        m,
         "Item Category",
         &[
             ("Code", "Code", "Specifies the item category.", 0),
+            ("Parent Category", "Parent Category", "Specifies the item category that this item category belongs to. Item attributes that are assigned to a parent item category also apply to the child item category.", 0),
             ("Description", "Description", "Specifies a description of the item category.", 0),
         ],
     );
@@ -1872,6 +1937,74 @@ pub fn extend(m: &mut Metadata) {
             F::code("Shortcut Dimension 7 Code", 20).calc(CalcFormula::new(CalcFunc::Lookup, "Dimension Set Entry", "Dimension Value Code", &[("Dimension Set ID", "Dimension Set ID")], &[("Global Dimension No.", "7")])).tooltip("Specifies the code for Shortcut Dimension 7, which is one of dimension codes that you set up in the General Ledger Setup window."),
             F::code("Shortcut Dimension 8 Code", 20).calc(CalcFormula::new(CalcFunc::Lookup, "Dimension Set Entry", "Dimension Value Code", &[("Dimension Set ID", "Dimension Set ID")], &[("Global Dimension No.", "8")])).tooltip("Specifies the code for Shortcut Dimension 8, which is one of dimension codes that you set up in the General Ledger Setup window."),
             F::boolean("Applied Entry to Adjust").tooltip("Specifies whether there is one or more applied entries, which need to be adjusted."),
+        ],
+    );
+    relabel(
+        m,
+        "Item Reference",
+        &[
+            ("Item No.", "Item No.", "Specifies the number on the item card from which you opened the Item Reference Entries window.", 0),
+            ("Variant Code", "Variant Code", "Specifies the variant of the item on the line.", 0),
+            ("Unit of Measure", "Unit of Measure", "Specifies the name of the item or resource's unit of measure, such as piece or hour.", 0),
+            ("Reference Type", "Reference Type", "Specifies the type of the reference entry.", 0),
+            ("Reference Type No.", "Reference Type No.", "Specifies a customer number, a vendor number, or a bar code, depending on what you have selected in the Type field.", 0),
+            ("Reference No.", "Reference No.", "Specifies the referenced item number. If you enter a reference between yours and your vendor's or customer's item number, then this number will override the standard item number when you enter the reference number on a sales or purchase document.", 0),
+            ("Description", "Description", "Specifies a description of the item that is linked to this reference.", 0),
+            ("Description 2", "Description 2", "Specifies an additional description of the item that is linked to this reference.", 0),
+            ("Starting Date", "Starting Date", "Specifies the first day from when the item reference is valid.", 0),
+            ("Ending Date", "Ending Date", "Specifies the last day from when the item reference is valid.", 0),
+        ],
+    );
+    relabel(
+        m,
+        "Item Substitution",
+        &[
+            ("Variant Code", "Variant Code", "Specifies the variant of the item on the line.", 0),
+            ("Substitute No.", "Substitute No.", "Specifies the number of the item that can be used as a substitute in case the original item is unavailable.", 0),
+            ("Substitute Variant Code", "Substitute Variant Code", "Specifies the code of the variant that can be used as a substitute.", 0),
+            ("Description", "Description", "Specifies the description of the substitute item.", 0),
+            ("Inventory", "Inventory", "Specifies how many units (such as pieces, boxes, or cans) of the item are available.", 0),
+            ("Interchangeable", "Interchangeable", "Specifies that the item and the substitute item are interchangeable.", 0),
+            ("Condition", "Condition", "Specifies that a condition exists for this substitution.", 0),
+            ("Substitute Type", "Substitute Type", "Specifies the type of the item that can be used as a substitute.", 0),
+        ],
+    );
+    relabel(
+        m,
+        "Item Translation",
+        &[
+            ("Item No.", "Item No.", "Specifies the item number of the item on the card.", 0),
+            ("Language Code", "Language Code", "Specifies the language that is used when translating specified text on documents to foreign business partner, such as an item description on an order confirmation.", 0),
+            ("Description", "Description", "Specifies the item description to use when this language code is selected.", 0),
+            ("Description 2", "Description 2", "Specifies more information about the item.", 0),
+            ("Variant Code", "Variant Code", "Specifies the variant of the item on the line.", 0),
+        ],
+    );
+    relabel(
+        m,
+        "Item Unit of Measure",
+        &[
+            ("Item No.", "Item No.", "Specifies the number of the item card from which you opened the Item Units of Measure window.", 0),
+            ("Code", "Code", "Specifies a code to identify the unit of measure.", 0),
+            ("Qty. per Unit of Measure", "Qty. per Unit of Measure", "Specifies how many of the base unit of measure are contained in one unit of the item.", 0),
+            ("Length", "Length", "Specifies the length of one item unit when measured in the specified unit of measure.", 0),
+            ("Width", "Width", "Specifies the width of one item unit when measured in the specified unit of measure.", 0),
+            ("Height", "Height", "Specifies the height of one item unit when measured in the unit of measure in the Code field.", 0),
+            ("Cubage", "Cubage", "Specifies the volume (cubage) of one item unit in the unit of measure in the Code field.", 0),
+            ("Weight", "Weight", "Specifies the weight of one item unit when measured in the specified unit of measure.", 0),
+        ],
+    );
+    relabel(
+        m,
+        "Item Variant",
+        &[
+            ("Code", "Code", "Specifies a code to identify the variant.", 0),
+            ("Item No.", "Item No.", "Specifies the number of the item card from which you opened the Item Variant Translations window.", 0),
+            ("Description", "Description", "Specifies text that describes the item variant.", 0),
+            ("Description 2", "Description 2", "Specifies the item variant in more detail than the Description field.", 0),
+            ("Blocked", "Blocked", "Specifies that the related record is blocked from being posted in transactions, for example an item variant that is placed in quarantine.", 0),
+            ("Sales Blocked", "Sales Blocked", "Specifies that the item variant cannot be entered on sales documents, except return orders and credit memos, and journals.", 0),
+            ("Purchasing Blocked", "Purchasing Blocked", "Specifies that the item variant cannot be entered on purchase documents, except return orders and credit memos, and journals.", 0),
         ],
     );
     relabel(
@@ -3011,6 +3144,7 @@ pub fn extend(m: &mut Metadata) {
             ("VAT Bus. Posting Group", "VAT Bus. Posting Group", "Specifies the vendor's VAT specification to link transactions made for this vendor with the appropriate general ledger account according to the VAT posting setup.", 0),
             ("VAT Prod. Posting Group", "VAT Prod. Posting Group", "Specifies the VAT product posting group. Links business transactions made for the item, resource, or G/L account with the general ledger, to account for VAT amounts resulting from trade with that record.", 0),
             ("Line Amount", "Line Amount", "Specifies the net amount, excluding any invoice discount amount, that must be paid for products on the line.", 1),
+            ("Qty. per Unit of Measure", "Qty. per Unit of Measure", "Specifies an auto-filled number if you have included Sales Unit of Measure on the item card and a quantity in the Qty. per Unit of Measure field.", 0),
             ("Unit of Measure Code", "Unit of Measure Code", "Specifies how each unit of the item or resource is measured, such as in pieces or hours. By default, the value in the Base Unit of Measure field on the item or resource card is inserted.", 0),
         ],
     );
@@ -3676,6 +3810,30 @@ pub fn extend(m: &mut Metadata) {
     columns(m, "dimension-set-entries", &["Dimension Code", "Dimension Value Code", "Dimension Value Name"]);
     columns(m, "dimension-values", &["Code", "Name", "Dimension Value Type", "Totaling", "Blocked"]);
     columns(m, "dimensions", &["Code", "Name", "Code Caption", "Filter Caption", "Description", "Blocked"]);
+    layout(
+        m,
+        "extended-text",
+        &[
+            Tab {
+                caption: "General",
+                fields: &["Language Code", "All Language Codes", "Description", "Starting Date", "Ending Date"],
+                ..Tab::default()
+            },
+            Tab {
+                caption: "Sales",
+                fields: &["Sales Quote", "Sales Blanket Order", "Sales Order", "Sales Invoice", "Sales Return Order", "Sales Credit Memo", "Reminder", "Finance Charge Memo", "Prepmt. Sales Invoice", "Prepmt. Sales Credit Memo", "Job"],
+                additional: &["Sales Quote", "Sales Blanket Order", "Sales Order", "Sales Return Order", "Prepmt. Sales Invoice", "Prepmt. Sales Credit Memo"],
+                ..Tab::default()
+            },
+            Tab {
+                caption: "Purchases",
+                fields: &["Purchase Quote", "Purchase Blanket Order", "Purchase Order", "Purchase Invoice", "Purchase Return Order", "Purchase Credit Memo", "Prepmt. Purchase Invoice", "Prepmt. Purchase Credit Memo"],
+                ..Tab::default()
+            },
+        ],
+    );
+    columns(m, "extended-text-lines", &["Text"]);
+    columns(m, "extended-text-list", &["Description", "Language Code", "All Language Codes", "Starting Date", "Ending Date"]);
     columns(m, "fa-classes", &["Code", "Name"]);
     columns(m, "fa-depreciation-books", &["FA No.", "Depreciation Book Code", "FA Posting Group", "Depreciation Method", "No. of Depreciation Years", "Depreciation Starting Date", "Depreciation Ending Date", "Default FA Depreciation Book", "Use Bonus Depreciation", "Bonus Depreciation %", "Acquisition Cost", "Bonus Depr. Applied Amount", "Depreciation"]);
     columns(m, "fa-gl-journal", &["Posting Date", "Document Type", "Document No.", "Account Type", "Account No.", "Depreciation Book Code", "FA Posting Type", "Description", "Gen. Posting Type", "Gen. Bus. Posting Group", "Gen. Prod. Posting Group", "Amount", "Bal. Account Type", "Bal. Account No.", "Bal. Gen. Posting Type", "Bal. Gen. Prod. Posting Group", "Bal. Gen. Bus. Posting Group", "No. of Depreciation Days", "Depr. until FA Posting Date", "Depr. Acquisition Cost", "Budgeted FA No.", "FA Reclassification Entry", "FA Error Entry No.", "Shortcut Dimension 1 Code", "Shortcut Dimension 2 Code"]);
@@ -3923,6 +4081,8 @@ pub fn extend(m: &mut Metadata) {
     );
     columns(m, "issued-reminder-lines", &["Type", "No.", "Document Type", "Document No.", "Due Date", "Description", "Remaining Amount", "Amount"]);
     columns(m, "issued-reminder-list", &["No.", "Customer No.", "Name", "Currency Code", "Remaining Amount", "Canceled"]);
+    columns(m, "item-attribute-values", &["Value", "Blocked"]);
+    columns(m, "item-attributes", &["Name", "Type", "Blocked"]);
     layout(
         m,
         "item-card",
@@ -3980,11 +4140,27 @@ pub fn extend(m: &mut Metadata) {
         ],
     );
     columns(m, "item-categories", &["Code", "Description"]);
+    layout(
+        m,
+        "item-category-card",
+        &[
+            Tab {
+                caption: "General",
+                fields: &["Code", "Description", "Parent Category"],
+                ..Tab::default()
+            },
+        ],
+    );
     columns(m, "item-journal", &["Posting Date", "Price Calculation Method", "Document No.", "Item No.", "Description", "Location Code", "Quantity", "Unit of Measure Code", "Unit Amount", "Amount", "Discount Amount", "Unit Cost", "Applies-to Entry", "Serial No.", "Lot No.", "Package No.", "Expiration Date", "Warranty Date", "Shortcut Dimension 1 Code", "Shortcut Dimension 2 Code"]);
     columns(m, "item-journal-templates", &["Name", "Description", "Type", "Recurring", "No. Series", "Posting No. Series", "Source Code", "Reason Code", "Increment Batch Name"]);
     columns(m, "item-ledger-entries", &["Posting Date", "Entry Type", "Document Type", "Document No.", "Item No.", "Description", "Global Dimension 1 Code", "Global Dimension 2 Code", "Location Code", "Quantity", "Invoiced Quantity", "Remaining Quantity", "Sales Amount (Actual)", "Cost Amount (Actual)", "Open", "Applied Entry to Adjust", "Order Type", "Entry No.", "Shortcut Dimension 3 Code", "Shortcut Dimension 4 Code", "Shortcut Dimension 5 Code", "Shortcut Dimension 6 Code", "Shortcut Dimension 7 Code", "Shortcut Dimension 8 Code"]);
-    columns(m, "item-list", &["No.", "Description", "Type", "Inventory", "Base Unit of Measure", "Cost is Adjusted", "Unit Cost", "Unit Price", "Vendor No.", "Default Deferral Template Code"]);
+    columns(m, "item-list", &["No.", "Description", "Type", "Inventory", "Substitutes Exist", "Base Unit of Measure", "Cost is Adjusted", "Unit Cost", "Unit Price", "Vendor No.", "Default Deferral Template Code"]);
     columns(m, "item-reclass-journal", &["Posting Date", "Document No.", "Item No.", "Description", "Location Code", "New Location Code", "Quantity", "Unit of Measure Code", "Applies-to Entry", "Shortcut Dimension 1 Code", "New Shortcut Dimension 1 Code", "Shortcut Dimension 2 Code", "New Shortcut Dimension 2 Code"]);
+    columns(m, "item-reference-entries", &["Reference Type", "Reference Type No.", "Reference No.", "Unit of Measure", "Description", "Starting Date", "Ending Date"]);
+    columns(m, "item-substitution-entry", &["Substitute Type", "Substitute No.", "Description", "Interchangeable", "Condition"]);
+    columns(m, "item-translations", &["Language Code", "Description"]);
+    columns(m, "item-units-of-measure", &["Code", "Qty. per Unit of Measure", "Height", "Width", "Length", "Cubage", "Weight"]);
+    columns(m, "item-variants", &["Blocked", "Sales Blocked", "Purchasing Blocked"]);
     columns(m, "locations", &["Code", "Name"]);
     columns(m, "payment-journal", &["Posting Date", "Document Type", "Document No.", "External Document No.", "Account Type", "Account No.", "Recipient Bank Account", "Message to Recipient", "Description", "Currency Code", "Posting Group", "Selected Alloc. Account No.", "Payment Method Code", "Payment Reference", "Creditor No.", "Amount", "Amount (LCY)", "Debit Amount", "Credit Amount", "Bal. Account Type", "Bal. Account No.", "Applies-to Doc. Type", "Applies-to Doc. No.", "Bank Payment Type", "Correction", "Exported to Payment File", "Shortcut Dimension 1 Code", "Shortcut Dimension 2 Code", "Remit-to Code"]);
     columns(m, "payment-terms", &["Code", "Due Date Calculation", "Discount Date Calculation", "Discount %", "Calc. Pmt. Disc. on Cr. Memos", "Description"]);
@@ -4754,6 +4930,7 @@ pub fn extend(m: &mut Metadata) {
             Nav { caption: "Ledger E&ntries", page: "general-ledger-entries", link: &[("G/L Account No.", "No.")], shortcut: "Ctrl+F7" },
             Nav { caption: "Co&mments", page: "comment-sheet", link: &[("No.", "No.")], shortcut: "" },
             Nav { caption: "Dimensions-Single", page: "default-dimensions", link: &[("No.", "No.")], shortcut: "Alt+D" },
+            Nav { caption: "E&xtended Texts", page: "extended-text-list", link: &[("No.", "No.")], shortcut: "" },
             Nav { caption: "G/L Register", page: "gl-registers", link: &[], shortcut: "" },
             Nav { caption: "General Journal", page: "general-journal", link: &[], shortcut: "" },
         ],
@@ -4904,6 +5081,7 @@ pub fn extend(m: &mut Metadata) {
         "gl-account-card",
         &[
             Nav { caption: "Ledger E&ntries", page: "general-ledger-entries", link: &[("G/L Account No.", "No.")], shortcut: "Ctrl+F7" },
+            Nav { caption: "E&xtended Texts", page: "extended-text-list", link: &[("No.", "No.")], shortcut: "" },
             Nav { caption: "General Posting Setup", page: "general-posting-setup", link: &[], shortcut: "" },
             Nav { caption: "VAT Posting Setup", page: "vat-posting-setup", link: &[], shortcut: "" },
             Nav { caption: "G/L Register", page: "gl-registers", link: &[], shortcut: "" },
@@ -4984,6 +5162,13 @@ pub fn extend(m: &mut Metadata) {
         &[
             Nav { caption: "Card", page: "item-card", link: &[("No.", "Item No.")], shortcut: "Shift+F7" },
             Nav { caption: "Ledger E&ntries", page: "item-ledger-entries", link: &[("Item No.", "Item No.")], shortcut: "Ctrl+F7" },
+        ],
+    );
+    actions(
+        m,
+        "item-variants",
+        &[
+            Nav { caption: "Item References", page: "item-reference-entries", link: &[("Item No.", "Item No."), ("Variant Code", "Code")], shortcut: "" },
         ],
     );
     actions(
@@ -5283,7 +5468,7 @@ pub fn extend(m: &mut Metadata) {
         m,
         "chart-of-accounts",
         &[
-            ("Account", &["Dimensions-&Multiple", "Dimensions-Single", "Co&mments", "Ledger E&ntries"]),
+            ("Account", &["Dimensions-&Multiple", "Dimensions-Single", "Co&mments", "Ledger E&ntries", "E&xtended Texts"]),
             ("Navigate", &["G/L Register", "General Journal"]),
             ("Report", &["G/L Register"]),
         ],
@@ -5470,7 +5655,7 @@ pub fn extend(m: &mut Metadata) {
         m,
         "gl-account-card",
         &[
-            ("Account", &["Dimensions", "Co&mments", "Ledger E&ntries"]),
+            ("Account", &["Dimensions", "Co&mments", "Ledger E&ntries", "E&xtended Texts"]),
         ],
     );
     categories(
@@ -5526,10 +5711,17 @@ pub fn extend(m: &mut Metadata) {
     );
     categories(
         m,
+        "item-attributes",
+        &[
+            ("Process", &["Item Attribute &Values"]),
+        ],
+    );
+    categories(
+        m,
         "item-card",
         &[
             ("Process", &["Copy Item", "Adjust Inventory"]),
-            ("Item", &["Attachments", "Co&mments", "Dimensions", "Items b&y Location"]),
+            ("Item", &["Attachments", "Co&mments", "Dimensions", "Attributes", "Items b&y Location"]),
         ],
     );
     categories(
@@ -5553,7 +5745,8 @@ pub fn extend(m: &mut Metadata) {
         "item-list",
         &[
             ("Process", &["Adjust Inventory", "Copy Item"]),
-            ("Item", &["Dimensions-&Multiple", "Dimensions-Single", "Co&mments", "Items b&y Location"]),
+            ("Item", &["Dimensions-&Multiple", "Dimensions-Single", "Co&mments", "Items b&y Location", "Item References"]),
+            ("Attributes", &["Attributes"]),
         ],
     );
     categories(
@@ -5562,6 +5755,13 @@ pub fn extend(m: &mut Metadata) {
         &[
             ("Process", &["P&ost", "Preview Posting", "Post and &Print"]),
             ("Line", &["Dimensions"]),
+        ],
+    );
+    categories(
+        m,
+        "item-variants",
+        &[
+            ("Variant", &["Item References"]),
         ],
     );
     categories(
@@ -6147,6 +6347,21 @@ pub fn extend(m: &mut Metadata) {
         &[
             ("Inventory", "item-ledger-entries", &[("Item No.", "No.")], &[]),
             ("Net Invoiced Qty.", "item-ledger-entries", &[("Item No.", "No.")], &[]),
+            ("Substitutes Exist", "item-substitution-entry", &[("No.", "No.")], &[("Type", "Item")]),
+        ],
+    );
+    calcs(
+        m,
+        "Item Attribute Value",
+        vec![
+            ("Attribute Name", CalcFormula::new(CalcFunc::Lookup, "Item Attribute", "Name", &[("ID", "Attribute ID")], &[])),
+        ],
+    );
+    drilldowns(
+        m,
+        "Item Attribute Value",
+        &[
+            ("Attribute Name", "item-attributes", &[("ID", "Attribute ID")], &[]),
         ],
     );
     drilldowns(

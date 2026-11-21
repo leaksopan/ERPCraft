@@ -300,6 +300,11 @@ pub fn post_document(ctx: &mut Ctx, side: &Side, doc_type: &str, no: &str, mode:
     let lines: Vec<Record> =
         ctx.db.rows(side.line).filter(|l| l.str("Document Type") == doc_type && l.str("Document No.") == no).cloned().collect();
     let real = |l: &Record| !l.str("Type").is_empty() && !l.str("No.").is_empty();
+    // Item ledger entries count in the base unit of measure.
+    let per = |l: &Record| match l.get("Qty. per Unit of Measure").as_dec() {
+        d if d.is_zero() => Decimal::ONE,
+        d => d,
+    };
     let shipped = |l: &Record| l.get(side.qty_handled).as_dec();
     let invoiced = |l: &Record| l.get("Quantity Invoiced").as_dec();
     // Quantities to post per line.
@@ -376,14 +381,15 @@ pub fn post_document(ctx: &mut Ctx, side: &Side, doc_type: &str, no: &str, mode:
             let q = to_ship(l);
             let mut ile = 0;
             if let Some(it) = is_item_inventory(ctx, l)? {
+                let qb = q * per(l);
                 let (qty, cost) = if side.sales {
-                    (-q, round_amount(-q * it.get("Unit Cost").as_dec()))
+                    (-qb, round_amount(-qb * it.get("Unit Cost").as_dec()))
                 } else {
-                    (q, lcy(portion(l, "Amount", q)))
+                    (qb, lcy(portion(l, "Amount", q)))
                 };
                 ile = post_item_entry(ctx, side, &it, posting_date, ile_doc, &shipment_no, l.str("Description"), l.str("Location Code"), qty, cost, Decimal::ZERO, l.get("Unit of Measure Code"), &party_no)?;
                 if !side.sales {
-                    update_item_cost(ctx, it.str("No."), q, cost)?;
+                    update_item_cost(ctx, it.str("No."), qb, cost)?;
                 }
             }
             let mut sl = slt.init_record();
@@ -489,7 +495,7 @@ pub fn post_document(ctx: &mut Ctx, side: &Side, doc_type: &str, no: &str, mode:
                 // Invoices and credit memos move stock now; orders moved it when shipping.
                 if !is_order {
                     let out = side.sales != credit;
-                    let signed = if out { -qty } else { qty };
+                    let signed = if out { -qty * per(l) } else { qty * per(l) };
                     let cost = if side.sales { round_amount(it.get("Unit Cost").as_dec() * signed) } else if credit { -amount } else { amount };
                     let ile_doc = match (side.sales, credit) {
                         (true, false) => "Sales Invoice",
@@ -500,12 +506,12 @@ pub fn post_document(ctx: &mut Ctx, side: &Side, doc_type: &str, no: &str, mode:
                     let sales_amount = if side.sales { if credit { -amount } else { amount } } else { Decimal::ZERO };
                     post_item_entry(ctx, side, it, posting_date, ile_doc, &posted_no, &line_desc, l.str("Location Code"), signed, cost, sales_amount, l.get("Unit of Measure Code"), &party_no)?;
                     if !side.sales && !credit && !qty.is_zero() {
-                        update_item_cost(ctx, it.str("No."), qty, amount)?;
+                        update_item_cost(ctx, it.str("No."), qty * per(l), amount)?;
                     }
                 }
                 // Cost of goods sold for what is invoiced.
                 if side.sales {
-                    let cost = round_amount(it.get("Unit Cost").as_dec() * qty) * if credit { Decimal::NEGATIVE_ONE } else { Decimal::ONE };
+                    let cost = round_amount(it.get("Unit Cost").as_dec() * qty * per(l)) * if credit { Decimal::NEGATIVE_ONE } else { Decimal::ONE };
                     if !cost.is_zero() {
                         let cogs = setup_account(ctx, GEN_POSTING_SETUP, gen_key.clone(), "COGS Account", "cost of goods sold")?;
                         let inv = inventory_account(ctx, it, l.str("Location Code"))?;

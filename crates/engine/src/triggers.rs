@@ -28,6 +28,9 @@ pub fn on_insert(ctx: &mut Ctx, t: &TableDef, r: &mut Record) -> Result<()> {
         crate::item_journal::on_insert(ctx, r)?;
         return crate::approvals::on_journal_line_insert(ctx, &t.name, r);
     }
+    if let Some(done) = crate::item_setup::on_insert(ctx, t, r)? {
+        return Ok(done);
+    }
     if t.name == crate::recurring::ALLOCATION {
         crate::recurring::on_allocation_insert(ctx, r);
         return Ok(());
@@ -193,6 +196,7 @@ pub fn on_delete(ctx: &mut Ctx, t: &TableDef, r: &Record) -> Result<()> {
 /// Field `OnValidate`: runs after the new value is set; `old` is the previous value.
 pub fn on_validate(ctx: &mut Ctx, t: &TableDef, r: &mut Record, field: &str, old: &Value) -> Result<()> {
     crate::dimensions::on_validate(ctx, t, r, field)?;
+    crate::item_setup::on_validate(ctx, t, r, field)?;
     if t.name == crate::schema::bank_rec::BANK_REC_LINE {
         crate::bank_rec::on_line_validate(ctx, r, field);
     }
@@ -247,6 +251,19 @@ fn same_doc_header(line: &Record, header: &Record) -> bool {
 /// The header of a document line.
 pub fn line_header(ctx: &Ctx, side: &Side, line: &Record) -> Result<Record> {
     ctx.get(side.header, &Key(vec![line.get("Document Type").clone(), line.get("Document No.").clone()]))
+}
+
+/// BC's UOMMgt.GetQtyPerUnitOfMeasure: 1 for the base unit (or none), else the item's unit.
+pub fn qty_per_uom(ctx: &Ctx, item: &Record, code: &str) -> Result<Decimal> {
+    if code.is_empty() || code == item.str("Base Unit of Measure") {
+        return Ok(Decimal::ONE);
+    }
+    let no = item.str("No.");
+    match ctx.db.get(crate::schema::item_setup::ITEM_UOM, &Key(vec![Value::text(no), Value::text(code)])) {
+        Some(u) if !u.get("Qty. per Unit of Measure").as_dec().is_zero() => Ok(u.get("Qty. per Unit of Measure").as_dec()),
+        Some(_) => refuse!("Qty. per Unit of Measure must have a value in Item Unit of Measure: Item No.={no},Code={code}. It cannot be zero or empty."),
+        None => refuse!("The Item Unit of Measure does not exist. Identification fields and values: Item No.='{no}',Code='{code}'"),
+    }
 }
 
 /// AL `TestStatusOpen`.
@@ -424,7 +441,13 @@ fn validate_line(ctx: &mut Ctx, side: &Side, r: &mut Record, field: &str, old: &
                     }
                     r.set("Description", item.get("Description").clone());
                     r.set("Description 2", item.get("Description 2").clone());
-                    r.set("Unit of Measure Code", item.get("Base Unit of Measure").clone());
+                    // BC: the item's sales / purchase unit of measure, else its base unit.
+                    let uom = match item.str(if side.sales { "Sales Unit of Measure" } else { "Purch. Unit of Measure" }) {
+                        "" => item.str("Base Unit of Measure").to_string(),
+                        u => u.to_string(),
+                    };
+                    r.set("Unit of Measure Code", Value::text(&uom));
+                    r.set("Qty. per Unit of Measure", dec(qty_per_uom(ctx, &item, &uom)?));
                     r.set("Gen. Prod. Posting Group", item.get("Gen. Prod. Posting Group").clone());
                     r.set("VAT Prod. Posting Group", item.get("VAT Prod. Posting Group").clone());
                     if side.sales {
@@ -443,6 +466,9 @@ fn validate_line(ctx: &mut Ctx, side: &Side, r: &mut Record, field: &str, old: &
                     // In the document's currency (BC: the LCY price times the currency factor).
                     let f = header.get("Currency Factor").as_dec();
                     let price = if header.str("Currency Code").is_empty() || f.is_zero() { price } else { (price * f).round_dp(5) };
+                    // Per the line's unit of measure.
+                    let per = r.get("Qty. per Unit of Measure").as_dec();
+                    let price = if per.is_zero() || per == Decimal::ONE { price } else { (price * per).round_dp(5) };
                     r.set(side.price, dec(price));
                 }
                 "G/L Account" => {
@@ -486,6 +512,19 @@ fn validate_line(ctx: &mut Ctx, side: &Side, r: &mut Record, field: &str, old: &
                 r.set("Quantity", dec(Decimal::ONE));
                 set_outstanding(side, &doc_type, r);
             }
+            calc_line_amounts(ctx, side, &header, r)
+        }
+        "Unit of Measure Code" if r.str("Type") == "Item" && !r.str("No.").is_empty() => {
+            let item = ctx.get_code(ITEM, r.str("No."))?;
+            let old_per = match r.get("Qty. per Unit of Measure").as_dec() {
+                d if d.is_zero() => Decimal::ONE,
+                d => d,
+            };
+            let per = qty_per_uom(ctx, &item, r.str("Unit of Measure Code"))?;
+            r.set("Qty. per Unit of Measure", dec(per));
+            // BC: the unit price is per unit of measure.
+            let price = r.get(side.price).as_dec() / old_per * per;
+            r.set(side.price, dec(price.round_dp(5)));
             calc_line_amounts(ctx, side, &header, r)
         }
         "Quantity" => {
@@ -574,6 +613,12 @@ fn convert_price(price: Decimal, price_incl: bool, doc_incl: bool, vat: Decimal)
 pub fn calc_line_amounts(ctx: &Ctx, side: &Side, header: &Record, r: &mut Record) -> Result<()> {
     let vat = if r.str("No.").is_empty() { Decimal::ZERO } else { vat_percent(ctx, header, r) };
     let qty = r.get("Quantity").as_dec();
+    // Quantity (Base) = Quantity × Qty. per Unit of Measure.
+    let per = match r.get("Qty. per Unit of Measure").as_dec() {
+        d if d.is_zero() => Decimal::ONE,
+        d => d,
+    };
+    r.set("Quantity (Base)", dec(qty * per));
     let price = r.get(side.price).as_dec();
     let gross = round_amount(qty * price);
     let disc = round_amount(gross * r.get("Line Discount %").as_dec() / Decimal::ONE_HUNDRED);

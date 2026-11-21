@@ -11,6 +11,7 @@ pub mod currency;
 pub mod vat;
 pub mod bank_rec;
 pub mod reminders;
+pub mod item_setup;
 pub mod finance;
 pub mod fixed_assets;
 pub mod inventory;
@@ -46,6 +47,7 @@ pub fn hand_written() -> Metadata {
     vat::register(&mut m);
     bank_rec::register(&mut m);
     reminders::register(&mut m);
+    item_setup::register(&mut m);
     inventory::register(&mut m);
     fixed_assets::register(&mut m);
     dimensions::register(&mut m);

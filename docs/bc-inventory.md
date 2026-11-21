@@ -20,10 +20,10 @@ orders this list into phases.
 | Finance | 36 | 344 | 1 | 86 |
 | FinancialMgt | 0 | 1 | 0 | 0 |
 | FixedAssets | 11 | 61 | 1 | 38 |
-| Foundation | 5 | 58 | 0 | 2 |
+| Foundation | 8 | 58 | 0 | 2 |
 | HumanResources | 0 | 57 | 0 | 15 |
 | Integration | 0 | 87 | 0 | 0 |
-| Inventory | 12 | 312 | 1 | 101 |
+| Inventory | 20 | 312 | 1 | 101 |
 | Invoicing | 0 | 7 | 0 | 0 |
 | Manufacturing | 0 | 134 | 0 | 50 |
 | Modules | 2 | 93 | 0 | 1 |
@@ -38,7 +38,7 @@ orders this list into phases.
 | Utilities | 0 | 12 | 0 | 2 |
 | Warehouse | 0 | 144 | 0 | 35 |
 | eServices | 0 | 25 | 0 | 0 |
-| **Base Application** | **149** | **2638** | **16** | **659** |
+| **Base Application** | **160** | **2638** | **16** | **659** |
 
 ### (root)
 
@@ -1398,7 +1398,7 @@ Pages 11 / 61, reports 1 / 38.
 
 ### Foundation
 
-Pages 5 / 58, reports 0 / 2.
+Pages 8 / 58, reports 0 / 2.
 
 <details><summary>Foundation / Address: pages 0 / 10, reports 0 / 0</summary>
 
@@ -1443,11 +1443,11 @@ Pages 5 / 58, reports 0 / 2.
 
 </details>
 
-<details><summary>Foundation / ExtendedText: pages 0 / 3, reports 0 / 0</summary>
+<details><summary>Foundation / ExtendedText: pages 3 / 3, reports 0 / 0</summary>
 
-- [ ] Page 386 Extended Text (ListPlus)
-- [ ] Page 387 Extended Text Lines (ListPart)
-- [ ] Page 391 Extended Text List (List)
+- [x] Page 386 Extended Text (ListPlus)
+- [x] Page 387 Extended Text Lines (ListPart)
+- [x] Page 391 Extended Text List (List)
 
 </details>
 
@@ -1754,7 +1754,7 @@ Pages 0 / 87, reports 0 / 0.
 
 ### Inventory
 
-Pages 12 / 312, reports 1 / 101.
+Pages 20 / 312, reports 1 / 101.
 
 <details><summary>Inventory / Analysis: pages 0 / 34, reports 0 / 8</summary>
 
@@ -1974,12 +1974,12 @@ Pages 12 / 312, reports 1 / 101.
 
 </details>
 
-<details><summary>Inventory / Item: pages 5 / 61, reports 0 / 2</summary>
+<details><summary>Inventory / Item: pages 13 / 61, reports 0 / 2</summary>
 
 - [x] Page 30 Item Card (Card)
 - [x] Page 31 Item List (List)
 - [ ] Page 32 Item Lookup (List)
-- [ ] Page 35 Item Translations (List)
+- [x] Page 35 Item Translations (List)
 - [x] Page 112 Inventory Posting Groups (List)
 - [ ] Page 114 Item Vendor Catalog (List)
 - [ ] Page 297 Vendor Item Catalog (List)
@@ -1995,10 +1995,10 @@ Pages 12 / 312, reports 1 / 101.
 - [ ] Page 1383 Item Templ. List (List)
 - [ ] Page 1384 Item Templ. Card (Card)
 - [ ] Page 5400 Item Unit Group List (List)
-- [ ] Page 5401 Item Variants (List)
-- [ ] Page 5404 Item Units of Measure (List)
+- [x] Page 5401 Item Variants (List)
+- [x] Page 5404 Item Units of Measure (List)
 - [ ] Page 5405 Item Variant Card (Card)
-- [ ] Page 5716 Item Substitution Entry (List)
+- [x] Page 5716 Item Substitution Entry (List)
 - [ ] Page 5717 Condition Entry (List)
 - [ ] Page 5718 Item Substitution Entries (Worksheet)
 - [ ] Page 5719 Sub. Conditions (List)
@@ -2010,18 +2010,18 @@ Pages 12 / 312, reports 1 / 101.
 - [ ] Page 5729 Purchasing Code List (List)
 - [x] Page 5730 Item Categories (List)
 - [ ] Page 5732 Catalog Item Setup (Card)
-- [ ] Page 5733 Item Category Card (Card)
+- [x] Page 5733 Item Category Card (Card)
 - [ ] Page 5734 Item Category Attributes (ListPart)
 - [ ] Page 5735 Item Reference List (List)
 - [ ] Page 5736 Item References (List)
-- [ ] Page 5737 Item Reference Entries (List)
+- [x] Page 5737 Item Reference Entries (List)
 - [ ] Page 5800 Item Charges (List)
 - [x] Page 5826 Inventory Posting Setup (List)
 - [ ] Page 7497 Item From Picture Wizard (NavigatePage)
 - [ ] Page 7498 Item From Picture (Card)
 - [ ] Page 7499 Item From Picture-Attrib Part (ListPart)
-- [ ] Page 7500 Item Attributes (List)
-- [ ] Page 7501 Item Attribute Values (List)
+- [x] Page 7500 Item Attributes (List)
+- [x] Page 7501 Item Attribute Values (List)
 - [ ] Page 7502 Item Attribute Translations (List)
 - [ ] Page 7503 Item Attribute (Card)
 - [ ] Page 7504 Item Attribute Value List (ListPart)

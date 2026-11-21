@@ -285,7 +285,7 @@ pub fn setup(ctx: &mut Ctx) -> Result<()> {
             )?;
         }
     }
-    for (code, desc) in [("PCS", "Piece"), ("SET", "Set"), ("LTR", "Liter"), ("HOUR", "Hour")] {
+    for (code, desc) in [("PCS", "Piece"), ("SET", "Set"), ("LTR", "Liter"), ("HOUR", "Hour"), ("BOX", "Box")] {
         raw(ctx, "Unit of Measure", json!({"Code": code, "Description": desc}))?;
     }
     for (code, desc) in [("OIL", "Oils & Lubricants"), ("BRAKE", "Brake System"), ("TIRE", "Tires & Wheels"), ("ELECTRIC", "Electrical"), ("SERVICE", "Workshop Services")] {
@@ -372,6 +372,8 @@ pub fn master_data(ctx: &mut Ctx) -> Result<()> {
                    "Vendor No.": vendor, "Reorder Point": if *ty == "Service" { 0 } else { 10 }}),
         )?;
     }
+    // Engine oil also comes by the box of 12.
+    raw(ctx, "Item Unit of Measure", json!({"Item No.": "1000", "Code": "BOX", "Qty. per Unit of Measure": 12}))?;
     for template in ["CASHRCPT", "PAYMENT"] {
         let t = ctx.table("Gen. Journal Batch")?;
         let key = erpcraft_meta::Key(vec![erpcraft_meta::Value::text(template), erpcraft_meta::Value::text("DEFAULT")]);

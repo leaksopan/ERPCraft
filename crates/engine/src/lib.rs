@@ -21,6 +21,7 @@ pub mod bc;
 pub mod dimensions;
 pub mod doc_tools;
 pub mod item_tools;
+pub mod navigate;
 mod error;
 pub mod fa;
 pub mod item_journal;

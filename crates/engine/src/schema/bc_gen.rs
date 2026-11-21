@@ -3852,7 +3852,7 @@ pub fn extend(m: &mut Metadata) {
         m,
         "bank-account-ledger-entries",
         &[
-            ("Process", &["Dimensions"]),
+            ("Process", &["Find entries...", "Dimensions"]),
         ],
     );
     actions(
@@ -3927,7 +3927,7 @@ pub fn extend(m: &mut Metadata) {
         m,
         "customer-ledger-entries",
         &[
-            ("Process", &["Apply Entries", "Unapply Entries", "Reverse Transaction"]),
+            ("Process", &["Apply Entries", "Unapply Entries", "Find entries...", "Reverse Transaction"]),
             ("Entry", &["Dimensions", "Detailed &Ledger Entries", "Customer"]),
         ],
     );
@@ -3952,6 +3952,20 @@ pub fn extend(m: &mut Metadata) {
     );
     categories(
         m,
+        "detailed-cust-ledger-entries",
+        &[
+            ("Process", &["Find entries..."]),
+        ],
+    );
+    categories(
+        m,
+        "detailed-vendor-ledger-entries",
+        &[
+            ("Process", &["Find entries..."]),
+        ],
+    );
+    categories(
+        m,
         "dimensions",
         &[
             ("Dimension", &["Dimension &Values"]),
@@ -3970,6 +3984,13 @@ pub fn extend(m: &mut Metadata) {
         &[
             ("Process", &["P&ost"]),
             ("Line", &["Dimensions"]),
+        ],
+    );
+    categories(
+        m,
+        "fa-ledger-entries",
+        &[
+            ("Process", &["Find entries..."]),
         ],
     );
     actions(
@@ -4085,7 +4106,7 @@ pub fn extend(m: &mut Metadata) {
         m,
         "general-ledger-entries",
         &[
-            ("Process", &["Reverse Transaction", "Dimensions"]),
+            ("Process", &["Find entries...", "Reverse Transaction", "Dimensions"]),
         ],
     );
     actions(
@@ -4206,7 +4227,7 @@ pub fn extend(m: &mut Metadata) {
         m,
         "item-ledger-entries",
         &[
-            ("Process", &["Dimensions"]),
+            ("Process", &["Find entries...", "Dimensions"]),
         ],
     );
     actions(
@@ -4286,6 +4307,7 @@ pub fn extend(m: &mut Metadata) {
         m,
         "posted-purchase-credit-memo",
         &[
+            ("Process", &["Find entries..."]),
             ("Print/Send", &["&Print"]),
             ("Credit Memo", &["Dimensions", "Co&mments", "Vendor"]),
         ],
@@ -4302,6 +4324,7 @@ pub fn extend(m: &mut Metadata) {
         m,
         "posted-purchase-credit-memos",
         &[
+            ("Process", &["Find entries..."]),
             ("Print/Send", &["&Print"]),
             ("Credit Memo", &["Dimensions", "Co&mments", "Vendor"]),
         ],
@@ -4310,6 +4333,7 @@ pub fn extend(m: &mut Metadata) {
         m,
         "posted-purchase-invoice",
         &[
+            ("Process", &["Find entries..."]),
             ("Print/Send", &["&Print"]),
             ("Invoice", &["Dimensions", "Co&mments", "Vendor"]),
         ],
@@ -4326,6 +4350,7 @@ pub fn extend(m: &mut Metadata) {
         m,
         "posted-purchase-invoices",
         &[
+            ("Process", &["Find entries..."]),
             ("Print/Send", &["&Print"]),
             ("Invoice", &["Dimensions", "Co&mments", "Vendor"]),
         ],
@@ -4334,7 +4359,7 @@ pub fn extend(m: &mut Metadata) {
         m,
         "posted-purchase-receipt",
         &[
-            ("Process", &["&Print"]),
+            ("Process", &["&Print", "Find entries..."]),
             ("Receipt", &["Dimensions", "Co&mments"]),
         ],
     );
@@ -4349,13 +4374,14 @@ pub fn extend(m: &mut Metadata) {
         m,
         "posted-purchase-receipts",
         &[
-            ("Process", &["Dimensions", "Co&mments"]),
+            ("Process", &["Find entries...", "Dimensions", "Co&mments"]),
         ],
     );
     categories(
         m,
         "posted-sales-credit-memo",
         &[
+            ("Process", &["Find entries..."]),
             ("Print/Send", &["&Print"]),
             ("Credit Memo", &["Dimensions", "Co&mments", "Customer"]),
         ],
@@ -4372,6 +4398,7 @@ pub fn extend(m: &mut Metadata) {
         m,
         "posted-sales-credit-memos",
         &[
+            ("Process", &["Find entries..."]),
             ("Print/Send", &["&Print"]),
             ("Credit Memo", &["Dimensions", "Co&mments", "Customer"]),
         ],
@@ -4380,6 +4407,7 @@ pub fn extend(m: &mut Metadata) {
         m,
         "posted-sales-invoice",
         &[
+            ("Process", &["Find entries..."]),
             ("Print/Send", &["&Print"]),
             ("Invoice", &["Dimensions", "Co&mments", "Customer"]),
         ],
@@ -4396,6 +4424,7 @@ pub fn extend(m: &mut Metadata) {
         m,
         "posted-sales-invoices",
         &[
+            ("Process", &["Find entries..."]),
             ("Print/Send", &["&Print"]),
             ("Invoice", &["Dimensions", "Co&mments", "Customer"]),
         ],
@@ -4404,7 +4433,7 @@ pub fn extend(m: &mut Metadata) {
         m,
         "posted-sales-shipment",
         &[
-            ("Process", &["&Print"]),
+            ("Process", &["&Print", "Find entries..."]),
             ("Print/Send", &["&Print"]),
             ("Shipment", &["Dimensions", "Co&mments"]),
         ],
@@ -4420,7 +4449,7 @@ pub fn extend(m: &mut Metadata) {
         m,
         "posted-sales-shipments",
         &[
-            ("Process", &["Dimensions", "Co&mments"]),
+            ("Process", &["Find entries...", "Dimensions", "Co&mments"]),
         ],
     );
     categories(
@@ -4744,7 +4773,7 @@ pub fn extend(m: &mut Metadata) {
         m,
         "vendor-ledger-entries",
         &[
-            ("Process", &["Apply Entries", "Unapply Entries", "Reverse Transaction"]),
+            ("Process", &["Apply Entries", "Unapply Entries", "Find entries...", "Reverse Transaction"]),
             ("Entry", &["Dimensions", "Detailed &Ledger Entries"]),
         ],
     );

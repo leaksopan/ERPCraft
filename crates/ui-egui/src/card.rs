@@ -590,12 +590,20 @@ fn lines_part(app: &mut ErpApp, ui: &mut Ui, host: &PageDef, header: &Record, pa
         widgets::flat(ui);
         ui.set_min_height(30.0);
         ui.label(RichText::new(&part.caption).font(theme::bold(theme::SUBTITLE)).color(TOKENS.text));
+        // Posted documents' lines can't change: BC shows no Manage tab there.
+        if !(page.editable && host.editable) {
+            return;
+        }
         widgets::vsep(ui);
         let r = ui.label(RichText::new("Manage").color(TOKENS.accent));
         ui.painter().line_segment([r.rect.left_bottom() + vec2(0.0, 3.0), r.rect.right_bottom() + vec2(0.0, 3.0)], egui::Stroke::new(2.0, TOKENS.accent));
     });
     widgets::divider(ui);
+    let lines_editable = page.editable && host.editable;
     ui.horizontal(|ui| {
+        if !lines_editable {
+            return;
+        }
         widgets::flat(ui);
         ui.set_min_height(34.0);
         ui.add_enabled_ui(editable, |ui| {

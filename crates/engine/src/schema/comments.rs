@@ -55,7 +55,38 @@ fn comments_action(page: &str) -> Act {
         .tooltip("View or add comments for the record.")
 }
 
+/// "Find entries..." (BC's Navigate) on posted documents and entry lists.
+fn find_entries(m: &mut Metadata) {
+    const TABLES: &[&str] = &[
+        "Sales Shipment Header",
+        "Sales Invoice Header",
+        "Sales Cr.Memo Header",
+        "Purch. Rcpt. Header",
+        "Purch. Inv. Header",
+        "Purch. Cr. Memo Hdr.",
+        "G/L Entry",
+        "Cust. Ledger Entry",
+        "Vendor Ledger Entry",
+        "Item Ledger Entry",
+        "Bank Account Ledger Entry",
+        "FA Ledger Entry",
+        "Detailed Cust. Ledg. Entry",
+        "Detailed Vendor Ledg. Entry",
+    ];
+    for p in m.pages.values_mut() {
+        if p.source_table.as_deref().is_some_and(|t| TABLES.contains(&t)) && !p.actions.iter().any(|a| a.caption == "Find entries...") {
+            p.actions.push(
+                Act::command("Find entries...", A::Navigate, "navigate")
+                    .shortcut("Ctrl+Shift+I")
+                    .icon("navigate")
+                    .tooltip("Find entries and documents that exist for the document number and posting date on the selected document."),
+            );
+        }
+    }
+}
+
 pub fn register(m: &mut Metadata) {
+    find_entries(m);
     m.add_table(
         TableDef::new(COMMENT_LINE, 97)
             .fields(comment_fields(F::new("Table Name", FieldType::option(TABLE_NAMES))))

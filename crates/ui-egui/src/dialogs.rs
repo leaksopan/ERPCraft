@@ -12,7 +12,8 @@ pub enum Dialog {
     Error(String),
     Confirm { text: String, command: String, params: Json },
     Form { title: String, submit: Submit, fields: Vec<FormField> },
-    Report { title: String, columns: Vec<String>, rows: Vec<Vec<String>> },
+    /// `links`: per row, the page (and filters) a click opens (Navigate's related entries).
+    Report { title: String, columns: Vec<String>, rows: Vec<Vec<String>>, links: Vec<Option<(String, Vec<(String, String)>)>> },
     /// BC's Select items: tick items, OK adds a line for each.
     SelectItems { command: String, base: Json, items: Vec<(String, String, bool)> },
 }
@@ -50,7 +51,24 @@ impl Dialog {
             .and_then(Json::as_array)
             .map(|rows| rows.iter().map(|row| row.as_array().map(|a| a.iter().map(cell).collect()).unwrap_or_default()).collect())
             .unwrap_or_default();
-        Dialog::Report { title, columns, rows }
+        let links = r
+            .get("links")
+            .and_then(Json::as_array)
+            .map(|a| {
+                a.iter()
+                    .map(|l| {
+                        let page = l.get("page")?.as_str()?.to_string();
+                        let filters = l
+                            .get("filters")
+                            .and_then(Json::as_array)
+                            .map(|fs| fs.iter().filter_map(|f| Some((cell(f.get(0)?), cell(f.get(1)?)))).collect())
+                            .unwrap_or_default();
+                        Some((page, filters))
+                    })
+                    .collect()
+            })
+            .unwrap_or_default();
+        Dialog::Report { title, columns, rows, links }
     }
 
     /// A parameter form for `command`'s `fields` (names from its JSON schema).
@@ -157,7 +175,7 @@ pub fn missing_params(command: &str, params: &Map<String, Json>, has_context: bo
     let schema = (cmd.params)();
     let required: Vec<String> =
         schema.get("required").and_then(Json::as_array).map(|a| a.iter().filter_map(|v| v.as_str().map(str::to_string)).collect()).unwrap_or_default();
-    let context_covers = |n: &str| has_context && matches!(n, "no" | "customer_no" | "vendor_no" | "item_no" | "document_type" | "table" | "key");
+    let context_covers = |n: &str| has_context && matches!(n, "no" | "customer_no" | "vendor_no" | "item_no" | "document_no" | "document_type" | "table" | "key");
     let mut out: Vec<String> = required.into_iter().filter(|r| !params.contains_key(r) && !context_covers(r)).collect();
     if !out.is_empty() {
         // Offer the optional ones too (e.g. applies-to document, posting date).
@@ -177,6 +195,7 @@ pub fn show(app: &mut ErpApp, ctx: &egui::Context) {
     let Some(dialog) = app.dialog.take() else { return };
     let mut keep = true;
     let mut then_run: Option<(String, Json)> = None;
+    let mut open_link: Option<(String, Vec<(String, String)>)> = None;
     let mut dialog = dialog;
     let modal = egui::Modal::new(Id::unique("erp_dialog")).show(ctx, |ui| {
         ui.set_max_width(560.0);
@@ -276,7 +295,7 @@ pub fn show(app: &mut ErpApp, ctx: &egui::Context) {
                     }
                 });
             }
-            Dialog::Report { title, columns, rows } => {
+            Dialog::Report { title, columns, rows, links } => {
                 ui.label(RichText::new(title.as_str()).font(theme::bold(theme::SUBTITLE)));
                 ui.add_space(8.0);
                 egui::ScrollArea::vertical().max_height(480.0).show(ui, |ui| {
@@ -285,10 +304,21 @@ pub fn show(app: &mut ErpApp, ctx: &egui::Context) {
                             ui.label(RichText::new(c).size(theme::SMALL).color(TOKENS.text_dim).strong());
                         }
                         ui.end_row();
-                        for r in rows.iter() {
+                        for (ri, r) in rows.iter().enumerate() {
+                            let link = links.get(ri).cloned().flatten();
                             for (i, c) in r.iter().enumerate() {
                                 let numeric = i > 0 && c.chars().next().is_some_and(|ch| ch.is_ascii_digit() || ch == '-') && c.contains('.');
-                                if numeric {
+                                if let Some((page, filters)) = link.as_ref().filter(|_| i == 0) {
+                                    // A related-entries row opens those records.
+                                    let r = ui.add(egui::Label::new(RichText::new(c).color(TOKENS.accent)).sense(egui::Sense::click()));
+                                    if r.hovered() {
+                                        ui.ctx().set_cursor_icon(egui::CursorIcon::PointingHand);
+                                    }
+                                    if r.clicked() {
+                                        open_link = Some((page.clone(), filters.clone()));
+                                        keep = false;
+                                    }
+                                } else if numeric {
                                     ui.with_layout(Layout::right_to_left(Align::Center), |ui| ui.label(c));
                                 } else {
                                     ui.label(c);
@@ -315,6 +345,9 @@ pub fn show(app: &mut ErpApp, ctx: &egui::Context) {
     }
     if let Some((c, p)) = then_run {
         app.run(&c, p);
+    }
+    if let Some((page, filters)) = open_link {
+        app.open_page(&page, filters, None);
     }
 }
 

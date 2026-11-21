@@ -41,6 +41,7 @@ pub mod item_charge;
 pub mod reqwksh;
 pub mod reservation;
 pub mod physinvt;
+pub mod sku;
 mod error;
 pub mod fa;
 pub mod item_journal;

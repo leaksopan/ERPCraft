@@ -54,6 +54,56 @@ pub fn on_item_entry(ctx: &mut Ctx, ile: &Record) -> Result<()> {
     Ok(())
 }
 
+/// A revaluation (BC's Revaluation value entry, posted from the revaluation journal): `amount`
+/// added to the value of the item's inventory (at `location`, all when blank) on `date`. It is
+/// booked on the applied entry, else on the latest inbound entry; the moving average takes it
+/// from its valuation date on.
+#[allow(clippy::too_many_arguments)]
+pub fn revalue(ctx: &mut Ctx, item: &Record, location: &str, applies_to: i64, date: chrono::NaiveDate, doc_no: &str, description: &str, amount: Decimal) -> Result<()> {
+    let no = item.str("No.");
+    let ile = if applies_to != 0 {
+        ctx.db.rows(ITEM_LEDGER).find(|e| e.get("Entry No.").as_int() == applies_to && e.str("Item No.") == no).cloned()
+    } else {
+        ctx.db
+            .rows(ITEM_LEDGER)
+            .filter(|e| e.str("Item No.") == no && (location.is_empty() || e.str("Location Code") == location) && e.get("Quantity").as_dec() > Decimal::ZERO)
+            .max_by_key(|e| e.get("Entry No.").as_int())
+            .cloned()
+    };
+    let Some(ile) = ile else {
+        refuse!("There is no inventory of item {no} to revalue.");
+    };
+    // The newest entry so far: the revaluation counts after it.
+    let after = ctx.db.rows(ITEM_LEDGER).filter(|e| e.str("Item No.") == no).map(|e| e.get("Entry No.").as_int()).max().unwrap_or(0);
+    let t = ctx.table(VALUE_ENTRY)?;
+    let mut v = t.init_record();
+    v.set("Entry No.", Value::Int(ctx.db.next_entry_no(VALUE_ENTRY)));
+    for f in ["Item No.", "Location Code", "Source Type", "Source No."] {
+        v.set(f, ile.get(f).clone());
+    }
+    v.set("Posting Date", Value::Date(date));
+    v.set("Valuation Date", Value::Date(date));
+    v.set("Document No.", Value::text(doc_no));
+    v.set("Description", Value::text(description));
+    v.set("Item Ledger Entry Type", ile.get("Entry Type").clone());
+    v.set("Item Ledger Entry No.", ile.get("Entry No.").clone());
+    v.set("Item Ledger Entry Quantity", dec(Decimal::ZERO));
+    v.set("Valued Quantity", dec(item_qty(ctx, no, location)));
+    v.set("Cost Amount (Actual)", dec(amount));
+    v.set("Cost Posted to G/L", dec(amount));
+    v.set("Entry Type", Value::text("Revaluation"));
+    v.set("Gen. Prod. Posting Group", item.get("Gen. Prod. Posting Group").clone());
+    v.set("Inventory Posting Group", item.get("Inventory Posting Group").clone());
+    v.set("Applies-to Entry", Value::Int(after));
+    v.set("User ID", Value::text(ctx.user.to_uppercase()));
+    ctx.db.insert(t, v)?;
+    Ok(())
+}
+
+fn item_qty(ctx: &Ctx, item: &str, location: &str) -> Decimal {
+    ctx.db.rows(ITEM_LEDGER).filter(|e| e.str("Item No.") == item && (location.is_empty() || e.str("Location Code") == location)).map(|e| e.get("Quantity").as_dec()).sum()
+}
+
 fn setup_account(ctx: &Ctx, bus: &str, prod: &str, field: &str) -> Result<String> {
     let s = ctx.get(GEN_POSTING_SETUP, &Key(vec![Value::text(bus), Value::text(prod)]))?;
     match s.str(field) {
@@ -70,6 +120,7 @@ fn gl_for(ctx: &Ctx, v: &Record, amount: Decimal) -> Result<Vec<GlLine>> {
     let desc = format!("Cost adjustment {} {}", v.str("Item No."), v.str("Document No."));
     let mut lines = vec![GlLine { account: inventory, amount, vat_amount: Decimal::ZERO, description: desc.clone(), gen_posting_type: "" }];
     let contra = match v.str("Item Ledger Entry Type") {
+        _ if v.str("Entry Type") == "Revaluation" => Some(setup_account(ctx, v.str("Gen. Bus. Posting Group"), v.str("Gen. Prod. Posting Group"), "Inventory Adjmt. Account")?),
         "Sale" => Some(setup_account(ctx, v.str("Gen. Bus. Posting Group"), v.str("Gen. Prod. Posting Group"), "COGS Account")?),
         "Positive Adjmt." | "Negative Adjmt." => Some(setup_account(ctx, v.str("Gen. Bus. Posting Group"), v.str("Gen. Prod. Posting Group"), "Inventory Adjmt. Account")?),
         "Purchase" => Some(setup_account(ctx, v.str("Gen. Bus. Posting Group"), v.str("Gen. Prod. Posting Group"), "Purch. Account")?),
@@ -81,8 +132,13 @@ fn gl_for(ctx: &Ctx, v: &Record, amount: Decimal) -> Result<Vec<GlLine>> {
     Ok(lines)
 }
 
+/// The cost of an item ledger entry, without revaluations (they count from their own date).
 fn entry_cost(ctx: &Ctx, ile_no: i64) -> Decimal {
-    ctx.db.rows(VALUE_ENTRY).filter(|v| v.get("Item Ledger Entry No.").as_int() == ile_no).map(|v| v.get("Cost Amount (Actual)").as_dec()).sum()
+    ctx.db
+        .rows(VALUE_ENTRY)
+        .filter(|v| v.get("Item Ledger Entry No.").as_int() == ile_no && v.str("Entry Type") != "Revaluation")
+        .map(|v| v.get("Cost Amount (Actual)").as_dec())
+        .sum()
 }
 
 /// BC's Adjust Cost - Item Entries for average costing: walking each item's entries by date, an
@@ -109,7 +165,27 @@ fn adjust_cost(ctx: &mut Ctx, p: &Json) -> Result<Json> {
         let standard = item.str("Costing Method") == "Standard";
         let (mut qty, mut cost) = (Decimal::ZERO, Decimal::ZERO);
         let mut shipped: HashMap<String, VecDeque<Decimal>> = HashMap::new();
+        // Revaluations: (valuation date, the newest entry before it, amount).
+        let mut revals: VecDeque<(Option<chrono::NaiveDate>, i64, Decimal)> = {
+            let mut v: Vec<(Option<chrono::NaiveDate>, i64, Decimal)> = ctx
+                .db
+                .rows(VALUE_ENTRY)
+                .filter(|v| v.str("Item No.") == no && v.str("Entry Type") == "Revaluation")
+                .map(|v| (v.get("Valuation Date").as_date(), v.get("Applies-to Entry").as_int(), v.get("Cost Amount (Actual)").as_dec()))
+                .collect();
+            v.sort_by_key(|r| (r.0, r.1));
+            v.into()
+        };
         for e in &ledger {
+            let (d, n) = (e.get("Posting Date").as_date(), e.get("Entry No.").as_int());
+            while let Some(&(rd, after, amount)) = revals.front() {
+                if rd < d || (rd == d && after < n) {
+                    cost += amount;
+                    revals.pop_front();
+                } else {
+                    break;
+                }
+            }
             let q = e.get("Quantity").as_dec();
             let current = entry_cost(ctx, e.get("Entry No.").as_int());
             let transfer = e.str("Entry Type") == "Transfer";
@@ -161,6 +237,7 @@ fn adjust_cost(ctx: &mut Ctx, p: &Json) -> Result<Json> {
             qty += q;
             cost += value;
         }
+        cost += revals.iter().map(|r| r.2).sum::<Decimal>();
         if !standard && qty > Decimal::ZERO {
             let mut i = ctx.get_code(ITEM, &no)?;
             i.set("Unit Cost", dec((cost / qty).round_dp(5)));

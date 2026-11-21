@@ -1904,6 +1904,7 @@ pub fn extend(m: &mut Metadata) {
             ("Unit Amount", "Unit Amount", "Specifies the price of one unit of the item on the journal line.", 2),
             ("Unit Cost", "Unit Cost", "Specifies the cost of one unit of the item or resource on the line.", 2),
             ("Amount", "Amount", "Specifies the line's net amount.", 1),
+            ("Applies-to Entry", "Applies-to Entry", "Specifies if the quantity on the journal line must be applied to an already-posted entry. In that case, enter the entry number that the quantity will be applied to.", 0),
             ("Journal Batch Name", "Journal Batch Name", "Specifies the name of the journal batch, a personalized journal layout, that the entries were posted from.", 0),
             ("New Location Code", "New Location Code", "Specifies the new location to link to the items on this journal line.", 0),
             ("Gen. Bus. Posting Group", "Gen. Bus. Posting Group", "Specifies the vendor's or customer's trade type to link transactions made for this business partner with the appropriate general ledger account according to the general posting setup.", 0),
@@ -1917,7 +1918,6 @@ pub fn extend(m: &mut Metadata) {
         vec![
             F::decimal("Discount Amount").read_only().auto_format(1).tooltip("Specifies the discount amount of this entry on the line."),
             F::code("Salespers./Purch. Code", 20).tooltip("Specifies the code for the salesperson or purchaser who is linked to the sale or purchase on the journal line."),
-            F::integer("Applies-to Entry").tooltip("Specifies if the quantity on the journal line must be applied to an already-posted entry. In that case, enter the entry number that the quantity will be applied to."),
             F::code("Shortcut Dimension 1 Code", 20).tooltip("Specifies the code for Shortcut Dimension 1, which is one of two global dimension codes that you set up in the General Ledger Setup window."),
             F::code("Shortcut Dimension 2 Code", 20).tooltip("Specifies the code for Shortcut Dimension 2, which is one of two global dimension codes that you set up in the General Ledger Setup window."),
             F::date("Expiration Date").tooltip("Specifies the last date on which the recurring journal will be posted, if you have indicated that the journal is recurring."),
@@ -3677,6 +3677,48 @@ pub fn extend(m: &mut Metadata) {
             ("Commission %", "Commission %", "Specifies the percentage to use to calculate the salesperson's commission.", 0),
             ("E-Mail", "Email", "Specifies the salesperson's email address.", 0),
             ("Phone No.", "Phone No.", "Specifies the salesperson's telephone number.", 0),
+        ],
+    );
+    relabel(
+        m,
+        "Stockkeeping Unit",
+        &[
+            ("Item No.", "Item No.", "Specifies the item number to which the SKU applies.", 0),
+            ("Variant Code", "Variant Code", "Specifies the variant of the item on the line.", 0),
+            ("Location Code", "Location Code", "Specifies the location code (for example, the warehouse or distribution center) to which the SKU applies.", 0),
+            ("Description", "Description", "Specifies the description from the Item Card.", 0),
+            ("Shelf No.", "Shelf No.", "Specifies where to find the SKU in the warehouse.", 0),
+            ("Unit Cost", "Unit Cost", "Specifies the cost of one unit of the item or resource on the line.", 2),
+            ("Standard Cost", "Standard Cost", "Specifies the unit cost that is used as an estimation to be adjusted with variances later. It is typically used in assembly and production where costs can vary. Warning: If the SKU is supplied through production, then this field is not used when invoicing and adjusting the actual cost of the produced item. Instead, the Standard Cost field on the underlying item card is used, and any variances are calculated against the cost shares of that item.", 2),
+            ("Last Direct Cost", "Last Direct Cost", "Specifies the most recent direct unit cost that was paid for the SKU.", 2),
+            ("Vendor No.", "Vendor No.", "Specifies for the SKU, the same as the field does on the item card.", 0),
+            ("Vendor Item No.", "Vendor Item No.", "Specifies the number that the vendor uses for this item.", 0),
+            ("Lead Time Calculation", "Lead Time Calculation", "Specifies a date formula for the amount of time it takes to replenish the item.", 0),
+            ("Reorder Point", "Reorder Point", "Specifies for the SKU, the same as the field does on the item card.", 0),
+            ("Maximum Inventory", "Maximum Inventory", "Specifies for the SKU, the same as the field does on the item card.", 0),
+            ("Reorder Quantity", "Reorder Quantity", "Specifies for the SKU, the same as the field does on the item card.", 0),
+            ("Last Date Modified", "Last Date Modified", "Specifies when the SKU card was last modified.", 0),
+            ("Inventory", "Inventory", "Specifies for the SKU, the same as the field does on the item card.", 0),
+            ("Qty. on Purch. Order", "Qty. on Purch. Order", "Specifies for the SKU, the same as the field does on the item card.", 0),
+            ("Qty. on Sales Order", "Qty. on Sales Order", "Specifies for the SKU, the same as the field does on the item card.", 0),
+            ("Minimum Order Quantity", "Minimum Order Quantity", "Specifies for the SKU, the same as the field does on the item card.", 0),
+            ("Safety Stock Quantity", "Safety Stock Quantity", "Specifies for the SKU, the same as the field does on the item card.", 0),
+            ("Order Multiple", "Order Multiple", "Specifies for the SKU, the same as the field does on the item card.", 0),
+            ("Replenishment System", "Replenishment System", "Specifies the type of supply order that is created by the planning system when the SKU needs to be replenished.", 0),
+            ("Reordering Policy", "Reordering Policy", "Specifies for the SKU, the same as the field does on the item card.", 0),
+            ("Transfer-from Code", "Transfer-from Code", "Specifies the code of the location that items are transferred from.", 0),
+            ("Qty. in Transit", "Qty. in Transit", "Specifies the quantity of the SKUs in transit. These items have been shipped, but not yet received.", 0),
+            ("Phys Invt Counting Period Code", "Phys Invt Counting Period Code", "Specifies the code of the counting period that indicates how often you want to count the SKU in a physical inventory.", 0),
+            ("Last Counting Period Update", "Last Counting Period Update", "Specifies the last date on which you calculated the counting period.", 0),
+            ("Next Counting Start Date", "Next Counting Start Date", "Specifies the starting date of the next counting period.", 0),
+            ("Next Counting End Date", "Next Counting End Date", "Specifies the ending date of the next counting period.", 0),
+        ],
+    );
+    fields(
+        m,
+        "Stockkeeping Unit",
+        vec![
+            F::option("Assembly Policy", &["Assemble-to-Stock", "Assemble-to-Order"]).tooltip("Specifies which default order flow is used to supply this SKU by assembly."),
         ],
     );
     relabel(
@@ -5491,6 +5533,7 @@ pub fn extend(m: &mut Metadata) {
     columns(m, "req-worksheet-templates", &["Name", "Description", "Recurring", "Increment Batch Name"]);
     columns(m, "requests-to-approve", &["Sender ID", "Due Date", "Status", "Amount", "Amount (LCY)", "Currency Code"]);
     columns(m, "reservation-entries", &["Reservation Status", "Item No.", "Location Code", "Quantity (Base)", "Entry No.", "Transferred from Entry No."]);
+    columns(m, "revaluation-journal", &["Posting Date", "Document No.", "Item No.", "Description", "Location Code", "Quantity", "Amount", "Unit Cost (Calculated)", "Inventory Value (Calculated)", "Unit Cost (Revalued)", "Inventory Value (Revalued)", "Applies-to Entry", "Shortcut Dimension 1 Code", "Shortcut Dimension 2 Code"]);
     columns(m, "sales-comment-sheet", &["Date", "Comment"]);
     layout(
         m,
@@ -5698,6 +5741,31 @@ pub fn extend(m: &mut Metadata) {
         ],
     );
     columns(m, "salespersons", &["Code", "Name", "Commission %", "Phone No."]);
+    layout(
+        m,
+        "stockkeeping-unit-card",
+        &[
+            Tab {
+                caption: "General",
+                fields: &["Location Code"],
+                promoted: &["Location Code"],
+                ..Tab::default()
+            },
+            Tab {
+                caption: "Invoicing",
+                fields: &["Standard Cost"],
+                ..Tab::default()
+            },
+            Tab {
+                caption: "Replenishment",
+                fields: &["Assembly Policy"],
+                breaks: &["Assembly Policy"],
+                headings: &[("Assembly Policy", "Assembly")],
+                ..Tab::default()
+            },
+        ],
+    );
+    columns(m, "stockkeeping-unit-list", &["Item No.", "Variant Code", "Location Code", "Replenishment System", "Description", "Inventory"]);
     layout(
         m,
         "transfer-order",
@@ -6081,6 +6149,7 @@ pub fn extend(m: &mut Metadata) {
         &[
             Nav { caption: "&Reservation Entries", page: "reservation-entries", link: &[("Item No.", "No.")], shortcut: "" },
             Nav { caption: "Physical Inventory Journal", page: "phys-inventory-journal", link: &[], shortcut: "" },
+            Nav { caption: "Revaluation Journal", page: "revaluation-journal", link: &[], shortcut: "" },
             Nav { caption: "Dimensions-Single", page: "default-dimensions", link: &[("No.", "No.")], shortcut: "Alt+D" },
             Nav { caption: "Co&mments", page: "comment-sheet", link: &[("No.", "No.")], shortcut: "" },
         ],
@@ -6249,6 +6318,15 @@ pub fn extend(m: &mut Metadata) {
     );
     actions(
         m,
+        "revaluation-journal",
+        &[
+            Nav { caption: "Card", page: "item-card", link: &[("No.", "Item No.")], shortcut: "Shift+F7" },
+            Nav { caption: "Ledger E&ntries", page: "item-ledger-entries", link: &[("Item No.", "Item No.")], shortcut: "Ctrl+F7" },
+            Nav { caption: "Value Entries", page: "value-entries", link: &[("Item No.", "Item No.")], shortcut: "" },
+        ],
+    );
+    actions(
+        m,
         "sales-credit-memos",
         &[
             Nav { caption: "Co&mments", page: "sales-comment-sheet", link: &[("Document Type", "Document Type"), ("No.", "No.")], shortcut: "" },
@@ -6298,6 +6376,25 @@ pub fn extend(m: &mut Metadata) {
         "salespersons",
         &[
             Nav { caption: "Dimensions-Single", page: "default-dimensions", link: &[("No.", "Code")], shortcut: "Alt+D" },
+        ],
+    );
+    actions(
+        m,
+        "stockkeeping-unit-card",
+        &[
+            Nav { caption: "Dimensions", page: "default-dimensions", link: &[("No.", "Item No.")], shortcut: "Alt+D" },
+        ],
+    );
+    actions(
+        m,
+        "stockkeeping-unit-list",
+        &[
+            Nav { caption: "Dimensions", page: "default-dimensions", link: &[("No.", "Item No.")], shortcut: "Alt+D" },
+            Nav { caption: "&Units of Measure", page: "item-units-of-measure", link: &[("Item No.", "Item No.")], shortcut: "" },
+            Nav { caption: "Va&riants", page: "item-variants", link: &[("Item No.", "Item No.")], shortcut: "" },
+            Nav { caption: "Co&mments", page: "comment-sheet", link: &[("No.", "Item No.")], shortcut: "" },
+            Nav { caption: "E&xtended Texts", page: "extended-text-list", link: &[("No.", "Item No.")], shortcut: "" },
+            Nav { caption: "New Item", page: "item-card", link: &[], shortcut: "" },
         ],
     );
     actions(
@@ -7059,6 +7156,15 @@ pub fn extend(m: &mut Metadata) {
     );
     categories(
         m,
+        "revaluation-journal",
+        &[
+            ("Process", &["Calculate Inventory Value", "P&ost", "Preview Posting", "Post and &Print"]),
+            ("Line", &["Dimensions"]),
+            ("Item", &["Value Entries"]),
+        ],
+    );
+    categories(
+        m,
         "sales-credit-memo",
         &[
             ("Process", &["P&ost", "Preview Posting", "Re&lease", "Re&open"]),
@@ -7151,6 +7257,20 @@ pub fn extend(m: &mut Metadata) {
         "salespersons",
         &[
             ("Salesperson", &["Dimensions-Single"]),
+        ],
+    );
+    categories(
+        m,
+        "stockkeeping-unit-card",
+        &[
+            ("Item", &["Dimensions"]),
+        ],
+    );
+    categories(
+        m,
+        "stockkeeping-unit-list",
+        &[
+            ("Item", &["Dimensions", "Co&mments"]),
         ],
     );
     categories(
@@ -7539,6 +7659,13 @@ pub fn extend(m: &mut Metadata) {
         &[
             ("Reserved Quantity", "reservation-entries", &[("Source ID", "Document No."), ("Source Ref. No.", "Line No."), ("Source Subtype", "Document Type")], &[("Source Type", "37"), ("Reservation Status", "Reservation")]),
             ("Reserved Qty. (Base)", "reservation-entries", &[("Source ID", "Document No."), ("Source Ref. No.", "Line No."), ("Source Subtype", "Document Type")], &[("Source Type", "37"), ("Reservation Status", "Reservation")]),
+        ],
+    );
+    drilldowns(
+        m,
+        "Stockkeeping Unit",
+        &[
+            ("Inventory", "item-ledger-entries", &[("Item No.", "Item No."), ("Location Code", "Location Code")], &[]),
         ],
     );
     drilldowns(

@@ -13,13 +13,14 @@ pub const ITEM_JNL_BATCH: &str = "Item Journal Batch";
 pub const ITEM_JNL_LINE: &str = "Item Journal Line";
 
 pub const ITEM_ENTRY_TYPES: &[&str] = &["Purchase", "Sale", "Positive Adjmt.", "Negative Adjmt.", "Transfer"];
-pub const ITEM_TEMPLATE_TYPES: &[&str] = &["Item", "Transfer", "Phys. Inventory"];
+pub const ITEM_TEMPLATE_TYPES: &[&str] = &["Item", "Transfer", "Phys. Inventory", "Revaluation"];
 
 /// (template, type, page id, page object id, caption, number series, source code).
 pub const ITEM_JOURNALS: &[(&str, &str, &str, u32, &str, &str, &str)] = &[
     ("ITEM", "Item", "item-journal", 40, "Item Journals", "I-JNL", "ITEMJNL"),
     ("RECLASS", "Transfer", "item-reclass-journal", 393, "Item Reclass. Journals", "I-RCLSS", "RECLASSJNL"),
     ("PHYS INV", "Phys. Inventory", "phys-inventory-journal", 392, "Phys. Inventory Journals", "I-PHYS", "PHYSINVJNL"),
+    ("REVAL", "Revaluation", "revaluation-journal", 5803, "Revaluation Journals", "I-REVAL", "REVALJNL"),
 ];
 
 pub fn register(m: &mut Metadata) {
@@ -87,6 +88,12 @@ pub fn register(m: &mut Metadata) {
                 F::code("Gen. Prod. Posting Group", 20),
                 F::code("Inventory Posting Group", 20),
                 F::code("Source Code", 10).read_only(),
+                F::option("Value Entry Type", &["Direct Cost", "Revaluation", "Rounding", "Indirect Cost", "Variance"]).read_only(),
+                F::decimal("Inventory Value (Calculated)").auto_format(1).read_only(),
+                F::decimal("Inventory Value (Revalued)").auto_format(1),
+                F::decimal("Unit Cost (Calculated)").auto_format(2).read_only(),
+                F::decimal("Unit Cost (Revalued)").auto_format(2),
+                F::integer("Applies-to Entry"),
             ])
             .key(&["Journal Template Name", "Journal Batch Name", "Line No."])
             .describe_by("Description"),
@@ -138,6 +145,19 @@ fn pages(m: &mut Metadata) {
                 "Unit Amount",
                 "Amount",
             ],
+            "Revaluation" => &[
+                "Posting Date",
+                "Document No.",
+                "Item No.",
+                "Description",
+                "Location Code",
+                "Quantity",
+                "Inventory Value (Calculated)",
+                "Inventory Value (Revalued)",
+                "Unit Cost (Calculated)",
+                "Unit Cost (Revalued)",
+                "Applies-to Entry",
+            ],
             _ => &["Posting Date", "Entry Type", "Document No.", "Item No.", "Description", "Location Code", "Quantity", "Unit of Measure Code", "Unit Amount", "Amount"],
         };
         let mut p = PageDef::new(id, *obj, caption, K::List, Some(ITEM_JNL_LINE))
@@ -183,6 +203,16 @@ fn pages(m: &mut Metadata) {
                     .confirm("Do you want to post the journal lines?"),
             )
             .keywords("inventory stock adjustment opname");
+        if *ty == "Revaluation" {
+            p = p.action(
+                Act::command("Calculate Inve&ntory Value", A::Process, "item_journal.calculate_inventory_value")
+                    .param("template", template)
+                    .param("batch", "DEFAULT")
+                    .ask(&["posting_date", "by_location"])
+                    .icon("stats")
+                    .tooltip("Calculate the inventory value of the items, as the basis for revaluing them."),
+            );
+        }
         if *ty == "Phys. Inventory" {
             p = p.action(
                 Act::command("Calculate Inventory", A::Process, "item_journal.calculate_inventory")

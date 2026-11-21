@@ -92,6 +92,32 @@ pub fn on_validate(ctx: &mut Ctx, r: &mut Record, field: &str) -> Result<()> {
             r.set("Unit Cost", r.get("Unit Amount").clone());
             recalc(r);
         }
+        "Unit Cost (Revalued)" => {
+            if r.str("Value Entry Type") != "Revaluation" {
+                refuse!("Value Entry Type must be equal to 'Revaluation' in Item Journal Line: Line No.={}.", r.get("Line No.").as_int());
+            }
+            if r.get("Unit Cost (Revalued)").as_dec() < Decimal::ZERO {
+                refuse!("Unit Cost (Revalued) must not be negative.");
+            }
+            let v = round_amount(r.get("Quantity").as_dec() * r.get("Unit Cost (Revalued)").as_dec());
+            r.set("Inventory Value (Revalued)", dec(v));
+            r.set("Unit Amount", r.get("Unit Cost (Revalued)").clone());
+            r.set("Amount", dec(v));
+        }
+        "Inventory Value (Revalued)" => {
+            if r.str("Value Entry Type") != "Revaluation" {
+                refuse!("Value Entry Type must be equal to 'Revaluation' in Item Journal Line: Line No.={}.", r.get("Line No.").as_int());
+            }
+            let v = r.get("Inventory Value (Revalued)").as_dec();
+            if v < Decimal::ZERO {
+                refuse!("Inventory Value (Revalued) must not be negative.");
+            }
+            let q = r.get("Quantity").as_dec();
+            let unit = if q.is_zero() { Decimal::ZERO } else { (v / q).round_dp(5) };
+            r.set("Unit Cost (Revalued)", dec(unit));
+            r.set("Unit Amount", dec(unit));
+            r.set("Amount", dec(v));
+        }
         "Qty. (Phys. Inventory)" => {
             let diff = r.get("Qty. (Phys. Inventory)").as_dec() - r.get("Qty. (Calculated)").as_dec();
             r.set("Entry Type", Value::text(if diff < Decimal::ZERO { "Negative Adjmt." } else { "Positive Adjmt." }));
@@ -173,6 +199,60 @@ pub fn calculate_inventory(ctx: &mut Ctx, template: &str, batch: &str, location:
     Ok(json!({"lines": created, "message": format!("{created} lines were created. Enter the counted quantities in Qty. (Phys. Inventory), then post.")}))
 }
 
+/// BC's Calculate Inventory Value (report 5899, per item): a revaluation line per item (and
+/// location) with its quantity on inventory and the value of it from the value entries.
+pub fn calculate_inventory_value(ctx: &mut Ctx, template: &str, batch: &str, date: chrono::NaiveDate, item_no: Option<&str>, by_location: bool) -> Result<Json> {
+    let tmpl = ctx.get_code(ITEM_JNL_TEMPLATE, template)?;
+    if tmpl.str("Type") != "Revaluation" {
+        refuse!("Type must be equal to 'Revaluation' in Item Journal Template: Name={template}. Current value is '{}'.", tmpl.str("Type"));
+    }
+    let lt = ctx.table(ITEM_JNL_LINE)?;
+    let items: Vec<Record> = ctx.db.rows(ITEM).filter(|i| i.str("Type") == "Inventory" && item_no.is_none_or(|n| i.str("No.") == n)).cloned().collect();
+    let mut created = 0;
+    for item in items {
+        let no = item.str("No.").to_string();
+        let mut per: BTreeMap<String, (Decimal, Decimal)> = BTreeMap::new();
+        let entries: Vec<Record> = ctx.db.rows(ITEM_LEDGER).filter(|e| e.str("Item No.") == no && e.get("Posting Date").as_date().is_none_or(|d| d <= date)).cloned().collect();
+        for e in &entries {
+            let key = if by_location { e.str("Location Code").to_string() } else { String::new() };
+            let value: Decimal = ctx
+                .db
+                .rows(crate::costing::VALUE_ENTRY)
+                .filter(|v| v.get("Item Ledger Entry No.") == e.get("Entry No.") && v.get("Valuation Date").as_date().is_none_or(|d| d <= date))
+                .map(|v| v.get("Cost Amount (Actual)").as_dec())
+                .sum();
+            let slot = per.entry(key).or_default();
+            slot.0 += e.get("Quantity").as_dec();
+            slot.1 += value;
+        }
+        for (loc, (qty, value)) in per {
+            if qty <= Decimal::ZERO {
+                continue;
+            }
+            let unit = (value / qty).round_dp(5);
+            let mut values = Map::new();
+            values.insert("Journal Template Name".into(), json!(template));
+            values.insert("Journal Batch Name".into(), json!(batch));
+            let mut r = crate::records::create(ctx, lt, &values, None)?;
+            crate::records::validate(ctx, lt, &mut r, "Item No.", &json!(no), false)?;
+            r.set("Location Code", Value::text(&loc));
+            r.set("Posting Date", Value::Date(date));
+            r.set("Entry Type", Value::text("Positive Adjmt."));
+            r.set("Value Entry Type", Value::text("Revaluation"));
+            r.set("Quantity", dec(qty));
+            r.set("Inventory Value (Calculated)", dec(round_amount(value)));
+            r.set("Inventory Value (Revalued)", dec(round_amount(value)));
+            r.set("Unit Cost (Calculated)", dec(unit));
+            r.set("Unit Cost (Revalued)", dec(unit));
+            r.set("Unit Amount", dec(unit));
+            r.set("Amount", dec(round_amount(value)));
+            ctx.db.modify(lt, r)?;
+            created += 1;
+        }
+    }
+    Ok(json!({"lines": created, "message": format!("{created} lines were created. Enter the revalued unit costs or inventory values, then post.")}))
+}
+
 fn adjustment_account(ctx: &Ctx, l: &Record) -> Result<String> {
     let key = Key(vec![l.get("Gen. Bus. Posting Group").clone(), l.get("Gen. Prod. Posting Group").clone()]);
     ctx.db
@@ -228,6 +308,30 @@ pub fn post(ctx: &mut Ctx, template: &str, batch: &str) -> Result<Json> {
             let loc = l.str("Location Code").to_string();
             let desc = l.str("Description").to_string();
             let unit = l.get("Unit Amount").as_dec();
+            if l.str("Value Entry Type") == "Revaluation" {
+                // The difference in value goes onto the inventory as a revaluation value entry.
+                let diff = round_amount(l.get("Inventory Value (Revalued)").as_dec() - l.get("Inventory Value (Calculated)").as_dec());
+                if !diff.is_zero() {
+                    let applies = l.get("Applies-to Entry").as_int();
+                    crate::costing::revalue(ctx, &item, &loc, applies, date, doc, &desc, diff)?;
+                    let inv = inventory_account(ctx, &item, if loc.is_empty() { "" } else { &loc })?;
+                    let adj = adjustment_account(ctx, l)?;
+                    gl.push(GlLine { account: inv, amount: diff, vat_amount: Decimal::ZERO, description: desc.clone(), gen_posting_type: "" });
+                    gl.push(GlLine { account: adj, amount: -diff, vat_amount: Decimal::ZERO, description: desc.clone(), gen_posting_type: "" });
+                }
+                // The item's cost follows (BC: the revalued unit cost for standard and average items).
+                let it = ctx.table(ITEM)?;
+                let mut i = ctx.get_code(ITEM, item.str("No."))?;
+                if i.str("Costing Method") == "Standard" {
+                    i.set("Standard Cost", l.get("Unit Cost (Revalued)").clone());
+                }
+                if loc.is_empty() {
+                    i.set("Unit Cost", l.get("Unit Cost (Revalued)").clone());
+                }
+                ctx.db.modify(it, i)?;
+                entries += 1;
+                continue;
+            }
             match l.str("Entry Type") {
                 t @ ("Positive Adjmt." | "Negative Adjmt.") => {
                     let positive = t == "Positive Adjmt.";

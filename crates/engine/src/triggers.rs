@@ -37,6 +37,9 @@ pub fn on_insert(ctx: &mut Ctx, t: &TableDef, r: &mut Record) -> Result<()> {
     if crate::physinvt::on_insert(ctx, t, r)? {
         return Ok(());
     }
+    if crate::sku::on_insert(ctx, t, r)? {
+        return Ok(());
+    }
     if let Some(done) = crate::item_setup::on_insert(ctx, t, r)? {
         return Ok(done);
     }
@@ -215,6 +218,7 @@ pub fn on_validate(ctx: &mut Ctx, t: &TableDef, r: &mut Record, field: &str, old
     crate::item_setup::on_validate(ctx, t, r, field)?;
     crate::transfer::on_validate(ctx, t, r, field)?;
     crate::physinvt::on_validate(ctx, t, r, field)?;
+    crate::sku::on_validate(ctx, t, r, field)?;
     crate::tracking::on_validate(ctx, t, r, field)?;
     crate::item_charge::on_validate(ctx, t, r, field);
     if t.name == crate::schema::bank_rec::BANK_REC_LINE {

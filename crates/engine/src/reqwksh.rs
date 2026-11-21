@@ -26,13 +26,19 @@ fn per(l: &Record) -> Decimal {
     }
 }
 
-/// On hand + open purchase orders - open sales orders, in the base unit.
+/// On hand + open purchase orders - open sales orders, in the base unit (at one location when
+/// planning a stockkeeping unit).
 pub fn projected(ctx: &Ctx, item: &str) -> Decimal {
-    let on_hand: Decimal = ctx.db.rows(ITEM_LEDGER).filter(|e| e.str("Item No.") == item).map(|e| e.get("Quantity").as_dec()).sum();
+    projected_at(ctx, item, None)
+}
+
+pub fn projected_at(ctx: &Ctx, item: &str, location: Option<&str>) -> Decimal {
+    let at = |l: &Record| location.is_none_or(|x| l.str("Location Code") == x);
+    let on_hand: Decimal = ctx.db.rows(ITEM_LEDGER).filter(|e| e.str("Item No.") == item && at(e)).map(|e| e.get("Quantity").as_dec()).sum();
     let open = |table: &str| -> Decimal {
         ctx.db
             .rows(table)
-            .filter(|l| l.str("Document Type") == "Order" && l.str("Type") == "Item" && l.str("No.") == item)
+            .filter(|l| l.str("Document Type") == "Order" && l.str("Type") == "Item" && l.str("No.") == item && at(l))
             .map(|l| l.get("Outstanding Quantity").as_dec() * per(l))
             .sum()
     };
@@ -101,24 +107,37 @@ fn calculate_plan(ctx: &mut Ctx, p: &Json) -> Result<Json> {
         }
     }
     let mut next = lines_of(ctx, &template, &batch).iter().map(|l| l.get("Line No.").as_int()).max().unwrap_or(0);
+    let skus: Vec<Record> = ctx.db.rows(crate::schema::sku::SKU).cloned().collect();
     let items: Vec<Record> = ctx
         .db
         .rows(ITEM)
-        .filter(|i| only.as_ref().is_none_or(|o| i.str("No.") == o) && i.str("Type") != "Service" && !i.get("Blocked").as_bool() && !i.str("Reordering Policy").is_empty())
-        .filter(|i| matches!(i.str("Replenishment System"), "" | "Purchase"))
+        .filter(|i| only.as_ref().is_none_or(|o| i.str("No.") == o) && i.str("Type") != "Service" && !i.get("Blocked").as_bool())
         .cloned()
         .collect();
-    let mut created = 0;
+    // What to plan: each item's stockkeeping units when it has any, else the item itself.
+    let mut plans: Vec<(Record, Record, Option<String>)> = Vec::new();
     for item in items {
+        let own: Vec<&Record> = skus.iter().filter(|s| s.str("Item No.") == item.str("No.")).collect();
+        if own.is_empty() {
+            plans.push((item.clone(), item.clone(), None));
+        } else {
+            for s in own {
+                plans.push((item.clone(), s.clone(), Some(s.str("Location Code").to_string())));
+            }
+        }
+    }
+    plans.retain(|(_, p, _)| !p.str("Reordering Policy").is_empty() && matches!(p.str("Replenishment System"), "" | "Purchase"));
+    let mut created = 0;
+    for (item, params, location) in plans {
         let no = item.str("No.").to_string();
-        let qty = plan_quantity(&item, projected(ctx, &no));
+        let qty = plan_quantity(&params, projected_at(ctx, &no, location.as_deref()));
         if qty.is_zero() {
             continue;
         }
         next += 10000;
-        let due = crate::dateformula::calc(item.str("Lead Time Calculation"), order_date)?;
-        let cost = match item.get("Last Direct Cost").as_dec() {
-            d if d.is_zero() => item.get("Unit Cost").as_dec(),
+        let due = crate::dateformula::calc(params.str("Lead Time Calculation"), order_date)?;
+        let cost = match params.get("Last Direct Cost").as_dec() {
+            d if d.is_zero() => params.get("Unit Cost").as_dec(),
             d => d,
         };
         let mut l = lt.init_record();
@@ -133,7 +152,10 @@ fn calculate_plan(ctx: &mut Ctx, p: &Json) -> Result<Json> {
         l.set("Unit of Measure Code", item.get("Base Unit of Measure").clone());
         l.set("Qty. per Unit of Measure", dec(Decimal::ONE));
         l.set("Quantity (Base)", dec(qty));
-        l.set("Vendor No.", item.get("Vendor No.").clone());
+        l.set("Vendor No.", if params.str("Vendor No.").is_empty() { item.get("Vendor No.").clone() } else { params.get("Vendor No.").clone() });
+        if let Some(loc) = &location {
+            l.set("Location Code", Value::text(loc));
+        }
         l.set("Direct Unit Cost", dec(cost));
         l.set("Order Date", Value::Date(order_date));
         l.set("Due Date", Value::Date(due));

@@ -23,7 +23,7 @@ orders this list into phases.
 | Foundation | 8 | 58 | 0 | 2 |
 | HumanResources | 0 | 57 | 0 | 15 |
 | Integration | 0 | 87 | 0 | 0 |
-| Inventory | 54 | 312 | 1 | 101 |
+| Inventory | 57 | 312 | 1 | 101 |
 | Invoicing | 0 | 7 | 0 | 0 |
 | Manufacturing | 0 | 134 | 0 | 50 |
 | Modules | 2 | 93 | 0 | 1 |
@@ -38,7 +38,7 @@ orders this list into phases.
 | Utilities | 0 | 12 | 0 | 2 |
 | Warehouse | 0 | 144 | 0 | 35 |
 | eServices | 0 | 25 | 0 | 0 |
-| **Base Application** | **195** | **2638** | **16** | **659** |
+| **Base Application** | **198** | **2638** | **16** | **659** |
 
 ### (root)
 
@@ -1754,7 +1754,7 @@ Pages 0 / 87, reports 0 / 0.
 
 ### Inventory
 
-Pages 54 / 312, reports 1 / 101.
+Pages 57 / 312, reports 1 / 101.
 
 <details><summary>Inventory / Analysis: pages 0 / 34, reports 0 / 8</summary>
 
@@ -2042,7 +2042,7 @@ Pages 54 / 312, reports 1 / 101.
 
 </details>
 
-<details><summary>Inventory / Journal: pages 3 / 12, reports 0 / 2</summary>
+<details><summary>Inventory / Journal: pages 4 / 12, reports 0 / 2</summary>
 
 - [x] Page 40 Item Journal (Worksheet)
 - [x] Page 102 Item Journal Templates (List)
@@ -2054,7 +2054,7 @@ Pages 54 / 312, reports 1 / 101.
 - [ ] Page 753 Standard Item Journals (List)
 - [ ] Page 754 Standard Item Journal (ListPlus)
 - [ ] Page 755 Standard Item Journal Subform (ListPart)
-- [ ] Page 5803 Revaluation Journal (Worksheet)
+- [x] Page 5803 Revaluation Journal (Worksheet)
 - [ ] Page 9122 Item Journal Errors Factbox (ListPart)
 - [ ] Report 751 Save as Standard Item Journal (Report)
 - [ ] Report 5899 Calculate Inventory Value (Report)
@@ -2080,11 +2080,11 @@ Pages 54 / 312, reports 1 / 101.
 
 </details>
 
-<details><summary>Inventory / Location: pages 1 / 10, reports 0 / 1</summary>
+<details><summary>Inventory / Location: pages 3 / 10, reports 0 / 1</summary>
 
 - [x] Page 15 Location List (List)
-- [ ] Page 5700 Stockkeeping Unit Card (Card)
-- [ ] Page 5701 Stockkeeping Unit List (List)
+- [x] Page 5700 Stockkeeping Unit Card (Card)
+- [x] Page 5701 Stockkeeping Unit List (List)
 - [ ] Page 5702 Stockkeeping Unit Comment List (List)
 - [ ] Page 5703 Location Card (Card)
 - [ ] Page 5704 Stock. Unit Comment Sheet (List)

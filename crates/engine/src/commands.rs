@@ -51,7 +51,7 @@ impl CommandDef {
 }
 
 /// Modules that add commands of their own (each a `static` slice of [`CommandDef`]).
-fn module_commands() -> [&'static [CommandDef]; 23] {
+fn module_commands() -> [&'static [CommandDef]; 24] {
     [
         crate::print::COMMANDS,
         crate::bc::COMMANDS,
@@ -76,6 +76,7 @@ fn module_commands() -> [&'static [CommandDef]; 23] {
         crate::reqwksh::COMMANDS,
         crate::reservation::COMMANDS,
         crate::physinvt::COMMANDS,
+        crate::sku::COMMANDS,
     ]
 }
 
@@ -340,9 +341,17 @@ fn s_period() -> Json {
 }
 fn s_item_journal() -> Json {
     json!({"type": "object", "properties": {
-        "template": {"type": "string", "enum": ["ITEM", "RECLASS", "PHYS INV"], "default": "ITEM"},
+        "template": {"type": "string", "enum": ["ITEM", "RECLASS", "PHYS INV", "REVAL"], "default": "ITEM"},
         "batch": {"type": "string", "default": "DEFAULT"},
         "location_code": {"type": "string", "description": "Calculate Inventory: only this location (blank: every location holding stock)"}}})
+}
+fn s_inventory_value() -> Json {
+    json!({"type": "object", "properties": {
+        "template": {"type": "string", "default": "REVAL"},
+        "batch": {"type": "string", "default": "DEFAULT"},
+        "posting_date": {"type": "string", "description": "YYYY-MM-DD; default the work date"},
+        "item_no": {"type": "string", "description": "only this item"},
+        "by_location": {"type": "boolean", "description": "Calculate per location"}}})
 }
 fn s_depreciation() -> Json {
     json!({"type": "object", "properties": {
@@ -892,6 +901,16 @@ fn item_journal_calc(c: &mut Ctx, p: &Json) -> Result<Json> {
     }
     crate::item_journal::calculate_inventory(c, &t, &b, loc.as_deref())
 }
+fn item_journal_calc_value(c: &mut Ctx, p: &Json) -> Result<Json> {
+    let template = opt_str(p, "template").unwrap_or("REVAL").to_uppercase();
+    let batch = opt_str(p, "batch").unwrap_or("DEFAULT").to_uppercase();
+    let date = match opt_str(p, "posting_date").map(str::trim).filter(|s| !s.is_empty()) {
+        Some(s) => chrono::NaiveDate::parse_from_str(s, "%Y-%m-%d").map_err(|_| EngineError::invalid(format!("'{s}' is not a date (YYYY-MM-DD).")))?,
+        None => c.work_date,
+    };
+    let by_location = p.get("by_location").and_then(|v| v.as_bool().or_else(|| v.as_str().map(|s| s.eq_ignore_ascii_case("true")))).unwrap_or(false);
+    crate::item_journal::calculate_inventory_value(c, &template, &batch, date, opt_str(p, "item_no"), by_location)
+}
 fn fa_depreciation(c: &mut Ctx, p: &Json) -> Result<Json> {
     let date = opt_date(p, "date")?.unwrap_or(c.work_date);
     let post = matches!(p.get("post"), Some(Json::Bool(true))) || opt_str(p, "post").is_some_and(|s| s.eq_ignore_ascii_case("yes") || s == "true");
@@ -1021,6 +1040,7 @@ static COMMANDS: &[CommandDef] = &[
     cmd!("report.aged_payables", "Aged Accounts Payable", "Purchasing", false, s_date, aged_payables, "Open vendor balances by days past due."),
     cmd!("item_journal.post", "Post Item Journal", "Inventory", true, s_item_journal, item_journal_post, "Post an item, reclassification or physical inventory journal batch."),
     cmd!("item_journal.calculate_inventory", "Calculate Inventory", "Inventory", true, s_item_journal, item_journal_calc, "Fill a physical inventory journal with the current stock per item and location."),
+    cmd!("item_journal.calculate_inventory_value", "Calculate Inventory Value", "Inventory", true, s_inventory_value, item_journal_calc_value, "Fill a revaluation journal with each item's inventory quantity and value."),
     cmd!("fa.calculate_depreciation", "Calculate Depreciation", "Fixed Assets", true, s_depreciation, fa_depreciation, "Straight-line depreciation up to a date, as FA G/L journal lines (optionally posted)."),
     cmd!("report.inventory_valuation", "Inventory Valuation", "Inventory", false, s_date, inventory_valuation, "Quantity and value per item, with the inventory G/L balance."),
     cmd!("report.fa_book_value", "Fixed Asset Book Value", "Fixed Assets", false, s_date, fa_book_value, "Acquisition cost, depreciation and book value per fixed asset."),

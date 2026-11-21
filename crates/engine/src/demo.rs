@@ -247,7 +247,7 @@ pub fn setup(ctx: &mut Ctx) -> Result<()> {
     // Stock on its way between warehouses.
     raw(ctx, "Location", json!({"Code": "TRANSIT", "Name": "In transit (own trucks)", "Use As In-Transit": true}))?;
     raw(ctx, "Inventory Posting Setup", json!({"Location Code": "TRANSIT", "Invt. Posting Group Code": "PARTS", "Inventory Account": "10300", "Description": "Spare parts in transit"}))?;
-    for (code, desc, start) in [("I-JNL", "Item Journal", "IJ00001"), ("I-RCLSS", "Item Reclass. Journal", "IR00001"), ("I-PHYS", "Phys. Inventory Journal", "IP00001"), ("FA-JNL", "FA G/L Journal", "FAJ00001")] {
+    for (code, desc, start) in [("I-JNL", "Item Journal", "IJ00001"), ("I-RCLSS", "Item Reclass. Journal", "IR00001"), ("I-PHYS", "Phys. Inventory Journal", "IP00001"), ("I-REVAL", "Revaluation Journal", "IRV00001"), ("FA-JNL", "FA G/L Journal", "FAJ00001")] {
         raw(ctx, "No. Series", json!({"Code": code, "Description": desc, "Starting No.": start, "Increment-by No.": 1}))?;
     }
     for (template, ty, _, _, caption, series, source) in crate::schema::inventory::ITEM_JOURNALS {

@@ -91,6 +91,7 @@ pub fn register(m: &mut Metadata) {
                 F::code("Item Charge No.", 20),
                 F::date("Valuation Date"),
                 F::code("User ID", 50),
+                F::integer("Applies-to Entry"),
             ])
             .key(&["Entry No."])
             .pages("value-entries", None),

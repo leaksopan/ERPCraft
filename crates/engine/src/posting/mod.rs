@@ -540,6 +540,7 @@ pub fn post_document(ctx: &mut Ctx, side: &Side, doc_type: &str, no: &str, mode:
         }
         ph.set("User ID", Value::text(ctx.user.to_uppercase()));
         ctx.db.insert(pht, ph)?;
+        copy_comments(ctx, side, doc_type, no, if credit { "Posted Credit Memo" } else { "Posted Invoice" }, &posted_no)?;
         result.insert("posted_table".into(), json!(ph_table));
         result.insert("posted_no".into(), json!(posted_no));
         result.insert("amount".into(), json!(total_amount.to_string()));
@@ -633,4 +634,17 @@ pub fn update_item_cost(ctx: &mut Ctx, item_no: &str, qty: Decimal, amount: Deci
     item.set("Last Direct Cost", dec(unit));
     item.set("Unit Cost", dec(new_cost));
     ctx.db.modify(it, item)
+}
+
+/// BC's CopyCommentLines: the document's comments go with it to the posted document.
+fn copy_comments(ctx: &mut Ctx, side: &Side, from_type: &str, from_no: &str, to_type: &str, to_no: &str) -> Result<()> {
+    let table = if side.sales { crate::schema::comments::SALES_COMMENT } else { crate::schema::comments::PURCH_COMMENT };
+    let t = ctx.table(table)?;
+    let comments: Vec<Record> = ctx.db.rows(table).filter(|c| c.str("Document Type") == from_type && c.str("No.") == from_no).cloned().collect();
+    for mut c in comments {
+        c.set("Document Type", Value::text(to_type));
+        c.set("No.", Value::text(to_no));
+        ctx.db.insert(t, c)?;
+    }
+    Ok(())
 }

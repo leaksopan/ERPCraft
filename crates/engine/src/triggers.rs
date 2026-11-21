@@ -16,6 +16,10 @@ use crate::schema::tables::{
 use crate::side::Side;
 
 pub fn on_insert(ctx: &mut Ctx, t: &TableDef, r: &mut Record) -> Result<()> {
+    if matches!(t.name.as_str(), crate::schema::comments::COMMENT_LINE | crate::schema::comments::SALES_COMMENT | crate::schema::comments::PURCH_COMMENT) {
+        comment_setup_new_line(ctx, t, r);
+        return Ok(());
+    }
     if t.name == crate::schema::finance::GEN_JNL_LINE {
         return crate::journal::on_insert(ctx, r);
     }
@@ -534,4 +538,22 @@ pub fn calc_line_amounts(ctx: &Ctx, side: &Side, header: &Record, r: &mut Record
     r.set("Amount", dec(amount));
     r.set("Amount Including VAT", dec(incl));
     Ok(())
+}
+
+/// BC's SetUpNewLine for comment lines: the next line number under the same record, dated today.
+fn comment_setup_new_line(ctx: &Ctx, t: &TableDef, r: &mut Record) {
+    if r.get("Line No.").as_int() == 0 {
+        let group: Vec<&str> = t.primary_key.iter().filter(|k| *k != "Line No.").map(String::as_str).collect();
+        let last = ctx
+            .db
+            .rows(&t.name)
+            .filter(|o| group.iter().all(|k| o.get(k).to_string() == r.get(k).to_string()))
+            .map(|o| o.get("Line No.").as_int())
+            .max()
+            .unwrap_or(0);
+        r.set("Line No.", Value::Int(last.saturating_add(10000)));
+    }
+    if r.get("Date").as_date().is_none() {
+        r.set("Date", Value::Date(ctx.work_date));
+    }
 }

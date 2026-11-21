@@ -1,6 +1,7 @@
 //! The base application's metadata: tables, pages and role centers.
 
 mod bc_gen;
+pub mod comments;
 pub mod dimensions;
 pub mod finance;
 pub mod fixed_assets;
@@ -34,6 +35,7 @@ pub fn hand_written() -> Metadata {
     inventory::register(&mut m);
     fixed_assets::register(&mut m);
     dimensions::register(&mut m);
+    comments::register(&mut m);
     crate::bc::register(&mut m);
     m
 }

@@ -99,3 +99,20 @@ fn select_items_adds_a_line_per_item() {
     assert_eq!(after.last().unwrap()["No."], "1001");
     assert!(s.run("sales.document.select_items", &json!({"document_type": "Order", "no": "S-ORD1002", "items": []})).is_err());
 }
+
+#[test]
+fn comments_number_their_lines_and_go_with_the_posted_invoice() {
+    let mut s = demo();
+    for text in ["Deliver before noon", "Call the workshop first"] {
+        s.run("record.new", &json!({"table": "Sales Comment Line", "values": {"Document Type": "Order", "No.": "S-ORD1002", "Comment": text}})).unwrap();
+    }
+    let list = s.run("record.list", &json!({"table": "Sales Comment Line", "filters": {"No.": "S-ORD1002"}})).unwrap();
+    let lines: Vec<i64> = list["records"].as_array().unwrap().iter().map(|c| c["Line No."].as_i64().unwrap()).collect();
+    assert_eq!(lines, vec![10000, 20000]);
+    let posted = s.run("sales.document.post", &json!({"document_type": "Order", "no": "S-ORD1002"})).unwrap();
+    let inv = posted["posted_no"].as_str().unwrap().to_string();
+    let copied = s.run("record.list", &json!({"table": "Sales Comment Line", "filters": {"Document Type": "Posted Invoice", "No.": inv}})).unwrap();
+    assert_eq!(copied["records"].as_array().unwrap().len(), 2);
+    let master = s.run("record.new", &json!({"table": "Comment Line", "values": {"Table Name": "Customer", "No.": "10000", "Comment": "Prefers WhatsApp"}})).unwrap();
+    assert_eq!(master["record"]["Line No."], 10000);
+}

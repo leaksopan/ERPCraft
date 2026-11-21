@@ -23,7 +23,7 @@ orders this list into phases.
 | Foundation | 8 | 58 | 0 | 2 |
 | HumanResources | 0 | 57 | 0 | 15 |
 | Integration | 0 | 87 | 0 | 0 |
-| Inventory | 57 | 312 | 1 | 101 |
+| Inventory | 61 | 312 | 1 | 101 |
 | Invoicing | 0 | 7 | 0 | 0 |
 | Manufacturing | 0 | 134 | 0 | 50 |
 | Modules | 2 | 93 | 0 | 1 |
@@ -38,7 +38,7 @@ orders this list into phases.
 | Utilities | 0 | 12 | 0 | 2 |
 | Warehouse | 0 | 144 | 0 | 35 |
 | eServices | 0 | 25 | 0 | 0 |
-| **Base Application** | **199** | **2638** | **16** | **659** |
+| **Base Application** | **203** | **2638** | **16** | **659** |
 
 ### (root)
 
@@ -1754,7 +1754,7 @@ Pages 0 / 87, reports 0 / 0.
 
 ### Inventory
 
-Pages 57 / 312, reports 1 / 101.
+Pages 61 / 312, reports 1 / 101.
 
 <details><summary>Inventory / Analysis: pages 0 / 34, reports 0 / 8</summary>
 
@@ -2221,7 +2221,7 @@ Pages 57 / 312, reports 1 / 101.
 
 </details>
 
-<details><summary>Inventory / Tracking: pages 4 / 31, reports 0 / 4</summary>
+<details><summary>Inventory / Tracking: pages 8 / 31, reports 0 / 4</summary>
 
 - [ ] Page 305 Reservation Worksheet (Worksheet)
 - [ ] Page 316 Allocation Policies (List)
@@ -2237,12 +2237,12 @@ Pages 57 / 312, reports 1 / 101.
 - [x] Page 6501 Item Tracking Entries (List)
 - [x] Page 6502 Item Tracking Codes (List)
 - [ ] Page 6503 Avail. - Item Tracking Lines (List)
-- [ ] Page 6504 Serial No. Information Card (Card)
-- [ ] Page 6505 Lot No. Information Card (Card)
+- [x] Page 6504 Serial No. Information Card (Card)
+- [x] Page 6505 Lot No. Information Card (Card)
 - [ ] Page 6506 Item Tracking Comments (List)
 - [ ] Page 6507 Item Tracking List (List)
-- [ ] Page 6508 Lot No. Information List (List)
-- [ ] Page 6509 Serial No. Information List (List)
+- [x] Page 6508 Lot No. Information List (List)
+- [x] Page 6509 Serial No. Information List (List)
 - [ ] Page 6510 Item Tracking Lines (Worksheet)
 - [ ] Page 6511 Posted Item Tracking Lines (List)
 - [x] Page 6512 Item Tracking Code Card (Card)

@@ -142,6 +142,7 @@ pub fn calc_fields(db: &Database, work_date: NaiveDate, table: &str, r: &mut Rec
         }
         crate::schema::fixed_assets::FIXED_ASSET | crate::schema::fixed_assets::FA_DEPR_BOOK => crate::fa::calc_fields(db, table, r),
         crate::schema::sku::SKU => crate::sku::calc_fields(db, r),
+        crate::schema::tracking::LOT_INFO | crate::schema::tracking::SERIAL_INFO => crate::tracking::calc_info(db, work_date, table, r),
         SALES_LINE | PURCH_LINE => {
             let base = crate::reservation::reserved_base(db, table, r);
             let per = match r.get("Qty. per Unit of Measure").as_dec() {

@@ -1776,6 +1776,7 @@ pub fn extend(m: &mut Metadata) {
             ("Item Category Code", "Item Category Code", "Specifies the category that the item belongs to. Item categories also contain any assigned item attributes.", 0),
             ("Item Tracking Code", "Item Tracking Code", "Specifies how serial, lot or package numbers assigned to the item are tracked in the supply chain.", 0),
             ("Lot Nos.", "Lot Nos.", "Specifies the number series code that will be used when assigning lot numbers.", 0),
+            ("Expiration Calculation", "Expiration Calculation", "Specifies the date formula for calculating the expiration date on the item tracking line. Note: This field will be ignored if the involved item has Require Expiration Date Entry set to Yes on the Item Tracking Code page.", 0),
             ("Phys Invt Counting Period Code", "Phys Invt Counting Period Code", "Specifies the code of the counting period that indicates how often you want to count the item in a physical inventory.", 0),
             ("Last Counting Period Update", "Last Counting Period Update", "Specifies the last date on which you calculated the counting period. It is updated when you use the function Calculate Counting Period.", 0),
             ("Last Phys. Invt. Date", "Last Phys. Invt. Date", "Specifies the date on which you last posted the results of a physical inventory for the item to the item ledger.", 0),
@@ -1813,7 +1814,6 @@ pub fn extend(m: &mut Metadata) {
             F::boolean("Created From Nonstock Item").caption("Created From Catalog Item").read_only().tooltip("Specifies that the item was created from a catalog item."),
             F::boolean("Substitutes Exist").calc(CalcFormula::new(CalcFunc::Exist, "Item Substitution", "", &[("No.", "No.")], &[("Type", "Item")])).tooltip("Specifies that a substitute exists for this item."),
             F::code("Purchasing Code", 10).tooltip("Specifies the code for a special procurement method, such as drop shipment."),
-            F::code("Expiration Calculation", 32).tooltip("Specifies the date formula for calculating the expiration date on the item tracking line. Note: This field will be ignored if the involved item has Require Expiration Date Entry set to Yes on the Item Tracking Code page."),
             F::code("Over-Receipt Code", 20).tooltip("Specifies the policy that will be used for the item if more items than ordered are received."),
             F::boolean("Critical").tooltip("Specifies if the item is included in availability calculations to promise a shipment date for its parent item."),
             F::code("Common Item No.", 20).tooltip("Specifies the unique common item number that the intercompany partners agree upon."),
@@ -2061,8 +2061,12 @@ pub fn extend(m: &mut Metadata) {
             ("Strict Expiration Posting", "Strict Expiration Posting", "Specifies if the expiration date is considered when you sell items. For example, you cannot post a sales order for an item that has passed its expiration date. For tracked items, this setting also uses the First-Expired-First-Out (FEFO) method to determine which items to pick, regardless of the Pick According to FEFO setting on the location.", 0),
             ("Use Expiration Dates", "Use Expiration Dates", "Specifies that items that use this item tracking code can have an expiration date. This will enable checks for expiration dates, which can affect performance for documents with many Item Tracking Lines.", 0),
             ("SN Specific Tracking", "SN Specific Tracking", "Specifies that when handling an outbound unit of the item in question, you must always specify which existing serial number to handle.", 0),
+            ("SN Info. Inbound Must Exist", "SN Info. Inbound Must Exist", "Specifies that serial numbers on inbound document lines must have an information record in the Serial No. Information Card.", 0),
+            ("SN Info. Outbound Must Exist", "SN Info. Outbound Must Exist", "Specifies that serial numbers on outbound document lines must have an information record in the Serial No. Information Card.", 0),
             ("SN Warehouse Tracking", "SN Warehouse Tracking", "Specifies that warehouse document lines require serial numbers.", 0),
             ("Lot Specific Tracking", "Lot Specific Tracking", "Specifies that when handling an outbound unit, always specify which existing lot number to handle.", 0),
+            ("Lot Info. Inbound Must Exist", "Lot Info. Inbound Must Exist", "Specifies that lot numbers on inbound document lines must have an information record in the Lot No. Information Card.", 0),
+            ("Lot Info. Outbound Must Exist", "Lot Info. Outbound Must Exist", "Specifies that lot numbers on outbound document lines must have an information record in the Lot No. Information Card.", 0),
             ("Lot Warehouse Tracking", "Lot Warehouse Tracking", "Specifies that warehouse document lines require a lot number.", 0),
         ],
     );
@@ -2072,8 +2076,6 @@ pub fn extend(m: &mut Metadata) {
         vec![
             F::code("Warranty Date Formula", 32).tooltip("Specifies the formula that calculates the warranty date entered in the Warranty Date field on item tracking line."),
             F::boolean("Man. Warranty Date Entry Reqd.").tooltip("Specifies that a warranty date must be entered manually."),
-            F::boolean("SN Info. Inbound Must Exist").tooltip("Specifies that serial numbers on inbound document lines must have an information record in the Serial No. Information Card."),
-            F::boolean("SN Info. Outbound Must Exist").tooltip("Specifies that serial numbers on outbound document lines must have an information record in the Serial No. Information Card."),
             F::boolean("SN Purchase Inbound Tracking").tooltip("Specifies that inbound purchase document lines require serial numbers."),
             F::boolean("SN Purchase Outbound Tracking").tooltip("Specifies that outbound purchase document lines require serial numbers."),
             F::boolean("SN Sales Inbound Tracking").tooltip("Specifies that inbound sales document lines require serial numbers."),
@@ -2084,8 +2086,6 @@ pub fn extend(m: &mut Metadata) {
             F::boolean("SN Neg. Adjmt. Outb. Tracking").tooltip("Specifies that outbound item journal lines of type negative entry require serial numbers."),
             F::boolean("SN Transfer Tracking").tooltip("Specifies that transfer order lines require serial numbers."),
             F::boolean("Create SN Info on Posting").caption("Create SN Info. on posting").tooltip("Specifies that if the Serial No. Information card is missing for the document line, the card will be created during posting."),
-            F::boolean("Lot Info. Inbound Must Exist").tooltip("Specifies that lot numbers on inbound document lines must have an information record in the Lot No. Information Card."),
-            F::boolean("Lot Info. Outbound Must Exist").tooltip("Specifies that lot numbers on outbound document lines must have an information record in the Lot No. Information Card."),
             F::boolean("Lot Purchase Inbound Tracking").tooltip("Specifies that inbound purchase document lines require a lot number."),
             F::boolean("Lot Purchase Outbound Tracking").tooltip("Specifies that outbound purchase document lines require a lot number."),
             F::boolean("Lot Sales Inbound Tracking").tooltip("Specifies that inbound sales document lines require a lot number."),
@@ -2161,6 +2161,21 @@ pub fn extend(m: &mut Metadata) {
             ("Contact", "Contact", "Specifies the name of the contact person at the location", 0),
             ("Post Code", "Post Code", "Specifies the postal code.", 0),
             ("Use As In-Transit", "Use As In-Transit", "Specifies that this location is an in-transit location.", 0),
+        ],
+    );
+    relabel(
+        m,
+        "Lot No. Information",
+        &[
+            ("Item No.", "Item No.", "Specifies this number from the Tracking Specification table when a lot number information record is created.", 0),
+            ("Variant Code", "Variant Code", "Specifies the variant of the item on the line.", 0),
+            ("Lot No.", "Lot No.", "Specifies this number from the Tracking Specification table when a lot number information record is created.", 0),
+            ("Description", "Description", "Specifies a description of the lot no. information record.", 0),
+            ("Test Quality", "Test Quality", "Specifies the quality of a given lot if you have inspected the items.", 0),
+            ("Certificate Number", "Certificate Number", "Specifies the number provided by the supplier to indicate that the batch or lot meets the specified requirements.", 0),
+            ("Blocked", "Blocked", "Specifies that the related record is blocked from being posted in transactions, for example a customer that is declared insolvent or an item that is placed in quarantine.", 0),
+            ("Inventory", "Inventory", "Specifies the inventory quantity of the specified lot number.", 0),
+            ("Expired Inventory", "Expired Inventory", "Specifies the inventory of the lot number with an expiration date before the posting date on the associated document.", 0),
         ],
     );
     relabel(
@@ -3708,6 +3723,19 @@ pub fn extend(m: &mut Metadata) {
     );
     relabel(
         m,
+        "Serial No. Information",
+        &[
+            ("Item No.", "Item No.", "Specifies the number that is copied from the Tracking Specification table, when a serial number information record is created.", 0),
+            ("Variant Code", "Variant Code", "Specifies the variant of the item on the line.", 0),
+            ("Serial No.", "Serial No.", "Specifies this number from the Tracking Specification table when a serial number information record is created.", 0),
+            ("Description", "Description", "Specifies a description of the serial no. information record.", 0),
+            ("Blocked", "Blocked", "Specifies that the related record is blocked from being posted in transactions, for example a customer that is declared insolvent or an item that is placed in quarantine.", 0),
+            ("Inventory", "Inventory", "Specifies the inventory quantity of the specified serial number.", 0),
+            ("Expired Inventory", "Expired Inventory", "Specifies the inventory of the serial number with an expiration date before the posting date on the associated document.", 0),
+        ],
+    );
+    relabel(
+        m,
         "Stockkeeping Unit",
         &[
             ("Item No.", "Item No.", "Specifies the item number to which the SKU applies.", 0),
@@ -4959,6 +4987,24 @@ pub fn extend(m: &mut Metadata) {
     columns(m, "item-units-of-measure", &["Code", "Qty. per Unit of Measure", "Height", "Width", "Length", "Cubage", "Weight"]);
     columns(m, "item-variants", &["Blocked", "Sales Blocked", "Purchasing Blocked"]);
     columns(m, "locations", &["Code", "Name"]);
+    layout(
+        m,
+        "lot-no-information-card",
+        &[
+            Tab {
+                caption: "General",
+                fields: &["Item No.", "Lot No.", "Description", "Test Quality", "Certificate Number", "Blocked"],
+                additional: &["Test Quality"],
+                ..Tab::default()
+            },
+            Tab {
+                caption: "Inventory",
+                fields: &["Inventory", "Expired Inventory"],
+                ..Tab::default()
+            },
+        ],
+    );
+    columns(m, "lot-no-information-list", &["Lot No.", "Description", "Test Quality", "Certificate Number", "Blocked"]);
     columns(m, "payment-journal", &["Posting Date", "Document Type", "Document No.", "External Document No.", "Account Type", "Account No.", "Recipient Bank Account", "Message to Recipient", "Description", "Currency Code", "Posting Group", "Selected Alloc. Account No.", "Payment Method Code", "Payment Reference", "Creditor No.", "Amount", "Amount (LCY)", "Debit Amount", "Credit Amount", "Bal. Account Type", "Bal. Account No.", "Applies-to Doc. Type", "Applies-to Doc. No.", "Bank Payment Type", "Correction", "Exported to Payment File", "Shortcut Dimension 1 Code", "Shortcut Dimension 2 Code", "Remit-to Code"]);
     columns(m, "payment-terms", &["Code", "Due Date Calculation", "Discount Date Calculation", "Discount %", "Calc. Pmt. Disc. on Cr. Memos", "Description"]);
     columns(m, "permission-sets", &["Role ID", "Name"]);
@@ -5771,6 +5817,23 @@ pub fn extend(m: &mut Metadata) {
     columns(m, "salespersons", &["Code", "Name", "Commission %", "Phone No."]);
     layout(
         m,
+        "serial-no-information-card",
+        &[
+            Tab {
+                caption: "General",
+                fields: &["Item No.", "Serial No.", "Description", "Blocked"],
+                ..Tab::default()
+            },
+            Tab {
+                caption: "Inventory",
+                fields: &["Inventory", "Expired Inventory"],
+                ..Tab::default()
+            },
+        ],
+    );
+    columns(m, "serial-no-information-list", &["Serial No.", "Description", "Blocked"]);
+    layout(
+        m,
         "stockkeeping-unit-card",
         &[
             Tab {
@@ -6478,6 +6541,7 @@ pub fn extend(m: &mut Metadata) {
     );
     mirror(m, "bank-acc-reconciliation-list", "bank-acc-reconciliation", &["P&ost"]);
     mirror(m, "finance-charge-memo-list", "finance-charge-memo", &["Issue"]);
+    mirror(m, "lot-no-information-list", "lot-no-information-card", &["&Item Tracing"]);
     mirror(m, "posted-purchase-credit-memos", "posted-purchase-credit-memo", &["Attach as PDF"]);
     mirror(m, "posted-purchase-invoices", "posted-purchase-invoice", &["Attach as PDF"]);
     mirror(m, "posted-purchase-receipts", "posted-purchase-receipt", &["&Print"]);
@@ -6493,6 +6557,7 @@ pub fn extend(m: &mut Metadata) {
     mirror(m, "sales-invoice-list", "sales-invoice", &["Approvals", "Send A&pproval Request", "Cancel Approval Re&quest"]);
     mirror(m, "sales-order-list", "sales-order", &["Approvals", "Order &Promising", "Send A&pproval Request", "Cancel Approval Re&quest", "Attach as PDF"]);
     mirror(m, "sales-quotes", "sales-quote", &["Approvals", "Attach as PDF", "Send A&pproval Request", "Cancel Approval Re&quest"]);
+    mirror(m, "serial-no-information-list", "serial-no-information-card", &["&Item Tracing"]);
     mirror(m, "transfer-orders", "transfer-order", &["Re&lease", "Reo&pen", "P&ost"]);
     categories(
         m,
@@ -6890,6 +6955,13 @@ pub fn extend(m: &mut Metadata) {
         &[
             ("Location", &["Dimensions-Single"]),
             ("Report", &["Transfer Order"]),
+        ],
+    );
+    categories(
+        m,
+        "lot-no-information-card",
+        &[
+            ("Lot No.", &["&Item Tracing"]),
         ],
     );
     categories(
@@ -7592,6 +7664,14 @@ pub fn extend(m: &mut Metadata) {
             ("Cost Amount (Non-Invtbl.)", "value-entries", &[("Item Ledger Entry No.", "Entry No.")], &[]),
         ],
     );
+    drilldowns(
+        m,
+        "Lot No. Information",
+        &[
+            ("Inventory", "item-ledger-entries", &[("Item No.", "Item No."), ("Lot No.", "Lot No.")], &[]),
+            ("Expired Inventory", "item-ledger-entries", &[("Item No.", "Item No."), ("Lot No.", "Lot No.")], &[("Open", "true"), ("Positive", "true")]),
+        ],
+    );
     calcs(
         m,
         "Purch. Cr. Memo Hdr.",
@@ -7697,6 +7777,14 @@ pub fn extend(m: &mut Metadata) {
             ("Qty. to Assign", "item-charge-assignment-sales", &[("Document Type", "Document Type"), ("Document No.", "Document No."), ("Document Line No.", "Line No.")], &[]),
             ("Qty. Assigned", "item-charge-assignment-sales", &[("Document Type", "Document Type"), ("Document No.", "Document No."), ("Document Line No.", "Line No.")], &[]),
             ("Item Charge Qty. to Handle", "item-charge-assignment-sales", &[("Document Type", "Document Type"), ("Document No.", "Document No."), ("Document Line No.", "Line No.")], &[]),
+        ],
+    );
+    drilldowns(
+        m,
+        "Serial No. Information",
+        &[
+            ("Inventory", "item-ledger-entries", &[("Item No.", "Item No."), ("Serial No.", "Serial No.")], &[]),
+            ("Expired Inventory", "item-ledger-entries", &[("Item No.", "Item No."), ("Serial No.", "Serial No.")], &[("Open", "true"), ("Positive", "true")]),
         ],
     );
     drilldowns(

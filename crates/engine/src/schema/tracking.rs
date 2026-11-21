@@ -6,6 +6,8 @@ use erpcraft_meta::{ActionArea as A, ActionDef as Act, FieldDef as F, GroupDef a
 
 pub const TRACKING_CODE: &str = "Item Tracking Code";
 pub const RESERVATION_ENTRY: &str = "Reservation Entry";
+pub const LOT_INFO: &str = "Lot No. Information";
+pub const SERIAL_INFO: &str = "Serial No. Information";
 
 fn ensure(m: &mut Metadata, table: &str, fields: Vec<F>) {
     if let Some(t) = m.tables.get_mut(table) {
@@ -58,7 +60,50 @@ pub fn register(m: &mut Metadata) {
             ])
             .key(&["Entry No."]),
     );
-    ensure(m, crate::schema::tables::ITEM, vec![F::code("Item Tracking Code", 10).relation(TRACKING_CODE), F::code("Serial Nos.", 20).relation("No. Series"), F::code("Lot Nos.", 20).relation("No. Series")]);
+    ensure(
+        m,
+        crate::schema::tables::ITEM,
+        vec![F::code("Item Tracking Code", 10).relation(TRACKING_CODE), F::code("Serial Nos.", 20).relation("No. Series"), F::code("Lot Nos.", 20).relation("No. Series"), F::code("Expiration Calculation", 20)],
+    );
+    ensure(
+        m,
+        TRACKING_CODE,
+        vec![F::boolean("SN Info. Inbound Must Exist"), F::boolean("SN Info. Outbound Must Exist"), F::boolean("Lot Info. Inbound Must Exist"), F::boolean("Lot Info. Outbound Must Exist")],
+    );
+    // Lot / serial number information cards (6505 / 6504, pages 6505 / 6508, 6504 / 6509).
+    for (table, id, no_field, list_id, list_obj, list_caption, card_id, card_obj, card_caption) in [
+        (LOT_INFO, 6505, "Lot No.", "lot-no-information-list", 6508, "Lot No. Information List", "lot-no-information-card", 6505, "Lot No. Information Card"),
+        (SERIAL_INFO, 6504, "Serial No.", "serial-no-information-list", 6509, "Serial No. Information List", "serial-no-information-card", 6504, "Serial No. Information Card"),
+    ] {
+        m.add_table(
+            TableDef::new(table, id)
+                .fields(vec![
+                    F::code("Item No.", 20).not_blank().relation(crate::schema::tables::ITEM),
+                    F::code("Variant Code", 10),
+                    F::code(no_field, 50).not_blank(),
+                    F::text("Description", 100),
+                    F::option("Test Quality", &["", "Good", "Average", "Bad"]),
+                    F::code("Certificate Number", 20),
+                    F::boolean("Blocked"),
+                    F::decimal("Inventory").flow(),
+                    F::decimal("Expired Inventory").flow(),
+                ])
+                .key(&["Item No.", "Variant Code", no_field])
+                .describe_by("Description")
+                .pages(list_id, Some(card_id)),
+        );
+        let mut l = PageDef::new(list_id, list_obj, list_caption, PageKind::List, Some(table));
+        l.columns = ["Item No.", "Variant Code", no_field, "Description", "Test Quality", "Certificate Number", "Blocked", "Inventory", "Expired Inventory"].iter().map(|c| (*c).to_string()).collect();
+        l.card_page = Some(card_id.to_string());
+        l.keywords = "lot serial batch tracking information".to_string();
+        m.add_page(l);
+        m.add_page(
+            PageDef::new(card_id, card_obj, card_caption, PageKind::Card, Some(table))
+                .group(G::new("General", &["Item No.", "Variant Code", no_field, "Description", "Test Quality", "Certificate Number", "Blocked"]))
+                .group(G::new("Inventory", &["Inventory", "Expired Inventory"]))
+                .action(Act::page("&Item Tracing", A::Navigate, "item-tracking-entries").link("Item No.", "Item No.").link(no_field, no_field).icon("list").tooltip("Trace where a lot or serial number assigned to the item was used, for example, to find which lot a defective component came from or to find all the customers that have received items containing the defective component.")),
+        );
+    }
     ensure(m, crate::schema::tables::ITEM_LEDGER, vec![F::text("Serial No.", 50), F::code("Lot No.", 50), F::date("Expiration Date"), F::option("Item Tracking", &["None", "Lot and Serial No.", "Lot No.", "Serial No."])]);
 
     // Costing: value entries, cost posting setup, the costing batch jobs on items.
@@ -337,6 +382,8 @@ pub fn register(m: &mut Metadata) {
     for page in ["item-card", "item-list"] {
         if let Some(p) = m.pages.get_mut(page) {
             p.actions.push(Act::page("Item &Tracking Entries", A::Navigate, "item-tracking-entries").link("Item No.", "No.").icon("list").tooltip("View serial or lot numbers that are assigned to items."));
+            p.actions.push(Act::page("Lot No. Information", A::Navigate, "lot-no-information-list").link("Item No.", "No.").icon("list").tooltip("View lot number information for the item."));
+            p.actions.push(Act::page("Serial No. Information", A::Navigate, "serial-no-information-list").link("Item No.", "No.").icon("list").tooltip("View serial number information for the item."));
         }
     }
 }

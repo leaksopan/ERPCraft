@@ -14,7 +14,7 @@ use crate::error::{EngineError, Result};
 use crate::posting::{ItemEntry, post_item};
 use crate::refuse;
 use crate::schema::tables::{ITEM, ITEM_LEDGER, SALES_DOC_TYPES};
-use crate::schema::tracking::{RESERVATION_ENTRY, TRACKING_CODE};
+use crate::schema::tracking::{LOT_INFO, RESERVATION_ENTRY, SERIAL_INFO, TRACKING_CODE};
 
 /// The line a set of tracking entries belongs to.
 #[derive(Clone, Debug)]
@@ -182,10 +182,98 @@ pub fn parts_from_stock(ctx: &Ctx, item: &Record, location: &str, qty: Decimal) 
     parts
 }
 
+/// Inventory (and inventory past its expiration date on the work date) of a lot / serial number.
+pub fn calc_info(db: &crate::db::Database, work_date: NaiveDate, table: &str, r: &mut Record) {
+    let field = if table == LOT_INFO { "Lot No." } else { "Serial No." };
+    let (item, no, variant) = (r.str("Item No.").to_string(), r.str(field).to_string(), r.str("Variant Code").to_string());
+    let rows: Vec<&Record> = db.rows(ITEM_LEDGER).filter(|e| e.str("Item No.") == item && e.str(field) == no && e.str("Variant Code") == variant).collect();
+    let inventory: Decimal = rows.iter().map(|e| e.get("Quantity").as_dec()).sum();
+    let expired: Decimal = rows.iter().filter(|e| e.get("Expiration Date").as_date().is_some_and(|d| d < work_date)).map(|e| e.get("Quantity").as_dec()).sum();
+    r.set("Inventory", Value::Dec(inventory));
+    r.set("Expired Inventory", Value::Dec(expired.max(Decimal::ZERO)));
+}
+
+/// BC's CheckItemTrackingInformation: an information card must exist when the tracking code
+/// says so, and a blocked one stops posting.
+fn check_info(ctx: &Ctx, code: &Record, item: &str, p: &Part, inbound: bool) -> Result<()> {
+    for (table, field, value, must) in [
+        (SERIAL_INFO, "Serial No.", &p.serial, code.get(if inbound { "SN Info. Inbound Must Exist" } else { "SN Info. Outbound Must Exist" }).as_bool()),
+        (LOT_INFO, "Lot No.", &p.lot, code.get(if inbound { "Lot Info. Inbound Must Exist" } else { "Lot Info. Outbound Must Exist" }).as_bool()),
+    ] {
+        if value.is_empty() {
+            continue;
+        }
+        match ctx.db.get(table, &Key(vec![Value::text(item), Value::text(""), Value::text(value)])) {
+            Some(info) if info.get("Blocked").as_bool() => {
+                refuse!("Blocked must be equal to 'No' in {table}: Item No.={item}, Variant Code=, {field}={value}. Current value is 'Yes'.");
+            }
+            None if must => {
+                refuse!("The {table} does not exist. Identification fields and values: Item No.='{item}',Variant Code='',{field}='{value}'");
+            }
+            _ => {}
+        }
+    }
+    Ok(())
+}
+
+/// The expiration date of a lot / serial number on stock (its newest inbound entry with one).
+fn stock_expiration(ctx: &Ctx, item: &str, p: &Part) -> Option<(i64, NaiveDate)> {
+    ctx.db
+        .rows(ITEM_LEDGER)
+        .filter(|x| x.str("Item No.") == item && x.str("Serial No.") == p.serial && x.str("Lot No.") == p.lot && x.get("Quantity").as_dec() > Decimal::ZERO)
+        .filter_map(|x| x.get("Expiration Date").as_date().map(|d| (x.get("Entry No.").as_int(), d)))
+        .max_by_key(|(n, _)| *n)
+}
+
+/// The expiration date a part posts with (BC: inbound from the tracking line, the lot's existing
+/// date or the item's Expiration Calculation; outbound from the stock it leaves, which strict
+/// expiration posting refuses once expired).
+fn expiration_of(ctx: &Ctx, code: &Record, item: &Record, e: &ItemEntry, p: &Part) -> Result<Option<NaiveDate>> {
+    if !code.get("Use Expiration Dates").as_bool() {
+        return Ok(p.expiration);
+    }
+    let no = item.str("No.");
+    let existing = if p.lot.is_empty() { None } else { stock_expiration(ctx, no, &Part { serial: String::new(), ..p.clone() }).or_else(|| stock_expiration(ctx, no, p)) };
+    if p.qty > Decimal::ZERO {
+        if let (Some(given), Some((_, have))) = (p.expiration, existing)
+            && given != have
+        {
+            refuse!("Only one expiration date is allowed per lot number. {} currently has two different expiration dates: {} and {}.", p.lot, have.format("%m/%d/%Y"), given.format("%m/%d/%Y"));
+        }
+        let date = p.expiration.or(existing.map(|(_, d)| d));
+        let date = match date {
+            Some(d) => Some(d),
+            None if !item.str("Expiration Calculation").is_empty() => Some(crate::dateformula::calc(item.str("Expiration Calculation"), e.posting_date)?),
+            None => None,
+        };
+        if date.is_none() && code.get("Man. Expir. Date Entry Reqd.").as_bool() {
+            refuse!("Expiration Date must have a value in Item Tracking Lines: Item No.={no}, Serial No.={}, Lot No.={}. It cannot be zero or empty.", p.serial, p.lot);
+        }
+        return Ok(date);
+    }
+    let Some((entry, date)) = stock_expiration(ctx, no, p) else { return Ok(None) };
+    if code.get("Strict Expiration Posting").as_bool() && e.posting_date > date && !matches!(e.entry_type, "Negative Adjmt." | "Transfer") && !matches!(e.doc_type, "Purchase Return Shipment" | "Purchase Credit Memo") {
+        refuse!("Expiration Date is before the posting date in Item Ledger Entry: Entry No.={entry}.");
+    }
+    Ok(Some(date))
+}
+
 /// Posts `e` once per part (cost shared by quantity, the last part taking the rounding) and
 /// stamps the tracking on each item ledger entry. Returns the first entry no.
 pub fn post_parts(ctx: &mut Ctx, e: &ItemEntry, parts: &[Part]) -> Result<i64> {
     let t = ctx.table(ITEM_LEDGER)?;
+    let code = if e.item.str("Item Tracking Code").is_empty() { None } else { ctx.db.get_code(TRACKING_CODE, e.item.str("Item Tracking Code")).cloned() };
+    let mut parts: Vec<Part> = parts.to_vec();
+    if let Some(code) = &code {
+        for p in &mut parts {
+            if p.serial.is_empty() && p.lot.is_empty() {
+                continue;
+            }
+            check_info(ctx, code, e.item.str("No."), p, p.qty > Decimal::ZERO)?;
+            p.expiration = expiration_of(ctx, code, e.item, e, p)?;
+        }
+    }
+    let parts = &parts[..];
     let mut first = 0;
     let mut cost_left = e.cost;
     let mut sales_left = e.sales_amount;

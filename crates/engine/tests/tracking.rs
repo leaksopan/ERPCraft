@@ -117,3 +117,64 @@ fn a_transfer_carries_its_lots_through_transit() {
     s.run("transfer.post", &json!({"no": tno, "mode": "Receive"})).unwrap();
     assert_eq!((on_hand(&mut s, "1000L", "TRANSIT", "", "L7"), on_hand(&mut s, "1000L", "BANDUNG", "", "L7")), (0.0, 3.0));
 }
+
+/// Buys `qty` of 1000L in lot `lot` (with an expiration date when given); the posting's result.
+fn buy_lot(s: &mut Session, lot: &str, qty: i64, expiration: Option<&str>) -> Result<Value, String> {
+    let doc = s.run("purchase.document.new", &json!({"document_type": "Invoice", "vendor_no": "10000", "lines": [{"no": "1000L", "quantity": qty}]})).unwrap();
+    let no = doc["no"].as_str().unwrap().to_string();
+    let (_, src) = line(s, "Purchase Line", "Invoice", &no);
+    let mut v = src.clone();
+    v["Lot No."] = json!(lot);
+    v["Quantity (Base)"] = json!(qty);
+    if let Some(e) = expiration {
+        v["Expiration Date"] = json!(e);
+    }
+    s.run("record.new", &json!({"table": "Reservation Entry", "values": v})).unwrap();
+    s.run("purchase.document.post", &json!({"document_type": "Invoice", "no": no})).map_err(|e| e.message)
+}
+
+fn sell_lot(s: &mut Session, lot: &str, qty: i64) -> Result<Value, String> {
+    let sale = s.run("sales.document.new", &json!({"document_type": "Invoice", "customer_no": "10000", "lines": [{"no": "1000L", "quantity": qty}]})).unwrap();
+    let no = sale["no"].as_str().unwrap().to_string();
+    let (_, src) = line(s, "Sales Line", "Invoice", &no);
+    track(s, &src, "", lot, qty);
+    s.run("sales.document.post", &json!({"document_type": "Invoice", "no": no})).map_err(|e| e.message)
+}
+
+#[test]
+fn lot_information_and_expiration_dates_rule_posting() {
+    let mut s = demo();
+    for (f, v) in [("Use Expiration Dates", json!(true)), ("Strict Expiration Posting", json!(true))] {
+        s.run("record.validate", &json!({"table": "Item Tracking Code", "key": "LOTALL", "field": f, "value": v})).unwrap();
+    }
+    s.run("record.validate", &json!({"table": "Item", "key": "1000L", "field": "Expiration Calculation", "value": "30D"})).unwrap();
+    buy_lot(&mut s, "L1", 5, None).unwrap();
+    let e = &s.run("record.list", &json!({"table": "Item Ledger Entry", "filters": {"Item No.": "1000L", "Lot No.": "L1"}})).unwrap()["records"][0];
+    assert_eq!(e["Expiration Date"], "2026-12-21", "the work date plus 30 days: {e}");
+    // The same lot keeps one expiration date.
+    let err = buy_lot(&mut s, "L1", 1, Some("2027-03-01")).unwrap_err();
+    assert!(err.contains("Only one expiration date is allowed per lot number"), "{err}");
+
+    // A blocked lot cannot be sold.
+    s.run("record.new", &json!({"table": "Lot No. Information", "values": {"Item No.": "1000L", "Lot No.": "L1", "Description": "First batch", "Blocked": true}})).unwrap();
+    let info = s.run("record.get", &json!({"table": "Lot No. Information", "key": ["1000L", "", "L1"]})).unwrap();
+    assert_eq!(d(&info["Inventory"]), 5.0);
+    let err = sell_lot(&mut s, "L1", 1).unwrap_err();
+    assert!(err.contains("Blocked must be equal to 'No' in Lot No. Information"), "{err}");
+    s.run("record.validate", &json!({"table": "Lot No. Information", "key": ["1000L", "", "L1"], "field": "Blocked", "value": false})).unwrap();
+    sell_lot(&mut s, "L1", 1).unwrap();
+
+    // An expired lot cannot be sold under strict expiration posting.
+    buy_lot(&mut s, "OLD", 2, Some("2026-11-01")).unwrap();
+    let err = sell_lot(&mut s, "OLD", 1).unwrap_err();
+    assert!(err.contains("Expiration Date is before the posting date"), "{err}");
+    let info = s.run("record.new", &json!({"table": "Lot No. Information", "values": {"Item No.": "1000L", "Lot No.": "OLD"}})).unwrap();
+    assert_eq!(d(&info["record"]["Expired Inventory"]), 2.0, "{info}");
+
+    // Information that must exist.
+    s.run("record.validate", &json!({"table": "Item Tracking Code", "key": "LOTALL", "field": "Lot Info. Inbound Must Exist", "value": true})).unwrap();
+    let err = buy_lot(&mut s, "NEW", 1, None).unwrap_err();
+    assert!(err.contains("The Lot No. Information does not exist"), "{err}");
+    s.run("record.new", &json!({"table": "Lot No. Information", "values": {"Item No.": "1000L", "Lot No.": "NEW"}})).unwrap();
+    buy_lot(&mut s, "NEW", 1, None).unwrap();
+}

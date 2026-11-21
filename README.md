@@ -32,7 +32,7 @@ On Windows without the MSVC build tools, use the `stable-x86_64-pc-windows-gnull
 
 ## Roadmap
 
-The road to full Business Central parity, how it is measured and the to-do list: [`docs/roadmap.md`](docs/roadmap.md).
+The road to full Business Central parity and how it is measured: [`docs/roadmap.md`](docs/roadmap.md). The complete to-do list (every BC page and report, generated from BCApps): [`docs/bc-inventory.md`](docs/bc-inventory.md).
 
 ## What works today
 

@@ -4,6 +4,7 @@
 //! ```text
 //! cargo run -p bc-parity -- [--root <W1 BaseApp dir>] [--page <id>] [--summary] [--check]
 //! cargo run -p bc-parity -- gen [--root <dir>] [--out crates/engine/src/schema/bc_gen.rs]
+//! cargo run -p bc-parity -- inventory [--root <dir>] [--apps <BCApps>/src/Apps/W1] [--out docs/bc-inventory.md]
 //! ```
 //!
 //! A field counts as shown in BC unless it has `Visible = false` or only application areas the
@@ -13,6 +14,7 @@
 
 mod al;
 mod generate;
+mod inventory;
 
 use std::collections::HashSet;
 use std::path::Path;
@@ -130,6 +132,27 @@ fn main() -> ExitCode {
     if src.pages.is_empty() {
         eprintln!("No *.Page.al files under {root}. Pass --root <BCApps>/src/Layers/W1/BaseApp.");
         return ExitCode::from(2);
+    }
+
+    if args.first().is_some_and(|a| a == "inventory") {
+        let apps = value("--apps").unwrap_or_else(|| {
+            Path::new(&root).ancestors().nth(3).map(|p| p.join("Apps").join("W1").display().to_string()).unwrap_or_default()
+        });
+        let out = value("--out").unwrap_or_else(|| "docs/bc-inventory.md".to_string());
+        for r in inventory::unknown_reports(Path::new(&root)) {
+            eprintln!("warning: report '{r}' is not in BCApps under that name");
+        }
+        let text = inventory::generate(erpcraft_engine::schema::base_app(), Path::new(&root), Path::new(&apps));
+        return match std::fs::write(&out, text) {
+            Ok(()) => {
+                println!("Wrote {out}");
+                ExitCode::SUCCESS
+            }
+            Err(e) => {
+                eprintln!("Could not write {out}: {e}");
+                ExitCode::from(2)
+            }
+        };
     }
 
     if args.first().is_some_and(|a| a == "gen") {

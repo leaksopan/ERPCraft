@@ -1,116 +1,243 @@
-# Roadmap to Business Central parity
+# Roadmap to Business Central parity: everything
 
-**Goal.** Every page, component and function of ERPCraft matches Business Central, as the user put it: "every single detail matters". BCApps W1 (`D:\Kerja\BCApps\src\Layers\W1\BaseApp`) is the source of truth for structure and logic. The live web client (CRONUS) is the reference for how things look and behave. Where BC calls Microsoft services (Dataverse, OneDrive, Copilot, Power Automate), ERPCraft may do something different (see [Out of scope](#out-of-scope)).
+**Goal.** ERPCraft has every page, component and function of Business Central:
 
-This file is the single to-do list. Update the numbers and tick the boxes at every checkpoint.
+- the whole W1 Base Application (2,638 pages, 659 reports);
+- the W1 apps Microsoft ships beside it (Shopify, E-Documents, Subscription Billing, Sustainability and about 70 more).
+
+BCApps W1 (`D:\Kerja\BCApps\src`) is the source of truth for structure and logic. The live web client (CRONUS) is the reference for look and behaviour. The user put it as "every single detail matters".
+
+**Two lists, one plan.**
+
+- [`docs/bc-inventory.md`](bc-inventory.md) is the complete to-do list: every BC page and report, per area, ticked when ERPCraft has it. It is generated, never hand-edited:
+
+  ```powershell
+  cargo run -p bc-parity -- inventory
+  ```
+- This file orders that inventory into phases and keeps the targets and the working routine.
 
 ## What "100%" means
 
-Each target is something a script or a screenshot can confirm, not a judgement call.
+Each target is checked by a script or a screenshot, not by eye.
 
 | # | Target | How to check | Now (2026-11-21) |
 | --- | --- | --- | --- |
-| 1 | Page structure matches BC: FastTabs, field order, columns | `cargo run -p bc-parity -- --summary --check` exits 0 | ✅ blocking 0 |
-| 2 | Every field BC shows on our pages exists | "needs table field" in the summary = 0 | 67 |
-| 3 | Every BC action on our pages exists and works | "actions missing" = 0, minus the agreed out-of-scope list | 1,323 |
-| 4 | Every page looks and behaves like BC | the [visual checklist](#visual-parity-checklist) fully ticked | 7 / 111 pages |
-| 5 | Every function has tests | `cargo test --workspace`; each new command has an integration test | ✅ 27 suites green |
+| 1 | Every Base Application page exists | inventory: pages ticked | 110 / 2,638 |
+| 2 | Every Base Application report exists | inventory: reports ticked | 16 / 659 |
+| 3 | Every W1 app's pages and reports exist (or are decided out) | inventory, W1 apps section | 0 / ~1,700 pages |
+| 4 | Every page we have matches BC's structure | `cargo run -p bc-parity -- --summary --check` exits 0 | ✅ blocking 0 |
+| 5 | Every field BC shows on our pages exists | "needs table field" = 0 | 67 |
+| 6 | Every action BC offers on our pages exists and works | "actions missing" = 0 | 1,323 |
+| 7 | Every page looks and behaves like BC | [visual checklist](#visual-parity-checklist) | 7 pages |
+| 8 | Every function has tests | `cargo test --workspace` | ✅ 27 suites |
 
-Pages with a BC object id: 111. The baseline when the parity tool was built was 86 fields missing from pages, 1,037 missing table fields, 190 extra fields and 1,477 missing actions.
+Targets 4–6 apply to the pages we already have. As new pages land they join the check, so those numbers can rise before they fall.
 
-## How every checkpoint is done
+## The routine for every checkpoint
 
-1. **Pick.** Take the next unticked item from the current phase below.
-2. **Read BC first.** Read the AL source: the table, the page, the codeunit behind the action. Open the same page in the live client (built-in browser) and click through it.
-3. **Build it.**
-   - Structure goes in the hand-written schema or the generator, never in `bc_gen.rs` by hand.
-   - Logic is an engine command with a test (AGENTS.md).
+1. **Pick.** Take the next unticked item of the current phase, then its pages in [bc-inventory.md](bc-inventory.md).
+2. **Read BC.** Read the AL source: tables, pages, the codeunits behind the actions. Then open the page in the live client (built-in browser) and click through it.
+3. **Build.**
+   - Tables and pages go in `crates/engine/src/schema/` with BC's object ids.
+   - Layout comes from the generator (`bc-parity gen`), never from hand edits to `bc_gen.rs`.
+   - Logic is an engine command with an integration test (AGENTS.md).
 4. **Verify.**
    - `cargo test --workspace`, with the PostgreSQL env.
    - `bc-parity --summary --check`.
-   - A screenshot of the page in the app: `erpcraft --control 7980` and `erpcraft-cli --connect 7980 ui …`, built into `target-ui` so the user's own window stays open.
-5. **Record.** Append a row to `.audit/bc-parity.tsv`, tick the box here, update the numbers above.
-6. **Ship.** Commit with a message file and push to `main`. No asking ([memory: autonomous commit & push]).
+   - Screenshots in the app on port 7980, built into `target-ui`, so the user's window on 7979 stays open.
+5. **Record.**
+   - Run `bc-parity inventory`.
+   - Tick here and update the numbers above.
+   - Add a row to `.audit/bc-parity.tsv`.
+6. **Ship.** Commit and push to `main`.
 
-## Done
+## Done so far
 
-- **Phases 1–4.** PostgreSQL store; users and permissions; journals and applications; ship/invoice posting; inventory and locations; fixed assets; PDF printing; list filter pane, sort and columns; BC API connector; wasm web build.
-- **Parity tooling.** `tools/bc-parity` (measure and generate) and the generated layer `bc_gen.rs`:
-  - fields, captions, tooltips, decimals (AutoFormatType);
-  - FastTabs, Show more, sub-headings, column breaks;
-  - list columns, navigation actions, action categories;
-  - FlowFields from CalcFormula, with drill-downs.
-- **Card.** Dotted caption leaders; caption callout; LCY symbol in captions; Show more in the tab header; covers everything below the app bar; BC input boxes with the icon inside; read-only toggles; status style.
-- **List grid.** 34 px rows with row lines; header menu (sort, filter, What's this?); ⋮ row menu; current cell; arrow keys; drill-down links; resizable columns; back button on stacked lists.
-- **Documents.** Lines part as BC's editable subform; Post and New, Preview Posting, Test Report, Post and Print, Copy Document, Select items; Print Confirmation, Work Order and Pro Forma; posted Statistics.
+- **Phases 1–4.** PostgreSQL store; users and permissions; journals and applications; ship/invoice posting; locations and item journals; fixed assets; PDF printing; list filter, sort and columns; BC API connector; wasm web build.
+- **Parity tooling.** `tools/bc-parity`: measure, generate, inventory.
+- **Card and list.** Card components and the list grid match BC. Details are in [bc-parity.md](bc-parity.md).
+- **Documents.**
+  - Post and New, Post and Print, Preview Posting, Test Report;
+  - Copy Document, Select items;
+  - Print Confirmation, Work Order, Pro Forma;
+  - posted Statistics.
 - **Items.** Copy Item, Adjust Inventory.
-- **Subsystems.** Dimensions; Comments; Find entries (Navigate); Approvals; Attachments.
+- **Subsystems.** Dimensions, Comments, Find entries (Navigate), Approvals, Attachments.
 
-## Phase A: existing functions on every page BC has them
+## Phases
 
-This is cheap and moves the action count fastest. The function exists but isn't offered everywhere BC offers it.
+The order follows impact for Auto Craft (a workshop and auto-parts business): money and stock first, then the areas the business grows into, then the rest. Every area of BC appears exactly once.
 
-- [ ] Approvals, Send/Cancel Approval Request on **list** pages (sales/purchase quotes, orders, invoices, credit memos), acting on the selected row
-- [ ] Co&mments on list pages and on journals (Gen. Journal Line comments)
-- [ ] Statistics on list pages (customer, vendor, item lists; document lists)
-- [ ] Post and Print, Test Report, Preview Posting on **journals** (general, cash receipt, payment, item, FA journals) and Post Batch
-- [ ] Attach as PDF / Attachments on posted document **lists**
-- [ ] Customer Statistics / Vendor Statistics actions on documents (BC opens the party's statistics)
+### Phase A: what exists, everywhere BC offers it
+
+- [ ] Approvals, Send/Cancel Approval Request on document **lists**, acting on the selected row
+- [ ] Co&mments on lists and journals
+- [ ] Statistics, Customer Statistics, Vendor Statistics on lists and documents
+- [ ] Post and Print, Test Report, Preview Posting, Post Batch on **journals**
+- [ ] Attachments and Attach as PDF on posted document lists
 - [ ] Dimensions-Multiple and Set Dimension Filter on lists
 
-Done when "actions missing" drops for each of these captions to the pages BC really shows them on (check with `bc-parity`, grouped by caption).
+### Phase B: Finance (Finance 344 pages / 86 reports, Bank 78 / 17)
 
-## Phase B: document lifecycle
+- [ ] **Financial reports** (account schedules): row and column definitions, Balance Sheet / Income Statement as BC builds them
+- [ ] G/L budgets, analysis views, accounting periods, Close Income Statement and year end
+- [ ] **Currencies**: exchange rates, currency on documents and journals, adjust exchange rates, realized and unrealized gains
+- [ ] VAT: statements, VAT returns, VAT entries, VAT rate change, VAT registration numbers
+- [ ] **Recurring journals**, allocations, allocation accounts, deferrals with Deferral Schedule
+- [ ] **Bank account reconciliation**, payment reconciliation journal, bank statement import, check printing
+- [ ] **Reminders and finance charge memos**, customer statements
+- [ ] Payment tolerance and discount, payment methods, payment terms with discount
+- [ ] Intercompany partners, IC inbox and outbox, consolidation
+- [ ] Every Finance and Bank report in the inventory
 
-- [ ] **Incoming Documents** (Incoming Document, Incoming Document Attachment): Create from File, Select, View, Remove on documents and journals
-- [ ] **Archive Document** and "No. of Archived Versions" (Sales/Purchase Header Archive)
-- [ ] **Cancel / Correct posted invoices**: Corrective Credit Memo, Cancel, and the "Cancelled" / "Corrective" fields (Cancelled Document table)
-- [ ] **Calculate Invoice Discount** (Cust./Vendor Invoice Disc.)
-- [ ] Get Recurring Sales/Purchase Lines (Standard Codes)
-- [ ] Move Negative Lines, Show All Lines / Show Lines with Issues
-- [ ] **Prepayments**: prepayment %, Post Prepayment Invoice / Credit Memo, Pending Prepayment status
-- [ ] Update Document (posted document header edits BC allows)
-- [ ] "Paid", "Completely Shipped" and "Amt. Ship. Not Inv." fields
+### Phase C: Sales and Purchases complete (Sales 222 / 78, Purchases 153 / 51)
 
-## Phase C: inventory depth
+- [ ] **Return orders**: sales and purchase return orders, posted return receipts and shipments
+- [ ] **Blanket orders**, quote to order to blanket flows
+- [ ] **Prepayments**: Post Prepayment Invoice / Credit Memo, Pending Prepayment status
+- [ ] Archive Document and No. of Archived Versions
+- [ ] Cancel / Correct posted invoices; Cancelled and Corrective fields
+- [ ] Calculate Invoice Discount, customer/vendor invoice discounts
+- [ ] Drop shipment and special orders
+- [ ] Standard sales/purchase codes, Get Recurring Lines
+- [ ] Customer and vendor templates (Apply Template), ship-to and order addresses, customer bank accounts
+- [ ] **Incoming documents**: create from file, OCR-less matching, link to journals and documents
+- [ ] Sales and purchase analysis reports, salespeople and purchasers, sales budgets
+- [ ] Every Sales and Purchases report in the inventory
 
-- [ ] **Item Tracking** (Lot / Serial No.): Item Tracking Lines, Item Tracking Entries, Document Line Tracking
-- [ ] **Reservations**: Reserved Quantity, Reserve, Reservation Entries
-- [ ] **Item Charges**: Qty. to Assign, Item Charge Assignment, Qty. Assigned
-- [ ] Stockkeeping Units (Create Stockkeeping Unit)
-- [ ] Assembly BOM / BOM Level, "Assembly BOM" field
-- [ ] Item Availability by Period / Location / Event / BOM Level pages
-- [ ] Item Substitutions ("Substitutes Exist"), Item References, Units of Measure per item, Item Variants
+### Phase D: Pricing (14 / 2)
 
-## Phase D: prices and discounts
+- [ ] Price lists: sales and purchase prices and discounts, price list lines, Price and Discount Overview
+- [ ] Best price on document lines, customer price and discount groups
 
-- [ ] Price lists (BC's new pricing): Sales Prices, Purchase Prices, line discounts, Price and Discount Overview
-- [ ] Prices used on document lines (best price), Customer Price Group / Disc. Group
+### Phase E: Inventory (312 / 101)
 
-## Phase E: journals
+- [ ] **Item tracking**: lot and serial numbers, item tracking lines, entries, Document Line Tracking
+- [ ] **Reservations** and Reserved Quantity, order promising
+- [ ] **Item charges**: assignment, Qty. to Assign
+- [ ] **Transfer orders**: shipments and receipts between locations
+- [ ] Stockkeeping units, item variants, units of measure per item, item references, substitutions, catalog items
+- [ ] Physical inventory orders and recordings, counting periods
+- [ ] Costing: Adjust Cost – Item Entries, Post Inventory Cost to G/L, revaluation journal, standard cost worksheet
+- [ ] Requisition worksheet, reordering policies, item availability by period, location, event and BOM level
+- [ ] Item budgets and analysis reports, item attributes and categories
+- [ ] Every Inventory report in the inventory
 
-- [ ] Journal Batch management on journal pages (batch picker, Journal Batch action)
-- [ ] Recurring journals, Post Batch from batch lists
-- [ ] Deferral templates and Deferral Schedule
+### Phase F: Warehouse (144 / 35)
 
-## Phase F: communication and contacts
+- [ ] Bins and bin contents, zones (directed put-away and pick)
+- [ ] Warehouse receipts, shipments, put-aways, picks, movements
+- [ ] Warehouse journals, worksheets, physical inventory by bin
+- [ ] Every Warehouse report in the inventory
 
-- [ ] Contacts (CRM Contact, Contact Business Relation): the Contact action on customer and vendor cards
-- [ ] Send / Send by Email / Sent Emails (Email Account, Document Sending Profile); SMTP is fine as the transport
-- [ ] Report Selections per document
+### Phase G: Assembly and Manufacturing (Assembly 31 / 9, Manufacturing 134 / 50, plus the Manufacturing and Subcontracting apps)
 
-## Phase G: UI detail backlog
+- [ ] Assembly BOMs, assembly orders, assemble-to-order on sales lines
+- [ ] Production BOMs, routings, work and machine centers, capacity
+- [ ] Production orders (simulated to finished), output and consumption journals
+- [ ] Planning worksheet (MRP), production forecasts
+- [ ] Subcontracting
+- [ ] Every Assembly and Manufacturing report in the inventory
 
-- [ ] Option captions that the page overrides (BC shows "Default (No)" where we show "Default")
-- [ ] A native file picker for Attach a file (BC opens a file dialog; we type a path)
+### Phase H: Service Management (192 / 55, plus the ServiceManagement app)
+
+Highly relevant for a workshop.
+
+- [ ] Service items, service contracts and contract quotes
+- [ ] Service orders, quotes, invoices and credit memos, service lines and posting
+- [ ] Repair status, fault and resolution codes, service hours, dispatching, loaners
+- [ ] Every Service report in the inventory
+
+### Phase I: Projects (135 / 40)
+
+- [ ] Projects (jobs), tasks, planning lines, project journals, invoicing from projects
+- [ ] WIP calculation and posting, project budgets
+- [ ] Time sheets, resources, resource prices and capacity
+- [ ] Every Projects report in the inventory
+
+### Phase J: Fixed assets complete (61 / 38)
+
+- [ ] Insurance, maintenance, FA reclassification, budgets, depreciation tables, more depreciation methods
+- [ ] Every Fixed Assets report in the inventory
+
+### Phase K: Cash flow and cost accounting (Cash Flow 22 / 3, Cost Accounting 30 / 21)
+
+- [ ] Cash flow forecasts, worksheets, setup
+- [ ] Cost types, cost centers and objects, allocations, cost budgets
+- [ ] Every report of both areas
+
+### Phase L: CRM and contacts (163 / 36)
+
+- [ ] Contacts and contact persons, business relations, customer/vendor from contact
+- [ ] Interactions, opportunities, sales cycles, campaigns, segments, to-dos
+- [ ] Email logging, Outlook-free email sending (SMTP)
+- [ ] Every CRM report in the inventory
+
+### Phase M: Human resources (57 / 15)
+
+- [ ] Employees, absences, qualifications, employee ledger (expenses to pay employees)
+- [ ] Every HR report in the inventory
+
+### Phase N: Platform (System 173 / 15, Foundation 58 / 2, Utilities 12 / 2, Integration 87, Modules 93, OtherCapabilities 30, eServices 25, Invoicing 7, root 44)
+
+- [ ] Number series UI, company information, setups, assisted setup and checklists
+- [ ] Users, permission sets and security groups UI, user tasks, approvals admin
+- [ ] Change log, data exchange definitions, report layouts and selections
+- [ ] Configuration packages (RapidStart), Excel import and export, data archive
+- [ ] Job queue (or a deliberate replacement), notifications, email accounts and scenarios
+- [ ] Every remaining page and report of these areas in the inventory
+
+### Phase O: Role centers (16)
+
+- [ ] Every role center: Business Manager (exists), Accountant, Sales Order Processor, Purchasing Agent, Warehouse Worker, Production Planner, Project Manager, Service Dispatcher, and the others in the inventory, with their cues, headlines and actions
+
+### Phase P: W1 apps
+
+Each app gets a decision first, then its pages and reports from the inventory.
+
+- [ ] **Relevant for Indonesia and Auto Craft first:**
+  - Withholding Tax (PPh);
+  - E-Documents and connectors (e-Faktur by its own connector);
+  - Bank Deposits;
+  - Statistical Accounts;
+  - Payment Practices;
+  - Subscription Billing;
+  - Quality Management;
+  - Sustainability;
+  - Shopify (online sales);
+  - Sales and Inventory Forecast;
+  - Excise Taxes;
+  - Simplified Bank Statement Import;
+  - Excel Reports;
+  - Data Archive;
+  - Review G/L Entries;
+  - Error Messages with Recommendations;
+  - Essential Business Headlines;
+  - Master Data Management.
+- [ ] **Country-specific elsewhere**, built only if a market needs them: Intrastat, SAF-T, Audit File Export, Service Declaration, VAT Group Management, PEPPOL, UK Send Remittance Advice, IN Tax Engine, EU 3-Party Trade.
+- [ ] **Microsoft-service apps**, each needing the user's decision: replace it or leave it out.
+  - Hybrid/migration (GP, SL, BC14, QuickBooks);
+  - API v1/v2 (an ERPCraft REST API instead?);
+  - Power BI reports;
+  - Copilot and agent apps (Sales Order Agent, Expense Agent, Payables Agent, AI toolkits, Image Analysis, Late Payment Predictor);
+  - Azure/SharePoint/SFTP file storage connectors;
+  - Microsoft 365 / Outlook email connectors;
+  - Universal Print, Field Service, Company Hub, Cross-environment Intercompany;
+  - PayPal / WorldPay / MS Wallet payments.
+
+### Phase Q: Look and feel, to the last detail
+
+- [ ] Option captions the page overrides ("Default (No)")
+- [ ] Native file picker for attachments and imports
 - [ ] "Resize" in the column header menu
-- [ ] Role center cues such as Requests to Approve and Incoming Documents, and their actions
-- [ ] Tell Me results grouped the way BC groups them
-- [ ] Re-check the wasm web build after each phase
+- [ ] FactBox tabs (Details / Attachments), Customer Picture, cues inside FactBoxes
+- [ ] Tell Me grouped as in BC; "Show more" and "Show less" everywhere BC has them
+- [ ] Web build (wasm) checked after every phase
+- [ ] The visual checklist below, page by page
 
 ## Visual parity checklist
 
-Each page is compared side by side with the live client: layout, components, hover and click behaviour.
+Pages compared side by side with the live client (layout, components, hover, clicks). Every page that lands in a phase is added here.
 
 - [x] Customer Card, Customer List
 - [x] Item List, Item Card
@@ -118,30 +245,20 @@ Each page is compared side by side with the live client: layout, components, hov
 - [x] Purchase Order
 - [x] Posted Sales Invoice
 - [ ] Vendor Card, Vendor List
-- [ ] Sales Quote, Sales Invoice, Sales Credit Memo and their lists
-- [ ] Purchase Quote, Invoice, Credit Memo and their lists
-- [ ] Posted documents (credit memos, shipments, receipts, purchase side)
+- [ ] Sales Quote, Invoice, Credit Memo and lists
+- [ ] Purchase Quote, Invoice, Credit Memo and lists
+- [ ] Posted credit memos, shipments, receipts
 - [ ] Ledger entry lists (G/L, customer, vendor, item, bank, FA)
 - [ ] Journals (general, cash receipt, payment, item, reclass, phys. inventory, FA)
-- [ ] Chart of Accounts, G/L Account Card
-- [ ] Bank Account Card and List
-- [ ] Fixed Asset Card and List, FA setup pages
-- [ ] Setup pages (General Ledger, Sales & Receivables, Purchases & Payables, Inventory, posting setups)
-- [ ] Role center (headline, cues, action bar, navigation)
+- [ ] Chart of Accounts, G/L Account Card, Bank Account Card and List
+- [ ] Fixed Asset Card and List, FA setup
+- [ ] Setup pages
+- [ ] Role center
 - [ ] Dimensions, Comments, Approvals and Attachments pages
 
-## Out of scope
-
-These BC features talk to Microsoft services. ERPCraft offers its own path or leaves them out. Each needs the user's decision before it's built.
-
-- Dataverse coupling ("Coupled to Dataverse", Delete Coupling, synchronize)
-- Power Automate ("Create approval flow"); ERPCraft's approvals are built in
-- Copilot summaries and OneDrive file actions
-- Edit in Excel. A plain .xlsx export could replace it.
-- Job Queue (Remove From Job Queue). Posting runs at once.
-
-## Known differences
+## Known differences (to close)
 
 - G/L entries of a posted document carry the header's dimension set, not each line's.
-- Default dimension Value Posting rules are not enforced yet.
+- Default dimension Value Posting rules are not enforced.
 - DateTime fields are read-only text.
+- Attach a file takes a typed path; BC opens a file dialog.

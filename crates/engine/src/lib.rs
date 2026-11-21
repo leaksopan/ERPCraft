@@ -34,6 +34,7 @@ pub mod bank_rec;
 pub mod reminders;
 pub mod recurring;
 pub mod item_setup;
+pub mod transfer;
 mod error;
 pub mod fa;
 pub mod item_journal;

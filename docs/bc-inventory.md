@@ -23,7 +23,7 @@ orders this list into phases.
 | Foundation | 8 | 58 | 0 | 2 |
 | HumanResources | 0 | 57 | 0 | 15 |
 | Integration | 0 | 87 | 0 | 0 |
-| Inventory | 20 | 312 | 1 | 101 |
+| Inventory | 29 | 312 | 1 | 101 |
 | Invoicing | 0 | 7 | 0 | 0 |
 | Manufacturing | 0 | 134 | 0 | 50 |
 | Modules | 2 | 93 | 0 | 1 |
@@ -38,7 +38,7 @@ orders this list into phases.
 | Utilities | 0 | 12 | 0 | 2 |
 | Warehouse | 0 | 144 | 0 | 35 |
 | eServices | 0 | 25 | 0 | 0 |
-| **Base Application** | **160** | **2638** | **16** | **659** |
+| **Base Application** | **169** | **2638** | **16** | **659** |
 
 ### (root)
 
@@ -1754,7 +1754,7 @@ Pages 0 / 87, reports 0 / 0.
 
 ### Inventory
 
-Pages 20 / 312, reports 1 / 101.
+Pages 29 / 312, reports 1 / 101.
 
 <details><summary>Inventory / Analysis: pages 0 / 34, reports 0 / 8</summary>
 
@@ -2261,20 +2261,20 @@ Pages 20 / 312, reports 1 / 101.
 
 </details>
 
-<details><summary>Inventory / Transfer: pages 0 / 23, reports 0 / 5</summary>
+<details><summary>Inventory / Transfer: pages 9 / 23, reports 0 / 5</summary>
 
-- [ ] Page 5740 Transfer Order (Document)
-- [ ] Page 5741 Transfer Order Subform (ListPart)
-- [ ] Page 5742 Transfer Orders (List)
-- [ ] Page 5743 Posted Transfer Shipment (Document)
-- [ ] Page 5744 Posted Transfer Shpt. Subform (ListPart)
-- [ ] Page 5745 Posted Transfer Receipt (Document)
-- [ ] Page 5746 Posted Transfer Rcpt. Subform (ListPart)
+- [x] Page 5740 Transfer Order (Document)
+- [x] Page 5741 Transfer Order Subform (ListPart)
+- [x] Page 5742 Transfer Orders (List)
+- [x] Page 5743 Posted Transfer Shipment (Document)
+- [x] Page 5744 Posted Transfer Shpt. Subform (ListPart)
+- [x] Page 5745 Posted Transfer Receipt (Document)
+- [x] Page 5746 Posted Transfer Rcpt. Subform (ListPart)
 - [ ] Page 5747 Transfer Routes (Card)
 - [ ] Page 5748 Transfer Route Specification (Card)
 - [ ] Page 5749 Transfer Lines (List)
-- [ ] Page 5752 Posted Transfer Shipments (List)
-- [ ] Page 5753 Posted Transfer Receipts (List)
+- [x] Page 5752 Posted Transfer Shipments (List)
+- [x] Page 5753 Posted Transfer Receipts (List)
 - [ ] Page 5755 Transfer Statistics (Card)
 - [ ] Page 5756 Transfer Shipment Statistics (Card)
 - [ ] Page 5757 Transfer Receipt Statistics (Card)

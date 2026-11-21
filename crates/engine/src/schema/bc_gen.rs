@@ -1589,6 +1589,9 @@ pub fn extend(m: &mut Metadata) {
             ("Location Mandatory", "Location Mandatory", "Specifies if a location code is required when posting item transactions. This field, together with the Components at Location field in the Manufacturing Setup window, is very important in governing how the planning system handles demand lines with/without location codes. For more information, see \"Planning with or without Locations\" in Help.", 0),
             ("Item Nos.", "Item Nos.", "Specifies the number series that will be used to assign numbers to items.", 0),
             ("Prevent Negative Inventory", "Prevent Negative Inventory", "Specifies whether you can post a transaction that will bring the item's inventory below zero. Negative inventory is always prevented for Consumption and Transfer type transactions.", 0),
+            ("Transfer Order Nos.", "Transfer Order Nos.", "Specifies the number series that will be used to assign numbers to transfer orders.", 0),
+            ("Posted Transfer Shpt. Nos.", "Posted Transfer Shpt. Nos.", "Specifies the number series that will be used to assign numbers to posted transfer shipments.", 0),
+            ("Posted Transfer Rcpt. Nos.", "Posted Transfer Rcpt. Nos.", "Specifies the number series that will be used to assign numbers to posted transfer receipts.", 0),
         ],
     );
     fields(
@@ -1605,9 +1608,6 @@ pub fn extend(m: &mut Metadata) {
             F::boolean("Allow Inventory Adjustment").tooltip("Specifies if you want to allow manual adjustment of the inventory in the item card."),
             F::code("Invt. Cost Jnl. Template Name", 10).tooltip("Specifies the name of the journal template to use for automatic and expected cost posting."),
             F::code("Invt. Cost Jnl. Batch Name", 10).caption("Jnl. Batch Name Cost Posting").tooltip("Specifies the name of the journal batch to use for automatic and expected cost posting."),
-            F::code("Transfer Order Nos.", 20).tooltip("Specifies the number series that will be used to assign numbers to transfer orders."),
-            F::code("Posted Transfer Shpt. Nos.", 20).tooltip("Specifies the number series that will be used to assign numbers to posted transfer shipments."),
-            F::code("Posted Transfer Rcpt. Nos.", 20).tooltip("Specifies the number series that will be used to assign numbers to posted transfer receipts."),
             F::boolean("Copy Comments Order to Shpt.").tooltip("Specifies that you want to copy the comments entered on the transfer order to the transfer shipment."),
             F::boolean("Copy Comments Order to Rcpt.").tooltip("Specifies that you want to copy the comments entered on the transfer order to the transfer receipt."),
             F::code("Nonstock Item Nos.", 20).caption("Catalog Item Nos.").tooltip("Specifies the number series that will be used to assign numbers to catalog items."),
@@ -2018,6 +2018,7 @@ pub fn extend(m: &mut Metadata) {
             ("Phone No.", "Phone No.", "Specifies the telephone number of the location.", 0),
             ("Contact", "Contact", "Specifies the name of the contact person at the location", 0),
             ("Post Code", "Post Code", "Specifies the postal code.", 0),
+            ("Use As In-Transit", "Use As In-Transit", "Specifies that this location is an in-transit location.", 0),
         ],
     );
     relabel(
@@ -3260,6 +3261,224 @@ pub fn extend(m: &mut Metadata) {
     );
     relabel(
         m,
+        "Transfer Header",
+        &[
+            ("No.", "No.", "Specifies the number of the involved entry or record, according to the specified number series.", 0),
+            ("Transfer-from Code", "Transfer-from Code", "Specifies the code of the location that items are transferred from.", 0),
+            ("Transfer-from Name", "Transfer-from Name", "Specifies the name of the sender at the location that the items are transferred from.", 0),
+            ("Transfer-to Code", "Transfer-to Code", "Specifies the code of the location that the items are transferred to.", 0),
+            ("Transfer-to Name", "Transfer-to Name", "Specifies the name of the recipient at the location that the items are transferred to.", 0),
+            ("Posting Date", "Posting Date", "Specifies the posting date of the transfer order.", 0),
+            ("Shipment Date", "Shipment Date", "Specifies when items on the document are shipped or were shipped. A shipment date is usually calculated from a requested delivery date plus lead time.", 0),
+            ("Receipt Date", "Receipt Date", "Specifies the date that you expect the transfer-to location to receive the shipment.", 0),
+            ("Status", "Status", "Specifies whether the transfer order is open or has been released for warehouse handling.", 0),
+            ("In-Transit Code", "In-Transit Code", "Specifies the in-transit code for the transfer order, such as a shipping agent.", 0),
+            ("Shipment Method Code", "Shipment Method Code", "Specifies the delivery conditions of the related shipment, such as free on board (FOB).", 0),
+            ("Direct Transfer", "Direct Transfer", "Specifies that the transfer does not use an in-transit location.", 0),
+            ("Assigned User ID", "Assigned User ID", "Specifies the ID of the user who is responsible for the document.", 0),
+        ],
+    );
+    fields(
+        m,
+        "Transfer Header",
+        vec![
+            F::text("Transfer-from Name 2", 50).tooltip("Specifies an additional part of the name of the sender at the location that the items are transferred from."),
+            F::text("Transfer-from Address", 100).tooltip("Specifies the address of the location that the items are transferred from."),
+            F::text("Transfer-from Address 2", 50).tooltip("Specifies an additional part of the address of the location that items are transferred from."),
+            F::code("Transfer-from Post Code", 20).tooltip("Specifies the postal code of the location that the items are transferred from."),
+            F::text("Transfer-from City", 30).tooltip("Specifies the city of the location that the items are transferred from."),
+            F::text("Transfer-from County", 30),
+            F::code("Trsf.-from Country/Region Code", 10),
+            F::text("Transfer-to Name 2", 50).tooltip("Specifies an additional part of the name of the recipient at the location that the items are transferred to."),
+            F::text("Transfer-to Address", 100).tooltip("Specifies the address of the location that the items are transferred to."),
+            F::text("Transfer-to Address 2", 50).tooltip("Specifies an additional part of the address of the location that the items are transferred to."),
+            F::code("Transfer-to Post Code", 20).tooltip("Specifies the postal code of the location that the items are transferred to."),
+            F::text("Transfer-to City", 30).tooltip("Specifies the city of the location that items are transferred to."),
+            F::text("Transfer-to County", 30),
+            F::code("Trsf.-to Country/Region Code", 10),
+            F::code("Shortcut Dimension 1 Code", 20).tooltip("Specifies the code for Shortcut Dimension 1, which is one of two global dimension codes that you set up in the General Ledger Setup window."),
+            F::code("Shortcut Dimension 2 Code", 20).tooltip("Specifies the code for Shortcut Dimension 2, which is one of two global dimension codes that you set up in the General Ledger Setup window."),
+            F::text("Transfer-from Contact", 100).tooltip("Specifies the name of the contact person at the location that the items are transferred from."),
+            F::text("Transfer-to Contact", 100).tooltip("Specifies the name of the contact person at the location that items are transferred to."),
+            F::code("Shipping Agent Code", 10).tooltip("Specifies the code for the shipping agent who is transporting the items."),
+            F::code("Shipping Agent Service Code", 10).tooltip("Specifies the code for the service, such as a one-day delivery, that is offered by the shipping agent."),
+            F::code("Shipping Time", 32).tooltip("Specifies how long it takes from when the items are shipped from the warehouse to when they are delivered."),
+            F::code("Transaction Type", 10).tooltip("Specifies the type of transaction that the document represents, for the purpose of reporting to INTRASTAT."),
+            F::code("Transport Method", 10).tooltip("Specifies the transport method, for the purpose of reporting to INTRASTAT."),
+            F::code("Partner VAT ID", 20).tooltip("Specifies the counter party's VAT number."),
+            F::code("Entry/Exit Point", 10).tooltip("Specifies the code of either the port of entry at which the items passed into your country/region, or the port of exit."),
+            F::code("Area", 10).tooltip("Specifies the area of the customer or vendor, for the purpose of reporting to INTRASTAT."),
+            F::code("Transaction Specification", 10).tooltip("Specifies a specification of the document's transaction, for the purpose of reporting to INTRASTAT."),
+            F::option("Direct Transfer Posting", &["", "Shipment and Receipt", "Direct Transfer"]).tooltip("Specifies the posting type for direct transfer. The posting type determines how inventory is updated for the transfer order."),
+            F::option("Shipping Advice", &["Partial", "Complete"]).tooltip("Specifies an instruction to the warehouse that ships the items, for example, that it is acceptable to do partial shipment."),
+        ],
+    );
+    relabel(
+        m,
+        "Transfer Line",
+        &[
+            ("Document No.", "Document No.", "Specifies the document number that is associated with the line or entry.", 0),
+            ("Item No.", "Item No.", "Specifies the number of the item that will be transferred.", 0),
+            ("Quantity", "Quantity", "Specifies the quantity of the item that will be processed as the document stipulates.", 0),
+            ("Qty. to Ship", "Qty. to Ship", "Specifies the quantity of items that remain to be shipped.", 0),
+            ("Qty. to Receive", "Qty. to Receive", "Specifies the quantity of items that remains to be received.", 0),
+            ("Quantity Shipped", "Quantity Shipped", "Specifies how many units of the item on the line have been posted as shipped.", 0),
+            ("Quantity Received", "Quantity Received", "Specifies how many units of the item on the line have been posted as received.", 0),
+            ("Description", "Description", "Specifies a description of the item.", 0),
+            ("Unit of Measure Code", "Unit of Measure Code", "Specifies how each unit of the item or resource is measured, such as in pieces or hours. By default, the value in the Base Unit of Measure field on the item or resource card is inserted.", 0),
+            ("Outstanding Quantity", "Outstanding Quantity", "Specifies the quantity of the items that remains to be shipped.", 0),
+            ("Variant Code", "Variant Code", "Specifies the variant of the item on the line.", 0),
+            ("Qty. in Transit", "Qty. in Transit", "Specifies the quantity of the item that is in transit.", 0),
+            ("Transfer-from Code", "Transfer-from Code", "Specifies the code of the location that items are transferred from.", 0),
+            ("Transfer-to Code", "Transfer-to Code", "Specifies the code of the location that the items are transferred to.", 0),
+            ("Shipment Date", "Shipment Date", "Specifies when items on the document are shipped or were shipped. A shipment date is usually calculated from a requested delivery date plus lead time.", 0),
+            ("Receipt Date", "Receipt Date", "Specifies the date that you expect the transfer-to location to receive the shipment.", 0),
+        ],
+    );
+    relabel(
+        m,
+        "Transfer Receipt Header",
+        &[
+            ("No.", "No.", "Specifies the number of the involved entry or record, according to the specified number series.", 0),
+            ("Transfer-from Code", "Transfer-from Code", "Specifies the code of the location that items are transferred from.", 0),
+            ("Transfer-from Name", "Transfer-from Name", "Specifies the name of the sender at the location that the items are transferred from.", 0),
+            ("Transfer-to Code", "Transfer-to Code", "Specifies the code of the location that the items are transferred to.", 0),
+            ("Transfer-to Name", "Transfer-to Name", "Specifies the name of the recipient at the location that the items are transferred to.", 0),
+            ("Posting Date", "Posting Date", "Specifies the posting date for this document.", 0),
+            ("Transfer Order No.", "Transfer Order No.", "Specifies the number of the related transfer order.", 0),
+            ("Shipment Date", "Shipment Date", "Specifies when items on the document are shipped or were shipped. A shipment date is usually calculated from a requested delivery date plus lead time.", 0),
+            ("Receipt Date", "Receipt Date", "Specifies the receipt date of the transfer order.", 0),
+            ("In-Transit Code", "In-Transit Code", "Specifies the in-transit code for the transfer order, such as a shipping agent.", 0),
+            ("Shipment Method Code", "Shipment Method Code", "Specifies the delivery conditions of the related shipment, such as free on board (FOB).", 0),
+        ],
+    );
+    fields(
+        m,
+        "Transfer Receipt Header",
+        vec![
+            F::text("Transfer-from Name 2", 50).tooltip("Specifies an additional part of the name of the sender at the location that the items are transferred from."),
+            F::text("Transfer-from Address", 100).tooltip("Specifies the address of the location that the items are transferred from."),
+            F::text("Transfer-from Address 2", 50).tooltip("Specifies an additional part of the address of the location that items are transferred from.."),
+            F::code("Transfer-from Post Code", 20),
+            F::text("Transfer-from City", 30).tooltip("Specifies the city of the location that the items are transferred from."),
+            F::text("Transfer-from County", 30),
+            F::code("Trsf.-from Country/Region Code", 10),
+            F::text("Transfer-to Name 2", 50).tooltip("Specifies an additional part of the name of the recipient at the location that the items are transferred to."),
+            F::text("Transfer-to Address", 100).tooltip("Specifies the address of the location that the items are transferred to."),
+            F::text("Transfer-to Address 2", 50).tooltip("Specifies an additional part of the address of the location that items are transferred to."),
+            F::code("Transfer-to Post Code", 20),
+            F::text("Transfer-to City", 30).tooltip("Specifies the city of the location that items are transferred to."),
+            F::text("Transfer-to County", 30),
+            F::code("Trsf.-to Country/Region Code", 10),
+            F::date("Transfer Order Date").tooltip("Specifies the date when the transfer order was created."),
+            F::code("Shortcut Dimension 1 Code", 20).tooltip("Specifies the code for Shortcut Dimension 1, which is one of two global dimension codes that you set up in the General Ledger Setup window."),
+            F::code("Shortcut Dimension 2 Code", 20).tooltip("Specifies the code for Shortcut Dimension 2, which is one of two global dimension codes that you set up in the General Ledger Setup window."),
+            F::text("Transfer-from Contact", 100).tooltip("Specifies the name of the contact person at the location that the items are transferred from."),
+            F::text("Transfer-to Contact", 100).tooltip("Specifies the name of the contact person at the location that items are transferred to."),
+            F::code("Shipping Agent Code", 10).tooltip("Specifies the code for the shipping agent who is transporting the items."),
+            F::code("Shipping Agent Service Code", 10).tooltip("Specifies the code for the service, such as a one-day delivery, that is offered by the shipping agent."),
+            F::code("Transaction Type", 10).tooltip("Specifies the type of transaction that the document represents, for the purpose of reporting to INTRASTAT."),
+            F::code("Transport Method", 10).tooltip("Specifies the transport method, for the purpose of reporting to INTRASTAT."),
+            F::code("Partner VAT ID", 20).tooltip("Specifies the counter party's VAT number."),
+            F::code("Entry/Exit Point", 10).tooltip("Specifies the code of either the port of entry at which the items passed into your country/region, or the port of exit."),
+            F::code("Area", 10).tooltip("Specifies the area of the customer or vendor, for the purpose of reporting to INTRASTAT."),
+            F::code("Transaction Specification", 10).tooltip("Specifies a specification of the document's transaction, for the purpose of reporting to INTRASTAT."),
+            F::boolean("Direct Transfer").tooltip("Specifies that the transfer does not use an in-transit location."),
+        ],
+    );
+    relabel(
+        m,
+        "Transfer Receipt Line",
+        &[
+            ("Document No.", "Document No.", "Specifies the document number associated with this transfer line.", 0),
+            ("Item No.", "Item No.", "Specifies the number of the item that is transferred", 0),
+            ("Quantity", "Quantity", "Specifies the quantity of the item that is transferred.", 0),
+            ("Description", "Description", "Specifies the description of the item being transferred.", 0),
+            ("Unit of Measure Code", "Unit of Measure Code", "Specifies how each unit of the item or resource is measured, such as in pieces or hours. By default, the value in the Base Unit of Measure field on the item or resource card is inserted.", 0),
+            ("Variant Code", "Variant Code", "Specifies the variant of the item on the line.", 0),
+            ("Receipt Date", "Receipt Date", "Specifies the receipt date of the transfer receipt line.", 0),
+        ],
+    );
+    fields(
+        m,
+        "Transfer Receipt Line",
+        vec![
+            F::code("Shipping Time", 32).tooltip("Specifies how long it takes from when the items are shipped from the warehouse to when they are delivered."),
+        ],
+    );
+    relabel(
+        m,
+        "Transfer Shipment Header",
+        &[
+            ("No.", "No.", "Specifies the number of the involved entry or record, according to the specified number series.", 0),
+            ("Transfer-from Code", "Transfer-from Code", "Specifies the code of the location that items are transferred from.", 0),
+            ("Transfer-from Name", "Transfer-from Name", "Specifies the name of the sender at the location that the items are transferred from.", 0),
+            ("Transfer-to Code", "Transfer-to Code", "Specifies the code of the location that the items are transferred to.", 0),
+            ("Transfer-to Name", "Transfer-to Name", "Specifies the name of the recipient at the location that the items are transferred to.", 0),
+            ("Posting Date", "Posting Date", "Specifies the posting date for this document.", 0),
+            ("Transfer Order No.", "Transfer Order No.", "Specifies the number of the related transfer order.", 0),
+            ("Shipment Date", "Shipment Date", "Specifies when items on the document are shipped or were shipped. A shipment date is usually calculated from a requested delivery date plus lead time.", 0),
+            ("Receipt Date", "Receipt Date", "Specifies the receipt date of the transfer order.", 0),
+            ("In-Transit Code", "In-Transit Code", "Specifies the in-transit code for the transfer order, such as a shipping agent.", 0),
+            ("Shipment Method Code", "Shipment Method Code", "Specifies the delivery conditions of the related shipment, such as free on board (FOB).", 0),
+        ],
+    );
+    fields(
+        m,
+        "Transfer Shipment Header",
+        vec![
+            F::text("Transfer-from Name 2", 50).tooltip("Specifies an additional part of the name of the sender at the location that the items are transferred from."),
+            F::text("Transfer-from Address", 100).tooltip("Specifies the address of the location that the items are transferred from."),
+            F::text("Transfer-from Address 2", 50).tooltip("Specifies an additional part of the address of the location that items are transferred from."),
+            F::code("Transfer-from Post Code", 20).tooltip("Specifies the postal code of the location that the items are transferred from."),
+            F::text("Transfer-from City", 30).tooltip("Specifies the city of the location that the items are transferred from."),
+            F::text("Transfer-from County", 30),
+            F::code("Trsf.-from Country/Region Code", 10),
+            F::text("Transfer-to Name 2", 50).tooltip("Specifies an additional part of the name of the recipient at the location that the items are transferred to."),
+            F::text("Transfer-to Address", 100).tooltip("Specifies the address of the location that the items are transferred to."),
+            F::text("Transfer-to Address 2", 50).tooltip("Specifies an additional part of the address of the location that items are transferred to."),
+            F::code("Transfer-to Post Code", 20),
+            F::text("Transfer-to City", 30).tooltip("Specifies the city of the location that items are transferred to."),
+            F::text("Transfer-to County", 30),
+            F::code("Trsf.-to Country/Region Code", 10),
+            F::date("Transfer Order Date").tooltip("Specifies the date when the transfer order was created."),
+            F::code("Shortcut Dimension 1 Code", 20).tooltip("Specifies the code for Shortcut Dimension 1, which is one of two global dimension codes that you set up in the General Ledger Setup window."),
+            F::code("Shortcut Dimension 2 Code", 20).tooltip("Specifies the code for Shortcut Dimension 2, which is one of two global dimension codes that you set up in the General Ledger Setup window."),
+            F::text("Transfer-from Contact", 100).tooltip("Specifies the name of the contact person at the location that the items are transferred from."),
+            F::text("Transfer-to Contact", 100).tooltip("Specifies the name of the contact person at the location that items are transferred to."),
+            F::code("Shipping Agent Code", 10).tooltip("Specifies the code for the shipping agent who is transporting the items."),
+            F::code("Shipping Agent Service Code", 10).tooltip("Specifies the code for the service, such as a one-day delivery, that is offered by the shipping agent."),
+            F::code("Transaction Type", 10).tooltip("Specifies the type of transaction that the document represents, for the purpose of reporting to INTRASTAT."),
+            F::code("Transport Method", 10).tooltip("Specifies the transport method, for the purpose of reporting to INTRASTAT."),
+            F::code("Partner VAT ID", 20).tooltip("Specifies the counter party's VAT number."),
+            F::code("Entry/Exit Point", 10).tooltip("Specifies the code of either the port of entry at which the items passed into your country/region, or the port of exit."),
+            F::code("Area", 10).tooltip("Specifies the area of the customer or vendor, for the purpose of reporting to INTRASTAT."),
+            F::code("Transaction Specification", 10).tooltip("Specifies a specification of the document's transaction, for the purpose of reporting to INTRASTAT."),
+            F::boolean("Direct Transfer").tooltip("Specifies that the transfer does not use an in-transit location."),
+        ],
+    );
+    relabel(
+        m,
+        "Transfer Shipment Line",
+        &[
+            ("Document No.", "Document No.", "Specifies the document number associated with this transfer line.", 0),
+            ("Item No.", "Item No.", "Specifies the number of the item that will be transferred.", 0),
+            ("Quantity", "Quantity", "Specifies the quantity of the item that is transferred.", 0),
+            ("Description", "Description", "Specifies a description of the item.", 0),
+            ("Unit of Measure Code", "Unit of Measure Code", "Specifies how each unit of the item or resource is measured, such as in pieces or hours. By default, the value in the Base Unit of Measure field on the item or resource card is inserted.", 0),
+            ("Variant Code", "Variant Code", "Specifies the variant of the item on the line.", 0),
+            ("Shipment Date", "Shipment Date", "Specifies when items on the document are shipped or were shipped. A shipment date is usually calculated from a requested delivery date plus lead time.", 0),
+        ],
+    );
+    fields(
+        m,
+        "Transfer Shipment Line",
+        vec![
+            F::code("Shipping Time", 32).tooltip("Specifies how long it takes from when the items are shipped from the warehouse to when they are delivered."),
+        ],
+    );
+    relabel(
+        m,
         "Unit of Measure",
         &[
             ("Code", "Code", "Specifies a code for the unit of measure, which you can select on item and resource cards from where it is copied to.", 0),
@@ -4380,6 +4599,92 @@ pub fn extend(m: &mut Metadata) {
     );
     columns(m, "posted-sales-shipment-lines", &["No.", "Item Reference No.", "Description", "Location Code", "Quantity", "Unit of Measure Code", "Quantity Invoiced", "Planned Delivery Date", "Planned Shipment Date", "Shipment Date", "Shortcut Dimension 1 Code", "Shortcut Dimension 2 Code"]);
     columns(m, "posted-sales-shipments", &["No.", "Sell-to Customer No.", "Sell-to Customer Name", "Currency Code", "Location Code", "No. Printed"]);
+    columns(m, "posted-transfer-rcpt-subform", &["Item No.", "Description", "Quantity", "Unit of Measure Code", "Shipping Time"]);
+    layout(
+        m,
+        "posted-transfer-receipt",
+        &[
+            Tab {
+                caption: "General",
+                fields: &["No.", "Transfer-from Code", "Transfer-to Code", "Direct Transfer", "In-Transit Code", "Transfer Order No.", "Transfer Order Date", "Posting Date", "Shortcut Dimension 1 Code", "Shortcut Dimension 2 Code"],
+                promoted: &["No.", "Transfer Order No."],
+                additional: &["Shortcut Dimension 1 Code", "Shortcut Dimension 2 Code"],
+                ..Tab::default()
+            },
+            Tab {
+                caption: "Shipment",
+                fields: &["Shipment Date", "Shipment Method Code", "Shipping Agent Code", "Shipping Agent Service Code", "Receipt Date"],
+                promoted: &["Shipping Agent Service Code", "Receipt Date"],
+                ..Tab::default()
+            },
+            Tab {
+                caption: "Transfer-from",
+                fields: &["Transfer-from Name", "Transfer-from Name 2", "Transfer-from Address", "Transfer-from Address 2", "Transfer-from City", "Transfer-from County", "Transfer-from Post Code", "Trsf.-from Country/Region Code", "Transfer-from Contact"],
+                additional: &["Transfer-from Name 2", "Transfer-from Address", "Transfer-from Address 2", "Transfer-from City", "Transfer-from County", "Transfer-from Post Code", "Trsf.-from Country/Region Code", "Transfer-from Contact"],
+                breaks: &["Transfer-from County"],
+                captions: &[("Transfer-from Name", "Name"), ("Transfer-from Name 2", "Name 2"), ("Transfer-from Address", "Address"), ("Transfer-from Address 2", "Address 2"), ("Transfer-from City", "City"), ("Transfer-from Post Code", "Post Code"), ("Trsf.-from Country/Region Code", "Country/Region"), ("Transfer-from Contact", "Contact")],
+                ..Tab::default()
+            },
+            Tab {
+                caption: "Transfer-to",
+                fields: &["Transfer-to Name", "Transfer-to Name 2", "Transfer-to Address", "Transfer-to Address 2", "Transfer-to City", "Transfer-to County", "Transfer-to Post Code", "Trsf.-to Country/Region Code", "Transfer-to Contact"],
+                additional: &["Transfer-to Name 2", "Transfer-to Address", "Transfer-to Address 2", "Transfer-to City", "Transfer-to County", "Transfer-to Post Code", "Trsf.-to Country/Region Code", "Transfer-to Contact"],
+                breaks: &["Transfer-to County"],
+                captions: &[("Transfer-to Name", "Name"), ("Transfer-to Name 2", "Name 2"), ("Transfer-to Address", "Address"), ("Transfer-to Address 2", "Address 2"), ("Transfer-to City", "City"), ("Transfer-to Post Code", "Post Code"), ("Trsf.-to Country/Region Code", "Country/Region"), ("Transfer-to Contact", "Contact")],
+                ..Tab::default()
+            },
+            Tab {
+                caption: "Foreign Trade",
+                fields: &["Transaction Type", "Transaction Specification", "Transport Method", "Area", "Entry/Exit Point", "Partner VAT ID"],
+                promoted: &["Transaction Type", "Transport Method"],
+                ..Tab::default()
+            },
+        ],
+    );
+    columns(m, "posted-transfer-receipts", &["No.", "Transfer-from Code", "Transfer-to Code", "Posting Date"]);
+    layout(
+        m,
+        "posted-transfer-shipment",
+        &[
+            Tab {
+                caption: "General",
+                fields: &["No.", "Transfer-from Code", "Transfer-to Code", "Direct Transfer", "In-Transit Code", "Transfer Order No.", "Transfer Order Date", "Posting Date", "Shortcut Dimension 1 Code", "Shortcut Dimension 2 Code"],
+                promoted: &["No.", "Transfer-from Code", "Transfer-to Code", "Transfer Order No."],
+                additional: &["Shortcut Dimension 1 Code", "Shortcut Dimension 2 Code"],
+                ..Tab::default()
+            },
+            Tab {
+                caption: "Shipment",
+                fields: &["Shipment Date", "Shipment Method Code", "Shipping Agent Code", "Shipping Agent Service Code", "Receipt Date"],
+                promoted: &["Shipping Agent Service Code", "Receipt Date"],
+                ..Tab::default()
+            },
+            Tab {
+                caption: "Transfer-from",
+                fields: &["Transfer-from Name", "Transfer-from Name 2", "Transfer-from Address", "Transfer-from Address 2", "Transfer-from City", "Transfer-from County", "Transfer-from Post Code", "Trsf.-from Country/Region Code", "Transfer-from Contact"],
+                additional: &["Transfer-from Name 2", "Transfer-from Address", "Transfer-from Address 2", "Transfer-from City", "Transfer-from County", "Transfer-from Post Code", "Trsf.-from Country/Region Code", "Transfer-from Contact"],
+                breaks: &["Transfer-from County"],
+                captions: &[("Transfer-from Name", "Name"), ("Transfer-from Name 2", "Name 2"), ("Transfer-from Address", "Address"), ("Transfer-from Address 2", "Address 2"), ("Transfer-from City", "City"), ("Transfer-from Post Code", "Post Code"), ("Trsf.-from Country/Region Code", "Country/Region"), ("Transfer-from Contact", "Contact")],
+                ..Tab::default()
+            },
+            Tab {
+                caption: "Transfer-to",
+                fields: &["Transfer-to Name", "Transfer-to Name 2", "Transfer-to Address", "Transfer-to Address 2", "Transfer-to City", "Transfer-to County", "Transfer-to Post Code", "Trsf.-to Country/Region Code", "Transfer-to Contact"],
+                additional: &["Transfer-to Name 2", "Transfer-to Address", "Transfer-to Address 2", "Transfer-to City", "Transfer-to County", "Transfer-to Post Code", "Trsf.-to Country/Region Code", "Transfer-to Contact"],
+                breaks: &["Transfer-to County"],
+                captions: &[("Transfer-to Name", "Name"), ("Transfer-to Name 2", "Name 2"), ("Transfer-to Address", "Address"), ("Transfer-to Address 2", "Address 2"), ("Transfer-to City", "City"), ("Transfer-to Post Code", "Post Code"), ("Trsf.-to Country/Region Code", "Country/Region"), ("Transfer-to Contact", "Contact")],
+                ..Tab::default()
+            },
+            Tab {
+                caption: "Foreign Trade",
+                fields: &["Transaction Type", "Transaction Specification", "Transport Method", "Area", "Entry/Exit Point", "Partner VAT ID"],
+                promoted: &["Transaction Type", "Transport Method"],
+                ..Tab::default()
+            },
+        ],
+    );
+    columns(m, "posted-transfer-shipments", &["No.", "Transfer-from Code", "Transfer-to Code", "Posting Date"]);
+    columns(m, "posted-transfer-shpt-subform", &["Item No.", "Description", "Quantity", "Unit of Measure Code", "Shipping Time"]);
     columns(m, "purch-comment-sheet", &["Date", "Comment"]);
     layout(
         m,
@@ -4823,6 +5128,49 @@ pub fn extend(m: &mut Metadata) {
         ],
     );
     columns(m, "salespersons", &["Code", "Name", "Commission %", "Phone No."]);
+    layout(
+        m,
+        "transfer-order",
+        &[
+            Tab {
+                caption: "General",
+                fields: &["Transfer-from Code", "Transfer-to Code", "Direct Transfer", "Direct Transfer Posting", "In-Transit Code", "Posting Date", "Shortcut Dimension 1 Code", "Shortcut Dimension 2 Code", "Assigned User ID", "Status"],
+                promoted: &["Transfer-from Code", "Transfer-to Code", "Direct Transfer", "Status"],
+                additional: &["Shortcut Dimension 1 Code", "Shortcut Dimension 2 Code", "Assigned User ID"],
+                ..Tab::default()
+            },
+            Tab {
+                caption: "Shipment",
+                fields: &["Shipment Date", "Shipment Method Code", "Shipping Agent Code", "Shipping Agent Service Code", "Shipping Time", "Shipping Advice", "Receipt Date"],
+                additional: &["Shipping Agent Service Code", "Shipping Advice"],
+                ..Tab::default()
+            },
+            Tab {
+                caption: "Transfer-from",
+                fields: &["Transfer-from Name", "Transfer-from Name 2", "Transfer-from Address", "Transfer-from Address 2", "Transfer-from City", "Transfer-from County", "Transfer-from Post Code", "Trsf.-from Country/Region Code", "Transfer-from Contact"],
+                additional: &["Transfer-from Name 2", "Transfer-from Address", "Transfer-from Address 2", "Transfer-from City", "Transfer-from County", "Transfer-from Post Code", "Trsf.-from Country/Region Code", "Transfer-from Contact"],
+                breaks: &["Transfer-from County"],
+                captions: &[("Transfer-from Name", "Name"), ("Transfer-from Name 2", "Name 2"), ("Transfer-from Address", "Address"), ("Transfer-from Address 2", "Address 2"), ("Transfer-from City", "City"), ("Transfer-from Post Code", "Post Code"), ("Trsf.-from Country/Region Code", "Country/Region"), ("Transfer-from Contact", "Contact")],
+                ..Tab::default()
+            },
+            Tab {
+                caption: "Transfer-to",
+                fields: &["Transfer-to Name", "Transfer-to Name 2", "Transfer-to Address", "Transfer-to Address 2", "Transfer-to City", "Transfer-to County", "Transfer-to Post Code", "Trsf.-to Country/Region Code", "Transfer-to Contact"],
+                additional: &["Transfer-to Name 2", "Transfer-to Address", "Transfer-to Address 2", "Transfer-to City", "Transfer-to County", "Transfer-to Post Code", "Trsf.-to Country/Region Code", "Transfer-to Contact"],
+                breaks: &["Transfer-to County"],
+                captions: &[("Transfer-to Name", "Name"), ("Transfer-to Name 2", "Name 2"), ("Transfer-to Address", "Address"), ("Transfer-to Address 2", "Address 2"), ("Transfer-to City", "City"), ("Transfer-to Post Code", "Post Code"), ("Trsf.-to Country/Region Code", "Country/Region"), ("Transfer-to Contact", "Contact")],
+                ..Tab::default()
+            },
+            Tab {
+                caption: "Foreign Trade",
+                fields: &["Transaction Type", "Transaction Specification", "Transport Method", "Area", "Entry/Exit Point", "Partner VAT ID"],
+                promoted: &["Transaction Type", "Transport Method"],
+                ..Tab::default()
+            },
+        ],
+    );
+    columns(m, "transfer-order-subform", &["Item No.", "Description", "Quantity", "Unit of Measure Code", "Qty. to Ship", "Quantity Shipped", "Qty. to Receive", "Quantity Received", "Shipment Date", "Receipt Date"]);
+    columns(m, "transfer-orders", &["No.", "Transfer-from Code", "Transfer-to Code", "In-Transit Code", "Status", "Direct Transfer", "Assigned User ID"]);
     columns(m, "units-of-measure", &["Code", "Description", "International Standard Code"]);
     columns(m, "user-setup", &["User ID", "Allow Posting From", "Allow Posting To", "Allow VAT Date From", "Allow VAT Date To", "Allow Deferral Posting From", "Allow Deferral Posting To", "Sales Invoice Posting Policy", "Purch. Invoice Posting Policy", "Register Time", "Salespers./Purch. Code", "Sales Resp. Ctr. Filter", "Purchase Resp. Ctr. Filter", "Time Sheet Admin.", "E-Mail", "Phone No."]);
     columns(m, "users", &["User Name", "Full Name", "State"]);
@@ -5176,6 +5524,7 @@ pub fn extend(m: &mut Metadata) {
         "locations",
         &[
             Nav { caption: "Dimensions-Single", page: "default-dimensions", link: &[("No.", "Code")], shortcut: "Alt+D" },
+            Nav { caption: "Transfer Order", page: "transfer-order", link: &[], shortcut: "" },
         ],
     );
     actions(
@@ -5344,6 +5693,14 @@ pub fn extend(m: &mut Metadata) {
     );
     actions(
         m,
+        "transfer-orders",
+        &[
+            Nav { caption: "S&hipments", page: "posted-transfer-shipments", link: &[("Transfer Order No.", "No.")], shortcut: "" },
+            Nav { caption: "Re&ceipts", page: "posted-transfer-receipts", link: &[("Transfer Order No.", "No.")], shortcut: "" },
+        ],
+    );
+    actions(
+        m,
         "vat-bus-posting-groups",
         &[
             Nav { caption: "&Setup", page: "vat-posting-setup", link: &[("VAT Bus. Posting Group", "Code")], shortcut: "" },
@@ -5402,6 +5759,7 @@ pub fn extend(m: &mut Metadata) {
     mirror(m, "sales-invoice-list", "sales-invoice", &["Approvals", "Send A&pproval Request", "Cancel Approval Re&quest"]);
     mirror(m, "sales-order-list", "sales-order", &["Approvals", "Send A&pproval Request", "Cancel Approval Re&quest", "Attach as PDF"]);
     mirror(m, "sales-quotes", "sales-quote", &["Approvals", "Attach as PDF", "Send A&pproval Request", "Cancel Approval Re&quest"]);
+    mirror(m, "transfer-orders", "transfer-order", &["Re&lease", "Reo&pen", "P&ost"]);
     categories(
         m,
         "account-schedule-names",
@@ -5769,6 +6127,7 @@ pub fn extend(m: &mut Metadata) {
         "locations",
         &[
             ("Location", &["Dimensions-Single"]),
+            ("Report", &["Transfer Order"]),
         ],
     );
     categories(
@@ -6113,6 +6472,23 @@ pub fn extend(m: &mut Metadata) {
         "salespersons",
         &[
             ("Salesperson", &["Dimensions-Single"]),
+        ],
+    );
+    categories(
+        m,
+        "transfer-order",
+        &[
+            ("Process", &["P&ost", "Re&lease", "Reo&pen"]),
+            ("Order", &["S&hipments", "Re&ceipts"]),
+        ],
+    );
+    categories(
+        m,
+        "transfer-orders",
+        &[
+            ("Release", &["Re&lease", "Reo&pen"]),
+            ("Posting", &["P&ost"]),
+            ("Order", &["S&hipments", "Re&ceipts"]),
         ],
     );
     categories(

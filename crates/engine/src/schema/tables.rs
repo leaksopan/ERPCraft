@@ -567,6 +567,8 @@ pub fn register(m: &mut Metadata) {
                         "Purchase Invoice",
                         "Purchase Return Shipment",
                         "Purchase Credit Memo",
+                        "Transfer Shipment",
+                        "Transfer Receipt",
                     ],
                 ),
                 F::code("Document No.", 20),

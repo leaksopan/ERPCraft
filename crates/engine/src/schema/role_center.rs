@@ -112,7 +112,11 @@ pub fn register(m: &mut Metadata) {
                 vec![
                     L::new("Items", "item-list"),
                     L::new("Item Ledger Entries", "item-ledger-entries"),
+                    L::new("Transfer Orders", "transfer-orders"),
+                    L::new("Posted Transfer Shipments", "posted-transfer-shipments"),
+                    L::new("Posted Transfer Receipts", "posted-transfer-receipts"),
                     L::new("Item Categories", "item-categories"),
+                    L::new("Item Attributes", "item-attributes"),
                     L::new("Units of Measure", "units-of-measure"),
                     L::new("Inventory Posting Setup", "inventory-posting-setup"),
                 ],

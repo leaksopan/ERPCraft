@@ -91,6 +91,9 @@ pub fn setup(ctx: &mut Ctx) -> Result<()> {
         ("G-RCPT", "Cash Receipts Journal", "GR00001"),
         ("G-PMT", "Payment Journal", "GP00001"),
         ("G-REC", "Recurring Journal", "REC00001"),
+        ("T-ORD", "Transfer Orders", "T-ORD1001"),
+        ("T-SHPT", "Posted Transfer Shipments", "T-SHPT1001"),
+        ("T-RCPT", "Posted Transfer Receipts", "T-RCPT1001"),
         ("S-REM", "Reminders", "S-REM1001"),
         ("S-IREM", "Issued Reminders", "S-IREM1001"),
         ("S-FIN", "Finance Charge Memos", "S-FIN1001"),
@@ -115,7 +118,7 @@ pub fn setup(ctx: &mut Ctx) -> Result<()> {
                "Credit Memo Nos.": "P-CR", "Return Order Nos.": "P-RET", "Posted Invoice Nos.": "PP-INV", "Posted Credit Memo Nos.": "PP-CR", "Posted Receipt Nos.": "PP-RCPT",
                "Ext. Doc. No. Mandatory": false}),
     )?;
-    raw(ctx, "Inventory Setup", json!({"Primary Key": "", "Item Nos.": "ITEM"}))?;
+    raw(ctx, "Inventory Setup", json!({"Primary Key": "", "Item Nos.": "ITEM", "Transfer Order Nos.": "T-ORD", "Posted Transfer Shpt. Nos.": "T-SHPT", "Posted Transfer Rcpt. Nos.": "T-RCPT"}))?;
     for (template, ty, _, _, caption, series) in crate::schema::finance::JOURNALS {
         let source = match *template {
             "CASHRCPT" => "CASHRECJNL",
@@ -239,6 +242,9 @@ pub fn setup(ctx: &mut Ctx) -> Result<()> {
         raw(ctx, "Location", json!({"Code": code, "Name": name, "City": city}))?;
         raw(ctx, "Inventory Posting Setup", json!({"Location Code": code, "Invt. Posting Group Code": "PARTS", "Inventory Account": "10300", "Description": format!("Spare parts at {name}")}))?;
     }
+    // Stock on its way between warehouses.
+    raw(ctx, "Location", json!({"Code": "TRANSIT", "Name": "In transit (own trucks)", "Use As In-Transit": true}))?;
+    raw(ctx, "Inventory Posting Setup", json!({"Location Code": "TRANSIT", "Invt. Posting Group Code": "PARTS", "Inventory Account": "10300", "Description": "Spare parts in transit"}))?;
     for (code, desc, start) in [("I-JNL", "Item Journal", "IJ00001"), ("I-RCLSS", "Item Reclass. Journal", "IR00001"), ("I-PHYS", "Phys. Inventory Journal", "IP00001"), ("FA-JNL", "FA G/L Journal", "FAJ00001")] {
         raw(ctx, "No. Series", json!({"Code": code, "Description": desc, "Starting No.": start, "Increment-by No.": 1}))?;
     }

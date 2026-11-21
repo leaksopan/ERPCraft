@@ -97,6 +97,10 @@ pub fn calc_fields(db: &Database, work_date: NaiveDate, table: &str, r: &mut Rec
                 )
             };
             set(r, "Qty. on Sales Order", on_order(SALES_LINE));
+            let (inv, sales, purch) = crate::reservation::item_reserved(db, &no);
+            set(r, "Reserved Qty. on Inventory", inv);
+            set(r, "Reserved Qty. on Sales Orders", sales);
+            set(r, "Reserved Qty. on Purch. Orders", purch);
             set(r, "Qty. on Purch. Order", on_order(PURCH_LINE));
         }
         GL_ACCOUNT => {
@@ -137,6 +141,15 @@ pub fn calc_fields(db: &Database, work_date: NaiveDate, table: &str, r: &mut Rec
             r.set("Closed", Value::Bool(remaining.is_zero()));
         }
         crate::schema::fixed_assets::FIXED_ASSET | crate::schema::fixed_assets::FA_DEPR_BOOK => crate::fa::calc_fields(db, table, r),
+        SALES_LINE | PURCH_LINE => {
+            let base = crate::reservation::reserved_base(db, table, r);
+            let per = match r.get("Qty. per Unit of Measure").as_dec() {
+                d if d.is_zero() => Decimal::ONE,
+                d => d,
+            };
+            set(r, "Reserved Qty. (Base)", base);
+            set(r, "Reserved Quantity", (base / per).round_dp(5));
+        }
         _ => {}
     }
 }

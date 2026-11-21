@@ -241,6 +241,35 @@ pub fn register(m: &mut Metadata) {
     lines.columns = ["Serial No.", "Lot No.", "Expiration Date", "Quantity (Base)", "Qty. to Handle (Base)", "Item No.", "Location Code"].iter().map(|c| (*c).to_string()).collect();
     lines.editable = true;
     m.add_page(lines);
+    // Reservations: the entries' dates, the reserved quantities, the Reservation Entries page.
+    ensure(m, RESERVATION_ENTRY, vec![F::date("Shipment Date"), F::date("Expected Receipt Date"), F::code("Created By", 50)]);
+    for line in [crate::schema::tables::SALES_LINE, crate::schema::tables::PURCH_LINE] {
+        ensure(m, line, vec![F::decimal("Reserved Quantity").flow(), F::decimal("Reserved Qty. (Base)").flow()]);
+    }
+    ensure(
+        m,
+        crate::schema::tables::ITEM,
+        vec![F::decimal("Reserved Qty. on Inventory").flow(), F::decimal("Reserved Qty. on Sales Orders").flow(), F::decimal("Reserved Qty. on Purch. Orders").flow()],
+    );
+    let mut res = PageDef::new("reservation-entries", 497, "Reservation Entries", PageKind::List, Some(RESERVATION_ENTRY)).view("Reservation Status", "Reservation");
+    res.columns = ["Reservation Status", "Item No.", "Location Code", "Quantity (Base)", "Positive", "Source Type", "Source Subtype", "Source ID", "Source Ref. No.", "Shipment Date", "Expected Receipt Date", "Description", "Creation Date", "Created By", "Entry No."]
+        .iter()
+        .map(|c| (*c).to_string())
+        .collect();
+    res.keywords = "reservation reserved".to_string();
+    res.actions = vec![Act::command("Cancel Reservation", A::Process, "reservation.cancel").icon("delete").confirm("Do you want to cancel the reservation of this line?").tooltip("Cancel the selected reservation entry.")];
+    m.add_page(res);
+    if let Some(p) = m.pages.get_mut("sales-lines") {
+        p.actions.push(Act::command("&Reserve", A::Process, "reservation.reserve").icon("apply").tooltip("Reserve the quantity of the selected item that is required on the document line from which you opened this page."));
+        p.actions.push(Act::command("Cancel Reservation", A::Process, "reservation.cancel").icon("delete").confirm("Do you want to cancel the reservations of this line?").tooltip("Cancel the reservations of the line."));
+        p.actions.push(Act::command("Reservation Entries", A::Navigate, "reservation.entries").icon("list").tooltip("View the entries for every reservation that is made, either manually or automatically."));
+    }
+    if let Some(p) = m.pages.get_mut("purchase-lines") {
+        p.actions.push(Act::command("Reservation Entries", A::Navigate, "reservation.entries").icon("list").tooltip("View the entries for every reservation that is made, either manually or automatically."));
+    }
+    if let Some(p) = m.pages.get_mut("sales-order") {
+        p.actions.push(Act::command("Order &Promising", A::Process, "sales.order_promising").icon("calendar").tooltip("Calculate the shipment and delivery dates based on the item's known and expected availability dates, and then promise the dates to the customer."));
+    }
     let mut entries = PageDef::new("item-tracking-entries", 6501, "Item Tracking Entries", PageKind::List, Some(crate::schema::tables::ITEM_LEDGER));
     entries.columns = ["Posting Date", "Entry Type", "Document No.", "Item No.", "Location Code", "Serial No.", "Lot No.", "Expiration Date", "Quantity", "Remaining Quantity", "Entry No."].iter().map(|c| (*c).to_string()).collect();
     m.add_page(entries);

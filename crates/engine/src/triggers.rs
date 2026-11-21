@@ -59,6 +59,10 @@ pub fn on_insert(ctx: &mut Ctx, t: &TableDef, r: &mut Record) -> Result<()> {
     if t.name == crate::schema::fixed_assets::FIXED_ASSET {
         return crate::fa::on_insert(ctx, r);
     }
+    // BC's InitValue of Item.Reserve is Optional.
+    if t.name == ITEM && r.str("Reserve") == "Never" {
+        r.set("Reserve", Value::text("Optional"));
+    }
     match t.name.as_str() {
         CUSTOMER | VENDOR | ITEM => {
             if r.str("No.").is_empty() {
@@ -144,6 +148,9 @@ pub fn on_delete(ctx: &mut Ctx, t: &TableDef, r: &Record) -> Result<()> {
             | PURCH_CR_LINE
     ) {
         refuse!("You cannot delete a posted document ({}). Create a corrective credit memo instead.", t.caption);
+    }
+    if name == crate::schema::tables::SALES_LINE || name == crate::schema::tables::PURCH_LINE {
+        crate::reservation::cancel_for(ctx, name, r)?;
     }
     match name {
         CUSTOMER | VENDOR => {

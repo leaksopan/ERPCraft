@@ -2586,8 +2586,10 @@ pub fn extend(m: &mut Metadata) {
             ("Gen. Prod. Posting Group", "Gen. Prod. Posting Group", "Specifies the item's product type to link transactions made for this item with the appropriate general ledger account according to the general posting setup.", 0),
             ("VAT Bus. Posting Group", "VAT Bus. Posting Group", "Specifies the vendor's VAT specification to link transactions made for this vendor with the appropriate general ledger account according to the VAT posting setup.", 0),
             ("VAT Prod. Posting Group", "VAT Prod. Posting Group", "Specifies the VAT product posting group. Links business transactions made for the item, resource, or G/L account with the general ledger, to account for VAT amounts resulting from trade with that record.", 0),
+            ("Reserved Quantity", "Reserved Quantity", "Specifies how many item units on this line have been reserved.", 0),
             ("Line Amount", "Line Amount", "Specifies the net amount, excluding any invoice discount amount, that must be paid for products on the line.", 1),
             ("Unit of Measure Code", "Unit of Measure Code", "Specifies how each unit of the item or resource is measured, such as in pieces or hours. By default, the value in the Base Unit of Measure field on the item or resource card is inserted.", 0),
+            ("Reserved Qty. (Base)", "Reserved Qty. (Base)", "Specifies the value in the Reserved Quantity field, expressed in the base unit of measure.", 0),
         ],
     );
     fields(
@@ -2847,6 +2849,37 @@ pub fn extend(m: &mut Metadata) {
         "Requisition Line",
         vec![
             F::option("Price Calculation Method", &["", "Lowest Price"]).tooltip("Specifies the method that will be used for unit cost calculation in the line."),
+        ],
+    );
+    relabel(
+        m,
+        "Reservation Entry",
+        &[
+            ("Entry No.", "Entry No.", "Specifies the number of the entry, as assigned from the specified number series when the entry was created.", 0),
+            ("Item No.", "Item No.", "Specifies the number of the item that has been reserved in this entry.", 0),
+            ("Location Code", "Location Code", "Specifies the Location of the items that have been reserved in the entry.", 0),
+            ("Reservation Status", "Reservation Status", "Specifies the status of the reservation.", 0),
+            ("Description", "Description", "Specifies a description of the reservation entry.", 0),
+            ("Creation Date", "Creation Date", "Specifies the date on which the entry was created.", 0),
+            ("Source Type", "Source Type", "Specifies for which source type the reservation entry is related to.", 0),
+            ("Source Subtype", "Source Subtype", "Specifies which source subtype the reservation entry is related to.", 0),
+            ("Source ID", "Source ID", "Specifies which source ID the reservation entry is related to.", 0),
+            ("Source Batch Name", "Source Batch Name", "Specifies the journal batch name if the reservation entry is related to a journal or requisition line.", 0),
+            ("Source Ref. No.", "Source Ref. No.", "Specifies a reference number for the line, which the reservation entry is related to.", 0),
+            ("Expected Receipt Date", "Expected Receipt Date", "Specifies the date on which the reserved items are expected to enter inventory.", 0),
+            ("Shipment Date", "Shipment Date", "Specifies when items on the document are shipped or were shipped. A shipment date is usually calculated from a requested delivery date plus lead time.", 0),
+            ("Serial No.", "Serial No.", "Specifies the serial number of the item that is being handled on the document line.", 0),
+            ("Created By", "Created By", "Specifies the user who created the traced record.", 0),
+            ("Positive", "Positive", "Specifies that the difference is positive.", 0),
+            ("Expiration Date", "Expiration Date", "Specifies the expiration date of the item that is being handled on the document line.", 0),
+            ("Lot No.", "Lot No.", "Specifies the lot number of the item that is being handled with the associated document line.", 0),
+        ],
+    );
+    fields(
+        m,
+        "Reservation Entry",
+        vec![
+            F::integer("Transferred from Entry No.").relation("Reservation Entry").tooltip("Specifies a value when the order tracking entry is for the quantity that remains on a document line after a partial posting."),
         ],
     );
     relabel(
@@ -3308,9 +3341,11 @@ pub fn extend(m: &mut Metadata) {
             ("Gen. Prod. Posting Group", "Gen. Prod. Posting Group", "Specifies the item's product type to link transactions made for this item with the appropriate general ledger account according to the general posting setup.", 0),
             ("VAT Bus. Posting Group", "VAT Bus. Posting Group", "Specifies the vendor's VAT specification to link transactions made for this vendor with the appropriate general ledger account according to the VAT posting setup.", 0),
             ("VAT Prod. Posting Group", "VAT Prod. Posting Group", "Specifies the VAT product posting group. Links business transactions made for the item, resource, or G/L account with the general ledger, to account for VAT amounts resulting from trade with that record.", 0),
+            ("Reserved Quantity", "Reserved Quantity", "Specifies how many units of the item on the line have been reserved.", 0),
             ("Line Amount", "Line Amount", "Specifies the net amount, excluding any invoice discount amount, that must be paid for products on the line.", 1),
             ("Qty. per Unit of Measure", "Qty. per Unit of Measure", "Specifies an auto-filled number if you have included Sales Unit of Measure on the item card and a quantity in the Qty. per Unit of Measure field.", 0),
             ("Unit of Measure Code", "Unit of Measure Code", "Specifies how each unit of the item or resource is measured, such as in pieces or hours. By default, the value in the Base Unit of Measure field on the item or resource card is inserted.", 0),
+            ("Reserved Qty. (Base)", "Reserved Qty. (Base)", "Specifies the value in the Reserved Quantity field, expressed in the base unit of measure.", 0),
         ],
     );
     fields(
@@ -5020,7 +5055,7 @@ pub fn extend(m: &mut Metadata) {
         ],
     );
     columns(m, "purchase-invoices", &["No.", "Buy-from Vendor No.", "Buy-from Vendor Name", "Vendor Invoice No.", "Location Code", "Assigned User ID", "Job Queue Status", "Amount"]);
-    columns(m, "purchase-lines", &["Type", "No.", "Item Reference No.", "Description", "Location Code", "Quantity", "Unit of Measure Code", "Direct Unit Cost", "Tax Area Code", "Tax Group Code", "Line Amount", "Non-Deductible VAT Base", "Non-Deductible VAT Amount", "Qty. to Receive", "Quantity Received", "Qty. to Invoice", "Quantity Invoiced", "Qty. to Assign", "Item Charge Qty. to Handle", "Qty. Assigned", "Selected Alloc. Account No.", "Promised Receipt Date", "Planned Receipt Date", "Expected Receipt Date", "Shortcut Dimension 1 Code", "Shortcut Dimension 2 Code", "Over-Receipt Quantity", "Over-Receipt Code"]);
+    columns(m, "purchase-lines", &["Type", "No.", "Item Reference No.", "Description", "Location Code", "Quantity", "Reserved Quantity", "Unit of Measure Code", "Direct Unit Cost", "Tax Area Code", "Tax Group Code", "Line Amount", "Non-Deductible VAT Base", "Non-Deductible VAT Amount", "Qty. to Receive", "Quantity Received", "Qty. to Invoice", "Quantity Invoiced", "Qty. to Assign", "Item Charge Qty. to Handle", "Qty. Assigned", "Selected Alloc. Account No.", "Promised Receipt Date", "Planned Receipt Date", "Expected Receipt Date", "Shortcut Dimension 1 Code", "Shortcut Dimension 2 Code", "Over-Receipt Quantity", "Over-Receipt Code"]);
     layout(
         m,
         "purchase-order",
@@ -5175,6 +5210,7 @@ pub fn extend(m: &mut Metadata) {
     columns(m, "req-worksheet", &["Price Calculation Method", "Location Code"]);
     columns(m, "req-worksheet-templates", &["Increment Batch Name"]);
     columns(m, "requests-to-approve", &["Sender ID", "Due Date", "Status", "Amount", "Amount (LCY)", "Currency Code"]);
+    columns(m, "reservation-entries", &["Reservation Status", "Item No.", "Location Code", "Quantity (Base)", "Entry No.", "Transferred from Entry No."]);
     columns(m, "sales-comment-sheet", &["Date", "Comment"]);
     layout(
         m,
@@ -5254,7 +5290,7 @@ pub fn extend(m: &mut Metadata) {
         ],
     );
     columns(m, "sales-invoice-list", &["No.", "Sell-to Customer No.", "Sell-to Customer Name", "External Document No.", "Sell-to Contact", "Posting Date", "Location Code", "Assigned User ID", "Due Date", "Job Queue Status", "Amount"]);
-    columns(m, "sales-lines", &["Type", "No.", "Item Reference No.", "Description", "Location Code", "Quantity", "Qty. to Assemble to Order", "Unit of Measure Code", "Unit Price", "Tax Area Code", "Tax Group Code", "Line Discount %", "Line Amount", "Selected Alloc. Account No.", "Qty. to Ship", "Quantity Shipped", "Qty. to Invoice", "Quantity Invoiced", "Shipment Date", "Shortcut Dimension 1 Code", "Shortcut Dimension 2 Code"]);
+    columns(m, "sales-lines", &["Type", "No.", "Item Reference No.", "Description", "Location Code", "Quantity", "Qty. to Assemble to Order", "Reserved Quantity", "Unit of Measure Code", "Unit Price", "Tax Area Code", "Tax Group Code", "Line Discount %", "Line Amount", "Selected Alloc. Account No.", "Qty. to Ship", "Quantity Shipped", "Qty. to Invoice", "Quantity Invoiced", "Shipment Date", "Shortcut Dimension 1 Code", "Shortcut Dimension 2 Code"]);
     layout(
         m,
         "sales-order",
@@ -5740,6 +5776,7 @@ pub fn extend(m: &mut Metadata) {
         "item-card",
         &[
             Nav { caption: "Item Journal", page: "item-journal", link: &[], shortcut: "" },
+            Nav { caption: "&Reservation Entries", page: "reservation-entries", link: &[("Item No.", "No.")], shortcut: "" },
         ],
     );
     actions(
@@ -5762,6 +5799,7 @@ pub fn extend(m: &mut Metadata) {
         m,
         "item-list",
         &[
+            Nav { caption: "&Reservation Entries", page: "reservation-entries", link: &[("Item No.", "No.")], shortcut: "" },
             Nav { caption: "Physical Inventory Journal", page: "phys-inventory-journal", link: &[], shortcut: "" },
             Nav { caption: "Dimensions-Single", page: "default-dimensions", link: &[("No.", "No.")], shortcut: "Alt+D" },
             Nav { caption: "Co&mments", page: "comment-sheet", link: &[("No.", "No.")], shortcut: "" },
@@ -6020,7 +6058,7 @@ pub fn extend(m: &mut Metadata) {
     mirror(m, "reminder-list", "reminder", &["Suggest Reminder Lines", "Issue"]);
     mirror(m, "sales-credit-memos", "sales-credit-memo", &["Approvals", "Send A&pproval Request", "Cancel Approval Re&quest"]);
     mirror(m, "sales-invoice-list", "sales-invoice", &["Approvals", "Send A&pproval Request", "Cancel Approval Re&quest"]);
-    mirror(m, "sales-order-list", "sales-order", &["Approvals", "Send A&pproval Request", "Cancel Approval Re&quest", "Attach as PDF"]);
+    mirror(m, "sales-order-list", "sales-order", &["Approvals", "Order &Promising", "Send A&pproval Request", "Cancel Approval Re&quest", "Attach as PDF"]);
     mirror(m, "sales-quotes", "sales-quote", &["Approvals", "Attach as PDF", "Send A&pproval Request", "Cancel Approval Re&quest"]);
     mirror(m, "transfer-orders", "transfer-order", &["Re&lease", "Reo&pen", "P&ost"]);
     categories(
@@ -6664,6 +6702,13 @@ pub fn extend(m: &mut Metadata) {
     );
     categories(
         m,
+        "reservation-entries",
+        &[
+            ("Process", &["Cancel Reservation"]),
+        ],
+    );
+    categories(
+        m,
         "sales-credit-memo",
         &[
             ("Process", &["P&ost", "Preview Posting", "Re&lease", "Re&open"]),
@@ -6999,6 +7044,8 @@ pub fn extend(m: &mut Metadata) {
         "Item",
         vec![
             ("Inventory", CalcFormula::new(CalcFunc::Sum, "Item Ledger Entry", "Quantity", &[("Item No.", "No.")], &[])),
+            ("Reserved Qty. on Inventory", CalcFormula::new(CalcFunc::Sum, "Reservation Entry", "Quantity (Base)", &[("Item No.", "No.")], &[("Source Type", "32"), ("Source Subtype", "0"), ("Reservation Status", "Reservation")])),
+            ("Reserved Qty. on Purch. Orders", CalcFormula::new(CalcFunc::Sum, "Reservation Entry", "Quantity (Base)", &[("Item No.", "No.")], &[("Source Type", "39"), ("Source Subtype", "1"), ("Reservation Status", "Reservation")])),
         ],
     );
     drilldowns(
@@ -7006,6 +7053,9 @@ pub fn extend(m: &mut Metadata) {
         "Item",
         &[
             ("Inventory", "item-ledger-entries", &[("Item No.", "No.")], &[]),
+            ("Reserved Qty. on Inventory", "reservation-entries", &[("Item No.", "No.")], &[("Source Type", "32"), ("Source Subtype", "0"), ("Reservation Status", "Reservation")]),
+            ("Reserved Qty. on Sales Orders", "reservation-entries", &[("Item No.", "No.")], &[("Source Type", "37"), ("Source Subtype", "1"), ("Reservation Status", "Reservation")]),
+            ("Reserved Qty. on Purch. Orders", "reservation-entries", &[("Item No.", "No.")], &[("Source Type", "39"), ("Source Subtype", "1"), ("Reservation Status", "Reservation")]),
             ("Net Invoiced Qty.", "item-ledger-entries", &[("Item No.", "No.")], &[]),
             ("Substitutes Exist", "item-substitution-entry", &[("No.", "No.")], &[("Type", "Item")]),
         ],
@@ -7076,10 +7126,19 @@ pub fn extend(m: &mut Metadata) {
             ("Amount Including VAT", CalcFormula::new(CalcFunc::Sum, "Purchase Line", "Amount Including VAT", &[("Document Type", "Document Type"), ("Document No.", "No.")], &[])),
         ],
     );
+    calcs(
+        m,
+        "Purchase Line",
+        vec![
+            ("Reserved Qty. (Base)", CalcFormula::new(CalcFunc::Sum, "Reservation Entry", "Quantity (Base)", &[("Source Subtype", "Document Type"), ("Source ID", "Document No."), ("Source Ref. No.", "Line No.")], &[("Source Type", "39"), ("Reservation Status", "Reservation")])),
+        ],
+    );
     drilldowns(
         m,
         "Purchase Line",
         &[
+            ("Reserved Quantity", "reservation-entries", &[("Source ID", "Document No."), ("Source Ref. No.", "Line No."), ("Source Subtype", "Document Type")], &[("Source Type", "39"), ("Reservation Status", "Reservation")]),
+            ("Reserved Qty. (Base)", "reservation-entries", &[("Source Subtype", "Document Type"), ("Source ID", "Document No."), ("Source Ref. No.", "Line No.")], &[("Source Type", "39"), ("Reservation Status", "Reservation")]),
             ("Qty. to Assign", "item-charge-assignment-purch", &[("Document Type", "Document Type"), ("Document No.", "Document No."), ("Document Line No.", "Line No.")], &[]),
             ("Qty. Assigned", "item-charge-assignment-purch", &[("Document Type", "Document Type"), ("Document No.", "Document No."), ("Document Line No.", "Line No.")], &[]),
             ("Item Charge Qty. to Handle", "item-charge-assignment-purch", &[("Document Type", "Document Type"), ("Document No.", "Document No."), ("Document Line No.", "Line No.")], &[]),
@@ -7122,6 +7181,14 @@ pub fn extend(m: &mut Metadata) {
         &[
             ("Remaining Amount", "detailed-cust-ledger-entries", &[], &[]),
             ("Closed", "customer-ledger-entries", &[], &[("Open", "true")]),
+        ],
+    );
+    drilldowns(
+        m,
+        "Sales Line",
+        &[
+            ("Reserved Quantity", "reservation-entries", &[("Source ID", "Document No."), ("Source Ref. No.", "Line No."), ("Source Subtype", "Document Type")], &[("Source Type", "37"), ("Reservation Status", "Reservation")]),
+            ("Reserved Qty. (Base)", "reservation-entries", &[("Source ID", "Document No."), ("Source Ref. No.", "Line No."), ("Source Subtype", "Document Type")], &[("Source Type", "37"), ("Reservation Status", "Reservation")]),
         ],
     );
     drilldowns(

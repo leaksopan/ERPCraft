@@ -69,7 +69,8 @@ fn entries_of(ctx: &Ctx, s: &Source) -> Vec<Record> {
         .db
         .rows(RESERVATION_ENTRY)
         .filter(|e| {
-            e.get("Source Type").as_int() == s.table
+            e.str("Reservation Status") != crate::reservation::RESERVATION
+                && e.get("Source Type").as_int() == s.table
                 && e.get("Source Subtype").as_int() == s.subtype
                 && e.str("Source ID") == s.id
                 && e.str("Source Batch Name") == s.batch
@@ -327,7 +328,8 @@ fn lines(ctx: &mut Ctx, p: &Json) -> Result<Json> {
     }
     let s = source_of(table, &l).ok_or_else(|| EngineError::refused(format!("{table} lines have no item tracking.")))?;
     Ok(json!({"open": {"page": "item-tracking-lines", "filters": [
-        ["Source Type", s.table.to_string()], ["Source Subtype", s.subtype.to_string()], ["Source ID", s.id], ["Source Batch Name", s.batch], ["Source Ref. No.", s.line.to_string()]
+        ["Source Type", s.table.to_string()], ["Source Subtype", s.subtype.to_string()], ["Source ID", s.id], ["Source Batch Name", s.batch], ["Source Ref. No.", s.line.to_string()],
+        ["Reservation Status", "Surplus".to_string()]
     ]}}))
 }
 

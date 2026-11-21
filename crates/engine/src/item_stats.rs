@@ -184,11 +184,15 @@ fn by_location(ctx: &mut Ctx, p: &Json) -> Result<Json> {
 // ---- Item availability by event / period / location (BC pages 5530, 157, 492) -------------------
 
 /// One expected movement of an item: (date, location, quantity +in / -out, what it is).
-struct Movement {
-    date: NaiveDate,
-    location: String,
-    qty: Decimal,
-    what: String,
+pub(crate) struct Movement {
+    pub date: NaiveDate,
+    pub location: String,
+    pub qty: Decimal,
+    pub what: String,
+    /// The line it comes from: table, document no., line no.
+    pub source: &'static str,
+    pub doc: String,
+    pub line: i64,
 }
 
 fn per(l: &Record) -> Decimal {
@@ -200,7 +204,7 @@ fn per(l: &Record) -> Decimal {
 
 /// Open sales / purchase / transfer lines of an item as future movements (BC's gross
 /// requirements and scheduled receipts).
-fn movements(ctx: &Ctx, no: &str) -> Vec<Movement> {
+pub(crate) fn movements(ctx: &Ctx, no: &str) -> Vec<Movement> {
     let mut v = Vec::new();
     let work = ctx.work_date;
     for (table, sign, date_field) in [("Sales Line", Decimal::NEGATIVE_ONE, "Shipment Date"), ("Purchase Line", Decimal::ONE, "Expected Receipt Date")] {
@@ -210,7 +214,16 @@ fn movements(ctx: &Ctx, no: &str) -> Vec<Movement> {
                 continue;
             }
             let side = if table == "Sales Line" { "Sales Order" } else { "Purchase Order" };
-            v.push(Movement { date: l.get(date_field).as_date().unwrap_or(work), location: l.str("Location Code").to_string(), qty: sign * q, what: format!("{side} {}", l.str("Document No.")) });
+            let source = if table == "Sales Line" { "Sales Line" } else { "Purchase Line" };
+            v.push(Movement {
+                date: l.get(date_field).as_date().unwrap_or(work),
+                location: l.str("Location Code").to_string(),
+                qty: sign * q,
+                what: format!("{side} {}", l.str("Document No.")),
+                source,
+                doc: l.str("Document No.").to_string(),
+                line: l.get("Line No.").as_int(),
+            });
         }
     }
     for l in ctx.db.rows(crate::schema::transfer::TRANSFER_LINE).filter(|l| l.str("Item No.") == no) {
@@ -218,10 +231,10 @@ fn movements(ctx: &Ctx, no: &str) -> Vec<Movement> {
         let inn = (l.get("Quantity").as_dec() - l.get("Quantity Received").as_dec()) * per(l);
         let doc = l.str("Document No.");
         if !out.is_zero() {
-            v.push(Movement { date: l.get("Shipment Date").as_date().unwrap_or(work), location: l.str("Transfer-from Code").to_string(), qty: -out, what: format!("Transfer Shipment {doc}") });
+            v.push(Movement { date: l.get("Shipment Date").as_date().unwrap_or(work), location: l.str("Transfer-from Code").to_string(), qty: -out, what: format!("Transfer Shipment {doc}"), source: "Transfer Line", doc: doc.to_string(), line: l.get("Line No.").as_int() });
         }
         if !inn.is_zero() {
-            v.push(Movement { date: l.get("Receipt Date").as_date().unwrap_or(work), location: l.str("Transfer-to Code").to_string(), qty: inn, what: format!("Transfer Receipt {doc}") });
+            v.push(Movement { date: l.get("Receipt Date").as_date().unwrap_or(work), location: l.str("Transfer-to Code").to_string(), qty: inn, what: format!("Transfer Receipt {doc}"), source: "Transfer Line", doc: doc.to_string(), line: l.get("Line No.").as_int() });
         }
     }
     v.sort_by(|a, b| a.date.cmp(&b.date).then(b.qty.cmp(&a.qty)));

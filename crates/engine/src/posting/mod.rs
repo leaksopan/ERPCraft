@@ -252,6 +252,7 @@ fn post_item_entry(
     if let Some(s) = source {
         crate::tracking::consume(ctx, &s)?;
     }
+    crate::reservation::on_posted(ctx, side.line, line, no, qty)?;
     Ok(no)
 }
 

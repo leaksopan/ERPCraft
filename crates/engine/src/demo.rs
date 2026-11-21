@@ -375,7 +375,7 @@ pub fn master_data(ctx: &mut Ctx) -> Result<()> {
                    "Unit Price": price, "Unit Cost": cost, "Costing Method": "Average",
                    "Gen. Prod. Posting Group": if *ty == "Service" { "SERVICES" } else { "PARTS" },
                    "VAT Prod. Posting Group": "STANDARD", "Inventory Posting Group": if *ty == "Service" { "" } else { "PARTS" },
-                   "Vendor No.": vendor, "Reorder Point": if *ty == "Service" { 0 } else { 10 }}),
+                   "Vendor No.": vendor, "Reorder Point": if *ty == "Service" { 0 } else { 10 }, "Reserve": "Optional"}),
         )?;
     }
     // The requisition worksheet.

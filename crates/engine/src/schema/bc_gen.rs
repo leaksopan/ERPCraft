@@ -4311,7 +4311,7 @@ pub fn extend(m: &mut Metadata) {
         m,
         "bank-account-ledger-entries",
         &[
-            ("Process", &["Find entries...", "Dimensions"]),
+            ("Process", &["Find entries...", "Dimensions", "Set Dimension Filter"]),
         ],
     );
     categories(
@@ -4351,7 +4351,7 @@ pub fn extend(m: &mut Metadata) {
         "customer-ledger-entries",
         &[
             ("Process", &["Apply Entries", "Unapply Entries", "Find entries...", "Reverse Transaction"]),
-            ("Entry", &["Dimensions", "Detailed &Ledger Entries", "Customer"]),
+            ("Entry", &["Dimensions", "Set Dimension Filter", "Detailed &Ledger Entries", "Customer"]),
         ],
     );
     categories(
@@ -4455,7 +4455,7 @@ pub fn extend(m: &mut Metadata) {
         m,
         "general-ledger-entries",
         &[
-            ("Process", &["Find entries...", "Reverse Transaction", "Dimensions"]),
+            ("Process", &["Find entries...", "Reverse Transaction", "Dimensions", "Set Dimension Filter"]),
         ],
     );
     categories(
@@ -4519,7 +4519,7 @@ pub fn extend(m: &mut Metadata) {
         m,
         "item-ledger-entries",
         &[
-            ("Process", &["Find entries...", "Dimensions"]),
+            ("Process", &["Find entries...", "Dimensions", "Set Dimension Filter"]),
         ],
     );
     categories(
@@ -4885,7 +4885,7 @@ pub fn extend(m: &mut Metadata) {
         "vendor-ledger-entries",
         &[
             ("Process", &["Apply Entries", "Unapply Entries", "Find entries...", "Reverse Transaction"]),
-            ("Entry", &["Dimensions", "Detailed &Ledger Entries"]),
+            ("Entry", &["Dimensions", "Set Dimension Filter", "Detailed &Ledger Entries"]),
         ],
     );
     categories(

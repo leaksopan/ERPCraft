@@ -5,7 +5,9 @@
 use std::collections::BTreeMap;
 
 use erpcraft_meta::{Key, Record, TableDef, Value};
-use serde_json::{Map, json};
+use serde_json::{Map, Value as Json, json};
+
+use crate::commands::{CommandDef, opt_str};
 
 use crate::ctx::Ctx;
 use crate::error::Result;
@@ -220,3 +222,73 @@ mod tests {
         assert_eq!(super::slot("Name"), None);
     }
 }
+
+/// Dimension Set IDs whose `dimension` value matches `value_filter` (BC's
+/// DimensionManagement.GetDimSetIDsForFilter). A filter that takes blank also takes the sets
+/// without the dimension, including set 0.
+pub fn set_ids_for_filter(ctx: &Ctx, dimension: &str, value_filter: &str) -> std::collections::BTreeSet<i64> {
+    let ty = erpcraft_meta::FieldType::Code(20);
+    let all: std::collections::BTreeSet<i64> = std::iter::once(0).chain(ctx.db.rows(DIM_SET_ENTRY).map(|e| e.get("Dimension Set ID").as_int())).collect();
+    let mut with_dim = std::collections::BTreeSet::new();
+    let mut out = std::collections::BTreeSet::new();
+    for e in ctx.db.rows(DIM_SET_ENTRY).filter(|e| e.str("Dimension Code").eq_ignore_ascii_case(dimension)) {
+        let id = e.get("Dimension Set ID").as_int();
+        with_dim.insert(id);
+        if crate::filter::matches(&ty, e.get("Dimension Value Code"), value_filter) {
+            out.insert(id);
+        }
+    }
+    if crate::filter::matches(&ty, &Value::text(""), value_filter) {
+        out.extend(all.difference(&with_dim).copied());
+    }
+    out
+}
+
+/// BC's Set Dimension Filter: the Dimension Set ID filter for entries whose dimensions match
+/// every (dimension, value filter) given.
+fn set_filter(ctx: &mut Ctx, p: &Json) -> Result<Json> {
+    let mut lines: Vec<(String, String)> = p
+        .get("lines")
+        .and_then(Json::as_array)
+        .map(|ls| ls.iter().filter_map(|l| Some((l.get("dimension_code")?.as_str()?.to_string(), l.get("value_filter").and_then(Json::as_str).unwrap_or("").to_string()))).collect())
+        .unwrap_or_default();
+    if let Some(code) = opt_str(p, "dimension_code").filter(|c| !c.trim().is_empty()) {
+        lines.push((code.trim().to_string(), opt_str(p, "value_filter").unwrap_or("").to_string()));
+    }
+    if lines.is_empty() {
+        return Ok(json!({"filter": {"field": "Dimension Set ID", "value": ""}}));
+    }
+    let mut ids: Option<std::collections::BTreeSet<i64>> = None;
+    for (code, values) in &lines {
+        let code = code.to_uppercase();
+        if ctx.db.rows(DIMENSION).all(|d| d.str("Code") != code) {
+            refuse!("The Dimension does not exist. Identification fields and values: Code='{code}'");
+        }
+        let found = set_ids_for_filter(ctx, &code, values);
+        ids = Some(match ids {
+            None => found,
+            Some(prev) => prev.intersection(&found).copied().collect(),
+        });
+    }
+    let ids = ids.unwrap_or_default();
+    // BC: no matching set filters everything out.
+    let value = if ids.is_empty() { "0&<>0".to_string() } else { ids.iter().map(i64::to_string).collect::<Vec<_>>().join("|") };
+    Ok(json!({"filter": {"field": "Dimension Set ID", "value": value}, "sets": ids.len()}))
+}
+
+fn s_set_filter() -> Json {
+    json!({"type": "object", "properties": {
+        "dimension_code": {"type": "string"},
+        "value_filter": {"type": "string", "description": "BC filter on the dimension value, e.g. SALES|ADM or blank"},
+        "lines": {"type": "array", "items": {"type": "object", "properties": {"dimension_code": {"type": "string"}, "value_filter": {"type": "string"}}}}}})
+}
+
+pub static COMMANDS: &[CommandDef] = &[CommandDef {
+    id: "dimension.set_filter",
+    label: "Set Dimension Filter",
+    group: "Finance",
+    summary: "The Dimension Set ID filter that limits entries to the given dimension values.",
+    mutates: false,
+    params: s_set_filter,
+    run: set_filter,
+}];

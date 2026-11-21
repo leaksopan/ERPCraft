@@ -74,3 +74,24 @@ fn identical_combinations_share_one_set() {
     let hb = get(&mut s, "Sales Header", json!(["Quote", b["no"]]));
     assert_eq!(ha["Dimension Set ID"], hb["Dimension Set ID"], "10000 and 40000 are both SALES / JKT");
 }
+
+#[test]
+fn set_dimension_filter_limits_entries_to_matching_sets() {
+    let mut s = demo();
+    let doc = s.run("sales.document.new", &json!({"document_type": "Invoice", "customer_no": "20000", "lines": [{"no": "1000", "quantity": 1}]})).unwrap();
+    s.run("sales.document.post", &json!({"document_type": "Invoice", "no": doc["no"]})).unwrap();
+    let f = s.run("dimension.set_filter", &json!({"dimension_code": "area", "value_filter": "BDG"})).unwrap();
+    assert_eq!(f["filter"]["field"], "Dimension Set ID");
+    let value = f["filter"]["value"].as_str().unwrap().to_string();
+    let all = s.run("record.list", &json!({"table": "G/L Entry"})).unwrap()["records"].as_array().unwrap().len();
+    let hit = s.run("record.list", &json!({"table": "G/L Entry", "filters": {"Dimension Set ID": value}})).unwrap();
+    let hit = hit["records"].as_array().unwrap();
+    assert!(!hit.is_empty() && hit.len() < all, "{} of {all}", hit.len());
+    assert!(hit.iter().all(|e| e["Global Dimension 2 Code"] == "BDG"));
+    // Two dimensions: both must match; a value nobody has filters everything out.
+    let both = s.run("dimension.set_filter", &json!({"lines": [{"dimension_code": "AREA", "value_filter": "BDG"}, {"dimension_code": "DEPARTMENT", "value_filter": "ADM"}]})).unwrap();
+    let none = s.run("record.list", &json!({"table": "G/L Entry", "filters": {"Dimension Set ID": both["filter"]["value"]}})).unwrap();
+    assert_eq!(none["records"].as_array().unwrap().len(), 0);
+    let bad = s.run("dimension.set_filter", &json!({"dimension_code": "NOPE", "value_filter": "X"}));
+    assert!(bad.unwrap_err().message.contains("does not exist"));
+}

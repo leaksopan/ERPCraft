@@ -386,6 +386,22 @@ mod tests {
     }
 
     #[test]
+    fn a_returned_filter_lands_on_the_list_and_an_open_with_filters_opens_a_filtered_list() {
+        let mut app = demo_app();
+        reply(dispatch(&mut app, "ui.open", &json!({"spec": "general-ledger-entries"}))).unwrap();
+        app.handle_result(&json!({"filter": {"field": "Dimension Set ID", "value": "1|2"}}));
+        let st = reply(dispatch(&mut app, "ui.state", &json!({}))).unwrap();
+        assert_eq!(st["top"]["filters"], json!([["Dimension Set ID", "1|2"]]), "{st}");
+        app.handle_result(&json!({"filter": {"field": "Dimension Set ID", "value": ""}}));
+        let st = reply(dispatch(&mut app, "ui.state", &json!({}))).unwrap();
+        assert_eq!(st["top"]["filters"], json!([]));
+        app.handle_result(&json!({"open": {"page": "customer-ledger-entries", "filters": [["Customer No.", "10000"]]}}));
+        let st = reply(dispatch(&mut app, "ui.state", &json!({}))).unwrap();
+        assert_eq!(st["top"]["page"], "customer-ledger-entries");
+        assert_eq!(st["top"]["filters"], json!([["Customer No.", "10000"]]));
+    }
+
+    #[test]
     fn engine_run_shows_changes_in_the_window() {
         let mut app = demo_app();
         let list = reply(dispatch(&mut app, "engine.run", &json!({"command": "record.list", "params": {"table": "Customer"}}))).unwrap();

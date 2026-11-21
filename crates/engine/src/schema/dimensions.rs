@@ -166,6 +166,25 @@ pub fn register(m: &mut Metadata) {
             );
         }
     }
+    // Ledger entry lists: Set Dimension Filter.
+    let entry_lists: Vec<String> = m
+        .pages
+        .values()
+        .filter(|p| p.kind == PageKind::List)
+        .filter(|p| p.source_table.as_deref().is_some_and(|t| t.ends_with("Ledger Entry") || t == "G/L Entry"))
+        .filter(|p| p.source_table.as_deref().and_then(|t| m.tables.get(t)).is_some_and(|t| t.field("Dimension Set ID").is_some()))
+        .map(|p| p.id.clone())
+        .collect();
+    for id in entry_lists {
+        if let Some(p) = m.pages.get_mut(&id) {
+            p.actions.push(
+                Act::command("Set Dimension Filter", A::Navigate, "dimension.set_filter")
+                    .ask(&["dimension_code", "value_filter"])
+                    .icon("filter")
+                    .tooltip("Limit the entries according to the dimension filters that you specify."),
+            );
+        }
+    }
     for (page, table_id) in MASTERS {
         if let Some(p) = m.pages.get_mut(*page) {
             p.actions.push(

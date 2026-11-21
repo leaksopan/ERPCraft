@@ -361,6 +361,16 @@ impl ErpApp {
         if let Some(rep) = r.get("report") {
             self.dialog = Some(Dialog::report(rep));
         }
+        // A command that returns a filter (Set Dimension Filter) sets it on the list shown.
+        if let Some(f) = r.get("filter")
+            && let (Some(field), Some(value)) = (f.get("field").and_then(Json::as_str), f.get("value").and_then(Json::as_str))
+            && let Some(View::List(state)) = self.stack.last_mut()
+        {
+            state.filters.retain(|(k, _)| k != field);
+            if !value.is_empty() {
+                state.filters.push((field.to_string(), value.to_string()));
+            }
+        }
         if let Some(msg) = r.get("message").and_then(Json::as_str) {
             self.notice = Some(msg.to_string());
         }

@@ -230,25 +230,72 @@ pub fn show(app: &mut ErpApp, ui: &mut Ui, idx: usize, mut state: CardState, lay
     }
 }
 
-/// BC's action bar on cards: category tabs (Home, Process, …) with the chosen category's actions
-/// on the row below.
-fn action_tabs(ui: &mut Ui, page: &PageDef, run: &mut Option<ActionDef>) {
+/// One tab of the action bar and the actions it shows.
+pub struct ActionTab<'a> {
+    pub caption: String,
+    pub actions: Vec<&'a ActionDef>,
+}
+
+/// The action bar's tabs: BC's promoted categories ("Process" shows as Home) when the page has
+/// them, then "More options" with every action by area; one tab per area otherwise.
+pub fn action_tab_list(page: &PageDef) -> Vec<ActionTab<'_>> {
     use erpcraft_engine::meta::ActionArea;
-    let areas: Vec<ActionArea> = [ActionArea::Home, ActionArea::Process, ActionArea::New, ActionArea::Navigate, ActionArea::Report]
-        .into_iter()
-        .filter(|a| page.actions.iter().any(|x| x.area == *a))
-        .collect();
-    if areas.is_empty() {
+    let norm = |s: &str| s.replace('&', "").trim_end_matches("...").trim().to_ascii_lowercase();
+    let by_area = |area: ActionArea, caption: &str| ActionTab {
+        caption: caption.to_string(),
+        actions: page.actions.iter().filter(|a| a.area == area).collect(),
+    };
+    let areas = [
+        (ActionArea::Home, "Home"),
+        (ActionArea::Process, "Process"),
+        (ActionArea::New, "New Document"),
+        (ActionArea::Navigate, "Related"),
+        (ActionArea::Report, "Report"),
+    ];
+    let mut tabs: Vec<ActionTab> = if page.categories.is_empty() {
+        areas.iter().map(|(a, c)| by_area(*a, c)).collect()
+    } else {
+        let mut tabs: Vec<ActionTab> = page
+            .categories
+            .iter()
+            .map(|(cat, captions)| ActionTab {
+                caption: if cat == "Process" { "Home".to_string() } else { cat.clone() },
+                actions: captions.iter().filter_map(|c| page.actions.iter().find(|a| norm(&a.caption) == norm(c))).collect(),
+            })
+            .collect();
+        // Actions BC doesn't promote (and ERPCraft's own) stay on the first tab, like BC's Home.
+        let promoted: Vec<&ActionDef> = tabs.iter().flat_map(|t| t.actions.iter().copied()).collect();
+        let rest: Vec<&ActionDef> = page
+            .actions
+            .iter()
+            .filter(|a| matches!(a.area, ActionArea::Home | ActionArea::Process) && !promoted.iter().any(|p| std::ptr::eq(*p, *a)))
+            .collect();
+        match tabs.iter_mut().find(|t| t.caption == "Home") {
+            Some(home) => home.actions.extend(rest),
+            None => tabs.insert(0, ActionTab { caption: "Home".to_string(), actions: rest }),
+        }
+        tabs.push(ActionTab { caption: "More options".to_string(), actions: page.actions.iter().collect() });
+        tabs
+    };
+    tabs.retain(|t| !t.actions.is_empty());
+    tabs
+}
+
+/// BC's action bar on cards: category tabs (Home, New Document, …) with the chosen category's
+/// actions on the row below.
+fn action_tabs(ui: &mut Ui, page: &PageDef, run: &mut Option<ActionDef>) {
+    let tabs = action_tab_list(page);
+    if tabs.is_empty() {
         return;
     }
     let id = egui::Id::unique(("action_tab", &page.id));
-    let mut current = ui.ctx().data(|d| d.get_temp::<usize>(id)).unwrap_or(0).min(areas.len() - 1);
+    let mut current = ui.ctx().data(|d| d.get_temp::<usize>(id)).unwrap_or(0).min(tabs.len() - 1);
     ui.vertical(|ui| {
         widgets::flat(ui);
         ui.horizontal(|ui| {
-            for (i, a) in areas.iter().enumerate() {
+            for (i, tab) in tabs.iter().enumerate() {
                 let sel = i == current;
-                let t = RichText::new(a.caption()).color(if sel { TOKENS.accent } else { TOKENS.text });
+                let t = RichText::new(&tab.caption).color(if sel { TOKENS.accent } else { TOKENS.text });
                 let r = ui.add(egui::Button::new(t).frame(false));
                 if sel {
                     let rect = r.rect;
@@ -265,8 +312,8 @@ fn action_tabs(ui: &mut Ui, page: &PageDef, run: &mut Option<ActionDef>) {
         let (line, _) = ui.allocate_exact_size(vec2(ui.available_width(), 1.0), Sense::hover());
         ui.painter().rect_filled(line, 0.0, TOKENS.divider);
         ui.horizontal(|ui| {
-            if let Some(area) = areas.get(current) {
-                for a in page.actions.iter().filter(|x| x.area == *area) {
+            if let Some(tab) = tabs.get(current) {
+                for a in tab.actions.iter().copied() {
                     let r = widgets::action_button(ui, widgets::glyph(&a.icon), &a.caption.replace('&', ""));
                     let tip = match (&a.shortcut, a.tooltip.is_empty()) {
                         (Some(s), true) => s.clone(),
@@ -339,6 +386,19 @@ pub fn table_values(app: &ErpApp, table: &str) -> Option<Lookup> {
     )
 }
 
+/// Where the second column starts: at the sub-group boundary nearest the middle (BC flows
+/// sub-groups into columns), or halfway when the tab has no sub-groups.
+fn column_break(g: &GroupDef, fields: &[&FieldDef]) -> usize {
+    let half = fields.len().div_ceil(2);
+    fields
+        .iter()
+        .enumerate()
+        .filter(|(i, f)| *i > 0 && g.breaks.contains(&f.name))
+        .map(|(i, _)| i)
+        .min_by_key(|i| i.abs_diff(half))
+        .unwrap_or(half)
+}
+
 fn tab_id(page: &PageDef, g: &GroupDef) -> String {
     format!("{}|{}", page.id, g.caption)
 }
@@ -347,7 +407,9 @@ fn fasttab(app: &mut ErpApp, ui: &mut Ui, page: &PageDef, table: &TableDef, rec:
     let id = tab_id(page, g);
     let open = g.collapsed == app.toggled_tabs.contains(&id);
     ui.add_space(4.0);
-    // Trigger row: title (semibold, larger) and, while collapsed, the summary beside it.
+    let show_more = app.show_more.contains(&id);
+    // Trigger row: title (semibold, larger), the summary while collapsed, "Show more" while open.
+    let mut more_rect = None;
     let header = ui.horizontal(|ui| {
         ui.set_min_height(32.0);
         ui.add_space(4.0);
@@ -364,10 +426,20 @@ fn fasttab(app: &mut ErpApp, ui: &mut Ui, page: &PageDef, table: &TableDef, rec:
         }
         ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
             ui.label(RichText::new(if open { "▴" } else { "▾" }).color(TOKENS.text_dim));
+            if open && !g.additional.is_empty() {
+                ui.add_space(8.0);
+                let label = if show_more { "Show less" } else { "Show more" };
+                more_rect = Some(ui.label(RichText::new(label).size(theme::SMALL).color(TOKENS.text)).rect);
+            }
         });
     });
     let click = ui.interact(header.response.rect, ui.scope_id().with(("fasttab", &id)), Sense::click());
-    if click.clicked() {
+    let on_more = more_rect.is_some_and(|r| click.interact_pointer_pos().is_some_and(|p| r.expand(4.0).contains(p)));
+    if click.clicked() && on_more {
+        if !app.show_more.remove(&id) {
+            app.show_more.insert(id.clone());
+        }
+    } else if click.clicked() {
         if !app.toggled_tabs.remove(&id) {
             app.toggled_tabs.insert(id.clone());
         }
@@ -385,29 +457,35 @@ fn fasttab(app: &mut ErpApp, ui: &mut Ui, page: &PageDef, table: &TableDef, rec:
     }
     widgets::divider(ui);
     ui.add_space(12.0);
-    let fields: Vec<&FieldDef> = g.fields.iter().filter_map(|f| table.field(f)).collect();
+    let fields: Vec<&FieldDef> =
+        g.fields.iter().filter(|f| show_more || !g.additional.contains(f)).filter_map(|f| table.field(f)).collect();
     let lookups = lookups(app, table, fields.iter().map(|f| f.name.as_str()));
     // Two columns like BC; one when the sheet is narrow (egui's columns can't take negative widths).
     let ncols = if ui.available_width() >= 520.0 { 2 } else { 1 };
-    let half = if ncols == 2 { fields.len().div_ceil(2) } else { fields.len() };
+    let half = if ncols == 2 { column_break(g, &fields) } else { fields.len() };
     let mut commit: Option<(String, Json)> = None;
     let mut activate = false;
     let key = rec.key(table);
     let is_editing = *editing;
     let editable_page = page.editable;
+    let lcy = app.lcy_symbol();
     ui.columns(ncols, |cols| {
         for (ci, col) in cols.iter_mut().enumerate() {
             let slice = if ci == 0 { fields.get(..half) } else { fields.get(half..) };
             let Some(slice) = slice else { continue };
+            // Caption (170) + gap (16) + value fill the column; the value never pushes past it.
+            let value_width = (col.available_width() - 170.0 - 16.0 - 12.0).clamp(60.0, 320.0);
             egui::Grid::new(("fields", &id, ci)).num_columns(2).spacing(vec2(16.0, 6.0)).min_col_width(140.0).show(col, |ui| {
                 for f in slice {
-                    let caption = ui.label(RichText::new(&f.caption).color(TOKENS.text_dim));
-                    if !f.tooltip.is_empty() {
-                        caption.on_hover_text(&f.tooltip);
+                    if let Some((_, heading)) = g.headings.iter().find(|(first, _)| *first == f.name) {
+                        ui.label(RichText::new(heading).font(theme::bold(theme::BODY)).color(TOKENS.text));
+                        ui.end_row();
                     }
+                    let text = g.caption_of(&f.name).unwrap_or(&f.caption);
+                    widgets::caption_leader(ui, &widgets::lcy_caption(text, &lcy), &f.tooltip, 170.0);
                     let can_change = editable_page && f.editable && !f.is_flow() && !table.primary_key.contains(&f.name);
-                    let wid = format!("card|{}|{}|{}", table.name, key.display(), f.name);
-                    let width = (ui.available_width()).clamp(160.0, 320.0);
+                    let wid = format!("card|{}|{}|{}|{}", table.name, key.display(), g.caption, f.name);
+                    let width = value_width;
                     if !is_editing && can_change {
                         // View mode: read-only box; a click starts editing.
                         if widgets::view_value(ui, f, rec.get(&f.name), width).clicked() {
@@ -601,12 +679,13 @@ pub fn factboxes(app: &ErpApp, ui: &mut Ui, page: &PageDef, rec: Option<&Record>
                 (tt, r)
             }
         };
+        let lcy = app.lcy_symbol();
         let rows: Vec<(String, String, bool)> = match (target_table, &target) {
             (Some(t), Some(r)) => fb
                 .fields
                 .iter()
                 .filter_map(|f| t.field(f))
-                .map(|f| (f.caption.clone(), widgets::display(r.get(&f.name), &f.ty), f.ty.is_numeric()))
+                .map(|f| (widgets::lcy_caption(&f.caption, &lcy), widgets::display(r.get(&f.name), &f.ty), f.ty.is_numeric()))
                 .collect(),
             _ => vec![("".into(), "(no record selected)".into(), false)],
         };

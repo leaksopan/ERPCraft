@@ -1,5 +1,6 @@
 //! The base application's metadata: tables, pages and role centers.
 
+mod bc_gen;
 pub mod finance;
 pub mod fixed_assets;
 pub mod inventory;
@@ -11,20 +12,131 @@ use std::sync::OnceLock;
 
 use erpcraft_meta::Metadata;
 
-/// The base application, built once.
+/// The base application, built once: the hand-written schema with the fields and page layouts
+/// generated from BCApps (`bc_gen.rs`) on top.
 pub fn base_app() -> &'static Metadata {
     static META: OnceLock<Metadata> = OnceLock::new();
     META.get_or_init(|| {
-        let mut m = Metadata::default();
-        tables::register(&mut m);
-        pages::register(&mut m);
-        role_center::register(&mut m);
-        finance::register(&mut m);
-        inventory::register(&mut m);
-        fixed_assets::register(&mut m);
-        crate::bc::register(&mut m);
+        let mut m = hand_written();
+        bc_gen::extend(&mut m);
         m
     })
+}
+
+/// The schema without the generated layer; `bc-parity gen` generates against this.
+pub fn hand_written() -> Metadata {
+    let mut m = Metadata::default();
+    tables::register(&mut m);
+    pages::register(&mut m);
+    role_center::register(&mut m);
+    finance::register(&mut m);
+    inventory::register(&mut m);
+    fixed_assets::register(&mut m);
+    crate::bc::register(&mut m);
+    m
+}
+
+/// Helpers the generated `bc_gen.rs` calls.
+mod gen_support {
+    use erpcraft_meta::{ActionArea, ActionDef, FieldDef, GroupDef, Metadata};
+
+    /// Appends the fields a table doesn't have yet; hand-written definitions win.
+    pub fn fields(m: &mut Metadata, table: &str, fields: Vec<FieldDef>) {
+        let Some(t) = m.tables.get_mut(table) else { return };
+        for f in fields {
+            if t.field(&f.name).is_none() {
+                t.fields.push(f);
+            }
+        }
+    }
+
+    /// Hand-written fields get BC's caption and, where they have none, its tooltip.
+    pub fn relabel(m: &mut Metadata, table: &str, labels: &[(&str, &str, &str)]) {
+        let Some(t) = m.tables.get_mut(table) else { return };
+        for (name, caption, tooltip) in labels {
+            if let Some(f) = t.fields.iter_mut().find(|f| f.name == *name) {
+                f.caption = (*caption).to_string();
+                if f.tooltip.is_empty() {
+                    f.tooltip = (*tooltip).to_string();
+                }
+            }
+        }
+    }
+
+    /// One FastTab of a generated layout.
+    #[derive(Default)]
+    pub struct Tab {
+        pub caption: &'static str,
+        pub fields: &'static [&'static str],
+        pub promoted: &'static [&'static str],
+        pub additional: &'static [&'static str],
+        pub captions: &'static [(&'static str, &'static str)],
+        pub headings: &'static [(&'static str, &'static str)],
+        pub breaks: &'static [&'static str],
+    }
+
+    /// Replaces a card's FastTabs with BC's layout, keeping which tabs start collapsed.
+    pub fn layout(m: &mut Metadata, page: &str, tabs: &[Tab]) {
+        let Some(p) = m.pages.get_mut(page) else { return };
+        let strs = |s: &[&str]| s.iter().map(|x| (*x).to_string()).collect::<Vec<_>>();
+        let pairs = |s: &[(&str, &str)]| s.iter().map(|(a, b)| ((*a).to_string(), (*b).to_string())).collect::<Vec<_>>();
+        let groups = tabs
+            .iter()
+            .map(|t| {
+                let collapsed = p.groups.iter().find(|g| g.caption.eq_ignore_ascii_case(t.caption)).is_some_and(|g| g.collapsed);
+                let mut g = GroupDef::new(t.caption, t.fields);
+                g.promoted = strs(t.promoted);
+                g.additional = strs(t.additional);
+                g.captions = pairs(t.captions);
+                g.headings = pairs(t.headings);
+                g.breaks = strs(t.breaks);
+                g.collapsed = collapsed;
+                g
+            })
+            .collect();
+        p.groups = groups;
+    }
+
+    /// A navigation action of BC's page: opens `page` filtered by (target field, this record's field).
+    pub struct Nav {
+        pub caption: &'static str,
+        pub page: &'static str,
+        pub link: &'static [(&'static str, &'static str)],
+        pub shortcut: &'static str,
+    }
+
+    /// Adds BC's navigation actions the page doesn't have yet (by caption).
+    pub fn actions(m: &mut Metadata, page: &str, navs: &[Nav]) {
+        let Some(p) = m.pages.get_mut(page) else { return };
+        for n in navs {
+            let norm = |s: &str| s.replace('&', "").to_ascii_lowercase();
+            if p.actions.iter().any(|a| norm(&a.caption) == norm(n.caption)) {
+                continue;
+            }
+            let mut a = ActionDef::page(n.caption, ActionArea::Navigate, n.page);
+            for (target, source) in n.link {
+                a = a.link(target, source);
+            }
+            if !n.shortcut.is_empty() {
+                a = a.shortcut(n.shortcut);
+            }
+            p.actions.push(a);
+        }
+    }
+
+    /// The action bar's categories, as BC's page promotes them.
+    pub fn categories(m: &mut Metadata, page: &str, cats: &[(&str, &[&str])]) {
+        if let Some(p) = m.pages.get_mut(page) {
+            p.categories = cats.iter().map(|(c, a)| ((*c).to_string(), a.iter().map(|x| (*x).to_string()).collect())).collect();
+        }
+    }
+
+    /// Replaces a list page's columns with BC's.
+    pub fn columns(m: &mut Metadata, page: &str, columns: &[&str]) {
+        if let Some(p) = m.pages.get_mut(page) {
+            p.columns = columns.iter().map(|x| (*x).to_string()).collect();
+        }
+    }
 }
 
 #[cfg(test)]

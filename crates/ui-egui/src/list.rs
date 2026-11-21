@@ -55,7 +55,10 @@ pub fn show(app: &mut ErpApp, ui: &mut Ui, idx: usize, mut state: ListState) {
     egui::CentralPanel::default().frame(egui::Frame::new().fill(TOKENS.canvas).inner_margin(egui::Margin { left: 24, right: 12, top: 12, bottom: 12 })).show(ui, |ui| {
         widgets::card_frame().show(ui, |ui| {
             ui.set_min_size(ui.available_size().max(egui::Vec2::ZERO));
-            grid(app, ui, page, table, &rows, &mut state, inline_edit);
+            // Wide lists scroll sideways, like BC's grid.
+            egui::ScrollArea::horizontal().id_salt(("list_h", &page.id)).auto_shrink([false, false]).show(ui, |ui| {
+                grid(app, ui, page, table, &rows, &mut state, inline_edit);
+            });
         });
     });
 
@@ -143,8 +146,16 @@ fn action_bar(app: &mut ErpApp, ui: &mut Ui, page: &PageDef, table: &TableDef, s
     }
 }
 
-/// Promoted (Home) actions as buttons, then one drop-down per other action area.
+/// BC's list action bar: one drop-down per promoted category ("Home ∨", "Customer ∨") and "⋯"
+/// with every action; without categories, Home actions as buttons and a drop-down per area.
 pub fn action_menus(ui: &mut Ui, page: &PageDef, run: &mut Option<ActionDef>) {
+    if !page.categories.is_empty() {
+        for tab in crate::card::action_tab_list(page) {
+            let caption = if tab.caption == "More options" { "⋯".to_string() } else { format!("{}  ▾", tab.caption) };
+            action_menu(ui, &caption, &tab.actions, run);
+        }
+        return;
+    }
     for a in page.actions.iter().filter(|a| a.area == ActionArea::Home) {
         let r = widgets::action_button(ui, widgets::glyph(&a.icon), &a.caption.replace('&', ""));
         let r = if a.tooltip.is_empty() { r } else { r.on_hover_text(&a.tooltip) };
@@ -157,22 +168,26 @@ pub fn action_menus(ui: &mut Ui, page: &PageDef, run: &mut Option<ActionDef>) {
         if actions.is_empty() {
             continue;
         }
-        ui.menu_button(RichText::new(format!("{}  ▾", area.caption())).color(TOKENS.text), |ui| {
-            ui.set_min_width(200.0);
-            for a in actions {
-                let mut label = a.caption.replace('&', "");
-                if let Some(s) = &a.shortcut {
-                    label = format!("{label}      {s}");
-                }
-                let r = ui.button(label);
-                let r = if a.tooltip.is_empty() { r } else { r.on_hover_text(&a.tooltip) };
-                if r.clicked() {
-                    *run = Some(a.clone());
-                    ui.close();
-                }
-            }
-        });
+        action_menu(ui, &format!("{}  ▾", area.caption()), &actions, run);
     }
+}
+
+fn action_menu(ui: &mut Ui, caption: &str, actions: &[&ActionDef], run: &mut Option<ActionDef>) {
+    ui.menu_button(RichText::new(caption).color(TOKENS.text), |ui| {
+        ui.set_min_width(200.0);
+        for a in actions {
+            let mut label = a.caption.replace('&', "");
+            if let Some(s) = &a.shortcut {
+                label = format!("{label}      {s}");
+            }
+            let r = ui.button(label);
+            let r = if a.tooltip.is_empty() { r } else { r.on_hover_text(&a.tooltip) };
+            if r.clicked() {
+                *run = Some((*a).clone());
+                ui.close();
+            }
+        }
+    });
 }
 
 fn grid(app: &mut ErpApp, ui: &mut Ui, page: &PageDef, table: &TableDef, rows: &[Record], state: &mut ListState, inline_edit: bool) {
@@ -183,6 +198,7 @@ fn grid(app: &mut ErpApp, ui: &mut Ui, page: &PageDef, table: &TableDef, rows: &
     }
     let chosen = app.columns.get(&page.id).cloned().unwrap_or_else(|| page.columns.clone());
     let cols: Vec<&erpcraft_engine::meta::FieldDef> = chosen.iter().filter_map(|c| table.field(c)).collect();
+    let lcy = app.lcy_symbol();
     let mut open: Option<Key> = None;
     let mut commit: Option<(Key, String, serde_json::Value)> = None;
     let lookups = crate::card::lookups(app, table, cols.iter().map(|f| f.name.as_str()));
@@ -191,7 +207,7 @@ fn grid(app: &mut ErpApp, ui: &mut Ui, page: &PageDef, table: &TableDef, rows: &
         .striped(false)
         .resizable(false)
         .sense(egui::Sense::click())
-        .auto_shrink([false, false])
+        .auto_shrink([true, false])
         .cell_layout(Layout::left_to_right(Align::Center));
     for f in &cols {
         let w = match f.ty {
@@ -214,7 +230,7 @@ fn grid(app: &mut ErpApp, ui: &mut Ui, page: &PageDef, table: &TableDef, rows: &
                         _ => "",
                     };
                     let r = ui.with_layout(layout, |ui| {
-                        ui.add(egui::Label::new(RichText::new(format!("{}{arrow}", f.caption)).size(theme::SMALL).color(TOKENS.text_dim).strong()).sense(egui::Sense::click()))
+                        ui.add(egui::Label::new(RichText::new(format!("{}{arrow}", widgets::lcy_caption(&f.caption, &lcy))).size(theme::SMALL).color(TOKENS.text_dim).strong()).sense(egui::Sense::click()))
                     });
                     let r = r.inner.on_hover_text("Sort by this column");
                     if r.clicked() {

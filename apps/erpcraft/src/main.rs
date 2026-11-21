@@ -106,6 +106,13 @@ impl eframe::App for App {
     fn ui(&mut self, ui: &mut egui::Ui, _frame: &mut eframe::Frame) {
         self.inner.ui(ui);
     }
+
+    fn raw_input_hook(&mut self, ctx: &egui::Context, raw_input: &mut egui::RawInput) {
+        if let Some(events) = self.inner.synthetic_input.pop_front() {
+            raw_input.events.extend(events);
+            ctx.request_repaint();
+        }
+    }
 }
 
 fn main() -> ExitCode {

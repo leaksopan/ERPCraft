@@ -1,0 +1,13 @@
+[package]
+name = "bc-parity"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+publish = false
+description = "Compares ERPCraft's page metadata with the Business Central AL page sources (BCApps)"
+
+[lints]
+workspace = true
+
+[dependencies]
+erpcraft-engine = { workspace = true }

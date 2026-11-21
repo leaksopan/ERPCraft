@@ -66,6 +66,8 @@ fn applied_field(side: &Side) -> &'static str {
 pub struct PartyEntry<'a> {
     pub party_no: &'a str,
     pub posting_date: NaiveDate,
+    /// The document's own date (BC's Document Date); the posting date when there is none.
+    pub document_date: Option<NaiveDate>,
     pub doc_type: &'a str,
     pub doc_no: &'a str,
     pub ext_doc_no: &'a str,
@@ -91,6 +93,7 @@ pub fn post_party_entry(ctx: &mut Ctx, side: &Side, txn: &Txn, e: &PartyEntry) -
     r.set(side.ledger_party, Value::text(e.party_no));
     r.set(if side.sales { "Customer Name" } else { "Vendor Name" }, party.get("Name").clone());
     r.set("Posting Date", Value::Date(e.posting_date));
+    r.set("Document Date", Value::Date(e.document_date.unwrap_or(e.posting_date)));
     r.set("Document Type", Value::text(e.doc_type));
     r.set("Document No.", Value::text(e.doc_no));
     r.set("External Document No.", Value::text(e.ext_doc_no));

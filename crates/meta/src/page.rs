@@ -142,6 +142,14 @@ pub struct GroupDef {
     pub fields: Vec<String>,
     /// Fields shown on the collapsed FastTab header (AL `Importance = Promoted`).
     pub promoted: Vec<String>,
+    /// Fields shown only after "Show more" (AL `Importance = Additional`).
+    pub additional: Vec<String>,
+    /// (field, caption) where the page names a field differently from the table.
+    pub captions: Vec<(String, String)>,
+    /// (first field, heading): a sub-group's caption, shown above its fields.
+    pub headings: Vec<(String, String)>,
+    /// Fields that start a sub-group; the second column starts at one of them.
+    pub breaks: Vec<String>,
     pub collapsed: bool,
 }
 
@@ -151,6 +159,10 @@ impl GroupDef {
             caption: caption.to_string(),
             fields: fields.iter().map(|s| (*s).to_string()).collect(),
             promoted: Vec::new(),
+            additional: Vec::new(),
+            captions: Vec::new(),
+            headings: Vec::new(),
+            breaks: Vec::new(),
             collapsed: false,
         }
     }
@@ -158,6 +170,11 @@ impl GroupDef {
     pub fn promoted(mut self, fields: &[&str]) -> Self {
         self.promoted = fields.iter().map(|s| (*s).to_string()).collect();
         self
+    }
+
+    /// The caption this tab shows for `field`, if the page overrides the table's.
+    pub fn caption_of(&self, field: &str) -> Option<&str> {
+        self.captions.iter().find(|(f, _)| f == field).map(|(_, c)| c.as_str())
     }
 
     pub fn collapsed(mut self) -> Self {
@@ -220,6 +237,9 @@ pub struct PageDef {
     pub parts: Vec<PartDef>,
     pub factboxes: Vec<FactBoxDef>,
     pub actions: Vec<ActionDef>,
+    /// The action bar's categories (AL `area(Promoted)`): caption and action captions, in order.
+    /// Empty: the bar shows one tab per action area.
+    pub categories: Vec<(String, Vec<String>)>,
     pub view: Vec<ViewFilter>,
     /// Field values a new record gets on this page (AL `SourceTableView` filters become defaults).
     pub editable: bool,
@@ -241,6 +261,7 @@ impl PageDef {
             parts: Vec::new(),
             factboxes: Vec::new(),
             actions: Vec::new(),
+            categories: Vec::new(),
             view: Vec::new(),
             editable: true,
             keywords: String::new(),

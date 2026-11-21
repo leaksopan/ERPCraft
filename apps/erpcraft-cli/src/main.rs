@@ -46,7 +46,7 @@ COMMANDS:
     search <query>                         Find pages and commands (Tell Me)
     mcp                                    Serve MCP (JSON-RPC over stdio) on the company, or on the
                                            running app with --connect
-    ui state|back|home|open <spec>|screenshot <file.png>
+    ui state|back|home|open <spec>|click <x> <y>|screenshot <file.png>
                                            Drive the running app's window (needs --connect)
     help                                   This text
 
@@ -597,13 +597,17 @@ fn search(args: &Args, rest: &[&str]) -> Outcome {
 
 fn ui(args: &Args, rest: &[&str]) -> Outcome {
     args.only("ui", &[], &[]).map_err(Failure::Usage)?;
-    const UI_USAGE: &str = "usage: ui state | back | home | open <spec> | screenshot <file.png>   (with --connect)";
+    const UI_USAGE: &str = "usage: ui state | back | home | open <spec> | click <x> <y> | screenshot <file.png>   (with --connect)";
     let (method, params) = match rest {
         ["state"] => ("ui.state", json!({})),
         ["back"] => ("ui.back", json!({})),
         ["home"] => ("ui.home", json!({})),
         ["open", spec] => ("ui.open", json!({"spec": spec})),
         ["screenshot", path] => ("ui.screenshot", json!({"path": path})),
+        ["click", x, y] => match (x.parse::<f64>(), y.parse::<f64>()) {
+            (Ok(x), Ok(y)) => ("ui.click", json!({"x": x, "y": y})),
+            _ => return usage(UI_USAGE),
+        },
         _ => return usage(UI_USAGE),
     };
     let no_app = "'ui' drives the running desktop app: start it with 'erpcraft --control' and pass --connect";

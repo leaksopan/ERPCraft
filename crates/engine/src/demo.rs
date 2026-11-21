@@ -94,7 +94,7 @@ pub fn setup(ctx: &mut Ctx) -> Result<()> {
     for (code, desc, start) in series {
         raw(ctx, "No. Series", json!({"Code": code, "Description": desc, "Starting No.": start, "Increment-by No.": 1, "Default Nos.": true}))?;
     }
-    raw(ctx, "General Ledger Setup", json!({"Primary Key": "", "LCY Code": "IDR", "Local Currency Description": "Indonesian Rupiah", "Amount Rounding Precision": 0.01, "Payment Nos.": "PMT"}))?;
+    raw(ctx, "General Ledger Setup", json!({"Primary Key": "", "LCY Code": "IDR", "Local Currency Symbol": "Rp", "Local Currency Description": "Indonesian Rupiah", "Amount Rounding Precision": 0.01, "Payment Nos.": "PMT"}))?;
     raw(
         ctx,
         "Sales & Receivables Setup",

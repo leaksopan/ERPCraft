@@ -102,6 +102,7 @@ pub fn reverse(ctx: &mut Ctx, txn_no: i64) -> Result<Json> {
                 &PartyEntry {
                     party_no: e.str(side.ledger_party),
                     posting_date: date,
+                    document_date: e.get("Document Date").as_date(),
                     doc_type: e.str("Document Type"),
                     doc_no: e.str("Document No."),
                     ext_doc_no: e.str("External Document No."),

@@ -359,3 +359,50 @@ pub fn calendar(ui: &mut Ui, id: &str, current: Option<chrono::NaiveDate>) -> Op
     ui.ctx().data_mut(|d| d.insert_temp(mid, month));
     picked
 }
+
+/// A card caption followed by BC's dotted leader up to the value column. Clicking it opens BC's
+/// callout: the caption in bold over the field's description.
+pub fn caption_leader(ui: &mut Ui, text: &str, tooltip: &str, width: f32) -> egui::Response {
+    let sense = if tooltip.is_empty() { Sense::hover() } else { Sense::click() };
+    let (rect, resp) = ui.allocate_exact_size(vec2(width, 22.0), sense);
+    let font = egui::FontId::proportional(theme::BODY);
+    let galley = ui.painter().layout(text.to_string(), font, TOKENS.text_dim, width - 12.0);
+    let top = rect.center().y - galley.size().y / 2.0;
+    let text_w = galley.size().x;
+    let baseline = top + galley.size().y - 4.0;
+    ui.painter().galley(egui::pos2(rect.left(), top), galley, TOKENS.text_dim);
+    let mut x = rect.left() + text_w + 6.0;
+    while x < rect.right() - 2.0 {
+        ui.painter().circle_filled(egui::pos2(x, baseline), 0.9, TOKENS.input_line);
+        x += 6.0;
+    }
+    if !tooltip.is_empty() {
+        if resp.hovered() {
+            ui.ctx().set_cursor_icon(egui::CursorIcon::PointingHand);
+        }
+        egui::Popup::from_toggle_button_response(&resp)
+            .close_behavior(egui::PopupCloseBehavior::CloseOnClickOutside)
+            .width(360.0)
+            .gap(6.0)
+            .frame(
+                egui::Frame::new()
+                    .fill(TOKENS.page)
+                    .stroke(Stroke::new(1.0, TOKENS.divider))
+                    .corner_radius(4)
+                    .shadow(egui::epaint::Shadow { offset: [0, 4], blur: 14, spread: 0, color: Color32::from_black_alpha(40) })
+                    .inner_margin(egui::Margin::symmetric(16, 12)),
+            )
+            .show(|ui| {
+                ui.set_max_width(328.0);
+                ui.label(RichText::new(text).font(theme::bold(theme::BODY)).color(TOKENS.text));
+                ui.add_space(6.0);
+                ui.label(RichText::new(tooltip).color(TOKENS.text));
+            });
+    }
+    resp
+}
+
+/// BC shows "(LCY)" in captions as the local currency symbol: "Balance (LCY)" → "Balance (Rp)".
+pub fn lcy_caption(caption: &str, symbol: &str) -> String {
+    if symbol.is_empty() { caption.to_string() } else { caption.replace("(LCY)", &format!("({symbol})")) }
+}

@@ -213,12 +213,25 @@ pub fn dispatch(app: &mut ErpApp, method: &str, params: &Value) -> Outcome {
             Ok(state(app))
         }
         "ui.state" => Ok(state(app)),
+        "ui.click" => ui_click(app, params),
         "ui.screenshot" => return Outcome::Screenshot,
         other => Err(EngineError::not_found(format!(
-            "Unknown control method '{other}'. Methods: ping, engine.run, engine.commands, ui.open, ui.back, ui.home, ui.state, ui.screenshot."
+            "Unknown control method '{other}'. Methods: ping, engine.run, engine.commands, ui.open, ui.back, ui.home, ui.state, ui.click, ui.screenshot."
         ))),
     };
     Outcome::Reply(result)
+}
+
+/// A left click at window point (x, y) in logical pixels: move, press, release over three frames.
+fn ui_click(app: &mut ErpApp, params: &Value) -> Result<Value, EngineError> {
+    let coord = |k: &str| params.get(k).and_then(Value::as_f64).filter(|v| v.is_finite() && (0.0..=100_000.0).contains(v));
+    let (Some(x), Some(y)) = (coord("x"), coord("y")) else {
+        return Err(EngineError::invalid("ui.click needs numbers 'x' and 'y' (window pixels)"));
+    };
+    let pos = egui::pos2(x as f32, y as f32);
+    let button = |pressed| egui::Event::PointerButton { pos, button: egui::PointerButton::Primary, pressed, modifiers: egui::Modifiers::NONE };
+    app.synthetic_input.extend([vec![egui::Event::PointerMoved(pos)], vec![button(true)], vec![button(false)]]);
+    Ok(json!({"clicked": [x, y]}))
 }
 
 fn engine_run(app: &mut ErpApp, params: &Value) -> Result<Value, EngineError> {

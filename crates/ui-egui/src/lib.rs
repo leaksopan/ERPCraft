@@ -43,6 +43,10 @@ pub struct ErpApp {
     pub role_center: String,
     /// FastTabs the user toggled away from their default (page id + caption).
     pub toggled_tabs: HashSet<String>,
+    /// Input events the control channel feeds in, one batch per frame (`ui.click`).
+    pub synthetic_input: std::collections::VecDeque<Vec<egui::Event>>,
+    /// FastTabs showing their "Show more" fields.
+    pub show_more: HashSet<String>,
     pub show_factbox: bool,
     /// Columns the user chose per list page (Personalize › columns); the page's own otherwise.
     pub columns: HashMap<String, Vec<String>>,
@@ -64,6 +68,8 @@ impl ErpApp {
             nav_menu_open: false,
             role_center: erpcraft_engine::schema::role_center::BUSINESS_MANAGER.to_string(),
             toggled_tabs: HashSet::new(),
+            show_more: HashSet::new(),
+            synthetic_input: std::collections::VecDeque::new(),
             show_factbox: true,
             columns: HashMap::new(),
             next_refresh: 0.0,
@@ -79,7 +85,6 @@ impl ErpApp {
         // The base page (role center or a list) stays underneath; cards stack over it.
         let base = self.stack.iter().rposition(|v| !matches!(v, View::Card(_))).unwrap_or(0);
         let base_is_rc = matches!(self.stack.get(base), Some(View::RoleCenter) | None);
-        shell::role_center_bars(self, ui, base_is_rc);
         egui::CentralPanel::default().frame(egui::Frame::new().fill(theme::TOKENS.canvas)).show(ui, |ui| {
             if let Some(n) = self.notice.clone() {
                 widgets::notice_bar(ui, &n, || self.notice = None);
@@ -90,6 +95,9 @@ impl ErpApp {
             if !cards.is_empty() {
                 base_ui.disable();
             }
+            // The navigation bars belong to the base page: a card dialog covers them, and only the
+            // black app bar stays above it (BC).
+            shell::role_center_bars(self, &mut base_ui, base_is_rc);
             match self.stack.get(base).cloned() {
                 Some(View::List(state)) => list::show(self, &mut base_ui, base, state),
                 _ => role_center::show(self, &mut base_ui),
@@ -296,6 +304,11 @@ impl ErpApp {
     }
 
     /// Runs a command and shows its outcome (navigation, report, message or error).
+    /// G/L Setup's Local Currency Symbol, shown in place of "LCY" in captions.
+    pub fn lcy_symbol(&self) -> String {
+        self.session.db().rows("General Ledger Setup").next().map(|r| r.str("Local Currency Symbol").trim().to_string()).unwrap_or_default()
+    }
+
     pub fn run(&mut self, command: &str, params: Json) {
         match self.session.run(command, &params) {
             Ok(r) => self.handle_result(&r),

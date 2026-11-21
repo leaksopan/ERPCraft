@@ -515,6 +515,7 @@ pub fn post_document(ctx: &mut Ctx, side: &Side, doc_type: &str, no: &str, mode:
             &PartyEntry {
                 party_no: &bill_no,
                 posting_date,
+                document_date: header.get("Document Date").as_date(),
                 doc_type: ledger_doc_type,
                 doc_no: &posted_no,
                 ext_doc_no: &ext_doc_no,

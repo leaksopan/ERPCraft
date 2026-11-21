@@ -308,6 +308,7 @@ pub fn post(ctx: &mut Ctx, template: &str, batch: &str) -> Result<Json> {
                         &PartyEntry {
                             party_no: s.account_no,
                             posting_date: *date,
+                            document_date: l.get("Document Date").as_date(),
                             doc_type: l.str("Document Type"),
                             doc_no,
                             ext_doc_no: l.str("External Document No."),

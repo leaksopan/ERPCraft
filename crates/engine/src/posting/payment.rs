@@ -69,6 +69,7 @@ pub fn register(ctx: &mut Ctx, side: &Side, p: &Payment) -> Result<Json> {
         &PartyEntry {
             party_no: p.party_no,
             posting_date: p.posting_date,
+            document_date: None,
             doc_type: "Payment",
             doc_no: &doc_no,
             ext_doc_no: "",

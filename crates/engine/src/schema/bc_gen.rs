@@ -8,6 +8,49 @@ use super::gen_support::{Nav, Tab, actions, calcs, categories, columns, drilldow
 pub fn extend(m: &mut Metadata) {
     relabel(
         m,
+        "Acc. Schedule Line",
+        &[
+            ("Schedule Name", "Schedule Name", "Specifies the unique name (code) of the financial report row definition. You can use up to 10 characters.", 0),
+            ("Row No.", "Row No.", "Specifies a number that identifies the line.", 0),
+            ("Description", "Description", "Specifies text that will appear on the financial report line.", 0),
+            ("Totaling Type", "Totaling Type", "Specifies the totaling type for the financial report line. The type determines which accounts within the totaling interval you specify in the Totaling field will be totaled.", 0),
+            ("New Page", "New Page", "Specifies whether there will be a page break after the current line when the financial report is exported to PDF or printed.", 0),
+            ("Show", "Show", "Specifies whether the line will be printed on the report.", 0),
+            ("Bold", "Bold", "Specifies whether to print the amounts in this row in bold.", 0),
+            ("Italic", "Italic", "Specifies whether to print the amounts in this row in italics.", 0),
+            ("Underline", "Underline", "Specifies whether to underline the amounts in this row.", 0),
+            ("Show Opposite Sign", "Show Opposite Sign", "Specifies whether to show debits in reports as negative amounts with a minus sign and credits as positive amounts.", 0),
+            ("Row Type", "Row Type", "Specifies the row type for the row definition. The type determines how the amounts in the row are calculated.", 0),
+            ("Amount Type", "Amount Type", "Specifies the type of entries that will be included in the amounts in the row definition.", 0),
+            ("Double Underline", "Double Underline", "Specifies whether to double underline the amounts in this row.", 0),
+        ],
+    );
+    fields(
+        m,
+        "Acc. Schedule Line",
+        vec![
+            F::text("Internal Description", 500).tooltip("Specifies the internal description for the row definition line that highlights complex logic or areas needing review for the next report designer."),
+        ],
+    );
+    relabel(
+        m,
+        "Acc. Schedule Name",
+        &[
+            ("Name", "Name", "Specifies the unique name (code) of the financial report row definition. You can use up to 10 characters.", 0),
+            ("Description", "Description", "Specifies a description of the financial report row definition. The description is not shown on the final report but is used to provide more context when using the definition.", 0),
+            ("Analysis View Name", "Analysis View Name", "Specifies the name of the analysis view you want the row definition to use. This field is optional.", 0),
+        ],
+    );
+    fields(
+        m,
+        "Acc. Schedule Name",
+        vec![
+            F::text("Internal Description", 500).tooltip("Specifies the internal description of row definition. The internal description is not shown on the final report but is used to provide more context when using the definition."),
+            F::code("Status", 10).tooltip("Specifies the status code for the row definition. The status code helps you organize the lifecycle of your row definitions."),
+        ],
+    );
+    relabel(
+        m,
         "Approval Entry",
         &[
             ("Due Date", "Approval Due Date", "", 0),
@@ -127,6 +170,52 @@ pub fn extend(m: &mut Metadata) {
         &[
             ("Code", "Code", "Specifies the code for the G/L account that bank transactions, such as bank payment reconciliations, are posted to when the bank account card contains this code.", 0),
             ("G/L Account No.", "G/L Account No.", "Specifies the general ledger account to which bank account entries in this posting group are posted.", 0),
+        ],
+    );
+    relabel(
+        m,
+        "Column Layout",
+        &[
+            ("Line No.", "Line No.", "Specifies the line number for the financial report column.", 0),
+            ("Column No.", "Column No.", "Specifies a number for the column in the analysis view.", 0),
+            ("Column Header", "Column Header", "Specifies a header for the column.", 0),
+            ("Column Type", "Column Type", "Specifies the analysis column type, which determines how the amounts in the column are calculated.", 0),
+            ("Ledger Entry Type", "Ledger Entry Type", "Specifies the type of ledger entries that will be included in the amounts in the financial report column.", 0),
+            ("Amount Type", "Amount Type", "Specifies the type of entries that will be included in the amounts in the financial report column.", 0),
+            ("Formula", "Formula", "Specifies a formula. The result of the formula will appear in the column when the financial report is printed.", 0),
+            ("Comparison Date Formula", "Comparison Date Formula", "Specifies a date formula that specifies which dates should be used to calculate the amount in this column.", 0),
+            ("Show Opposite Sign", "Show Opposite Sign", "Specifies whether to show debits in reports as negative amounts (that is, with a minus sign) and credits as positive amounts.", 0),
+            ("Show", "Show", "Specifies when you want the amounts in the column to be shown in reports.", 0),
+            ("Rounding Factor", "Rounding Factor", "Specifies a rounding factor for amounts in the column.", 0),
+        ],
+    );
+    fields(
+        m,
+        "Column Layout",
+        vec![
+            F::code("Comparison Period Formula", 20).tooltip("Specifies a period formula that specifies the accounting periods you want to use to calculate the amount in this column."),
+            F::code("Budget Name", 10).tooltip("Specifies which budget amounts will be totaled in this column."),
+            F::option("Include Date In Header", &["", "Weekday", "Week", "Month", "Month and Year", "Quarter", "Quarter and Year", "Year", "Full Date"]).caption("Include Date in Column Header").tooltip("Specifies how the ending date of the Date Filter applied to the column is displayed on the Column Header."),
+            F::text("G/L Account Totaling", 250).tooltip("Specifies which G/L accounts will be totalled in this column. Note that this filter will be applied in addition to any G/L account filters from the row definition lines."),
+            F::boolean("Show in ACY").tooltip("Specifies whether amounts are shown in the Additional Reporting Currency."),
+            F::text("Internal Description", 500).tooltip("Specifies the internal description for the column definition line that highlights complex logic or areas needing review for the next report designer."),
+        ],
+    );
+    relabel(
+        m,
+        "Column Layout Name",
+        &[
+            ("Name", "Name", "Specifies the unique name (code) of the financial report column definition. You can use up to 10 characters.", 0),
+            ("Description", "Description", "Specifies a description of the financial report columns definition. The description is not shown on the final report but is used to provide more context when using the definition.", 0),
+            ("Analysis View Name", "Analysis View Name", "Specifies the name of the analysis view you want the column definition to use. This field is optional.", 0),
+        ],
+    );
+    fields(
+        m,
+        "Column Layout Name",
+        vec![
+            F::text("Internal Description", 500).tooltip("Specifies the internal description of the column definition. The internal description is not shown on the final report but is used to provide more context when using the definition."),
+            F::code("Status", 10).tooltip("Specifies the status code for the column definition. The status code helps you organize the lifecycle of your column definitions."),
         ],
     );
     relabel(
@@ -704,6 +793,26 @@ pub fn extend(m: &mut Metadata) {
     );
     relabel(
         m,
+        "Financial Report",
+        &[
+            ("Name", "Name", "Specifies the unique name (code) of the financial report.", 0),
+            ("Description", "Display Title", "Specifies a title of the financial report. The text is shown as a title on the final report when you run it to get a PDF or to print it.", 0),
+            ("Financial Report Row Group", "Financial Report Row Group", "Specifies the row definition (code) to be used for this financial report.", 0),
+            ("Financial Report Column Group", "Financial Report Column Group", "Specifies the column definition (code) to be used for this financial report.", 0),
+        ],
+    );
+    fields(
+        m,
+        "Financial Report",
+        vec![
+            F::text("Internal Description", 500).tooltip("Specifies the internal description of this financial report."),
+            F::code("DimPerspective", 10).caption("Dimension Perspective").tooltip("Specifies the dimension perspective to be used for the financial report."),
+            F::code("CategoryCode", 20).caption("Category").tooltip("Specifies the category code for the financial report."),
+            F::code("Status", 10).tooltip("Specifies the status code for the financial report. The status code helps you organize the lifecycle of your financial reports."),
+        ],
+    );
+    relabel(
+        m,
         "Fixed Asset",
         &[
             ("No.", "No.", "Specifies the number of the involved entry or record, according to the specified number series.", 0),
@@ -1068,10 +1177,10 @@ pub fn extend(m: &mut Metadata) {
             F::boolean("Payment Tolerance Warning").tooltip("Specifies whether to display a message when a payment differs from the invoice amount within the specified tolerance, so you can choose how to process it. If you do not enable the message, and a tolerance level is specified, invoices with amounts that are within tolerance will be automatically closed and you cannot choose to leave the remaining amount. Default tolerance levels are specified in the Payment Tolerance % and Max. Payment Tolerance fields, but can also be specified for each customer ledger entry."),
             F::option("Bill-to/Sell-to VAT Calc.", &["Bill-to/Pay-to No.", "Sell-to/Buy-from No."]).tooltip("Specifies where the VAT Bus. Posting Group code on an order or invoice is copied from. Bill-to/Pay-to No.: The VAT Bus. Posting Group code on sales invoices and orders is copied from the Bill-to Customer field. The VAT Bus. Posting Group code on purchase invoices and orders is copied from the Pay-to Vendor field. Sell-to/Buy-from No. : The VAT Bus. Posting Group code on sales invoices and orders is copied from the Sell-to Customer field. The VAT Bus. Posting Group code on purchase invoices and orders is copied from the Buy-from Vendor field."),
             F::boolean("Block Deletion of G/L Accounts").tooltip("Specifies whether to prevent users from deleting G/L accounts with ledger entries that are after the date in the Check G/L Acc. Deletion After field. For example, blocking deletion helps you avoid losing financial data that your business should keep due to country regional requirements."),
-            F::code("Fin. Rep. for Balance Sheet", 10).caption("Financial Report for Balance Sheet").tooltip("Specifies which financial report is used to generate the Balance Sheet report."),
-            F::code("Fin. Rep. for Income Stmt.", 10).caption("Financial Report for Income Stmt.").tooltip("Specifies which financial report is used to generate the Income Statement report."),
-            F::code("Fin. Rep. for Cash Flow Stmt", 10).caption("Financial Report for Cash Flow Stmt.").tooltip("Specifies which financial report is used to generate the Cash Flow Statement report."),
-            F::code("Fin. Rep. for Retained Earn.", 10).caption("Financial Report for Retained Earn.").tooltip("Specifies which financial report is used to generate the Retained Earnings report."),
+            F::code("Fin. Rep. for Balance Sheet", 10).caption("Financial Report for Balance Sheet").relation("Financial Report").tooltip("Specifies which financial report is used to generate the Balance Sheet report."),
+            F::code("Fin. Rep. for Income Stmt.", 10).caption("Financial Report for Income Stmt.").relation("Financial Report").tooltip("Specifies which financial report is used to generate the Income Statement report."),
+            F::code("Fin. Rep. for Cash Flow Stmt", 10).caption("Financial Report for Cash Flow Stmt.").relation("Financial Report").tooltip("Specifies which financial report is used to generate the Cash Flow Statement report."),
+            F::code("Fin. Rep. for Retained Earn.", 10).caption("Financial Report for Retained Earn.").relation("Financial Report").tooltip("Specifies which financial report is used to generate the Retained Earnings report."),
             F::boolean("Req.Country/Reg. Code in Addr.").caption("Require Country/Region Code in Address").tooltip("Specifies whether to clear the Post Code, City, and County fields when the value in the Country/Region Code field is changed."),
             F::boolean("Print VAT specification in LCY").tooltip("Specifies that an extra VAT specification in local currency will be included on documents in a foreign currency. This can be used to make tax audits easier when reconciling VAT payables to invoices."),
             F::boolean("Prepayment Unrealized VAT").tooltip("Specifies whether to handle unrealized VAT on prepayments."),
@@ -1103,8 +1212,8 @@ pub fn extend(m: &mut Metadata) {
             F::code("Fin. Rep. Income Stmt. Row", 10).caption("Financial Report Row Definition for Income Stmt.").tooltip("Specifies the name of the Income Statement row on Financial Reports."),
             F::code("Fin. Rep. Cash Flow Stmt. Row", 10).caption("Financial Report Row Definition for Cash Flow Stmt.").tooltip("Specifies the name of the Cash Flow Statement row on Financial Reports."),
             F::code("Fin. Rep. Retained Earn. Row", 10).caption("Financial Report Row Definition for Retained Earn.").tooltip("Specifies the name of the Retained Earnings row on Financial Reports."),
-            F::code("Fin. Rep. Bal. Sheet Column", 10).caption("Financial Report Column Definition for Balance Sheet").tooltip("Specifies the name of the Balance Sheet column on Financial Reports."),
-            F::code("Fin. Rep. Net Change Column", 10).caption("Financial Report Column Definition for Net Change").tooltip("Specifies the name of the Net Change column on Financial Reports."),
+            F::code("Fin. Rep. Bal. Sheet Column", 10).caption("Financial Report Column Definition for Balance Sheet").relation("Column Layout Name").tooltip("Specifies the name of the Balance Sheet column on Financial Reports."),
+            F::code("Fin. Rep. Net Change Column", 10).caption("Financial Report Column Definition for Net Change").relation("Column Layout Name").tooltip("Specifies the name of the Net Change column on Financial Reports."),
             F::code("DefaultFinancialReportStatus", 10).caption("Default Financial Report Status").tooltip("Specifies the name of the Default Financial Report Status on Financial Reports."),
             F::code("Allow Posting From DateFormula", 32).caption("Allow Posting From Date Formula"),
             F::code("Allow Posting To DateFormula", 32).caption("Allow Posting To Date Formula"),
@@ -2810,6 +2919,8 @@ pub fn extend(m: &mut Metadata) {
             F::boolean("View All Accounts on Lookup").tooltip("Specifies that all possible accounts are shown when you look up from a field. If the check box is not selected, then only accounts related to the involved account category are shown."),
         ],
     );
+    columns(m, "account-schedule", &["Row No.", "Description", "Totaling Type", "Row Type", "Amount Type", "Show Opposite Sign", "Show", "Bold", "Italic", "Underline", "Double Underline", "New Page", "Internal Description"]);
+    columns(m, "account-schedule-names", &["Name", "Description", "Analysis View Name", "Status", "Internal Description"]);
     columns(m, "approval-comments", &["Comment", "User ID", "Date and Time"]);
     columns(m, "approval-entries", &["Limit Type", "Approval Type", "Sequence No.", "Status", "Sender ID", "Salespers./Purch. Code", "Approver ID", "Currency Code", "Amount (LCY)", "Available Credit Limit (LCY)", "Date-Time Sent for Approval", "Last Date-Time Modified", "Last Modified By User ID", "Due Date"]);
     columns(m, "attached-documents", &["File Name", "File Extension", "File Type", "User", "Attached Date", "Document Flow Purchase", "Document Flow Sales", "Document Flow Production"]);
@@ -2852,6 +2963,8 @@ pub fn extend(m: &mut Metadata) {
     columns(m, "bank-posting-groups", &["Code", "G/L Account No."]);
     columns(m, "cash-receipt-journal", &["Posting Date", "Document Type", "Document No.", "Account Type", "Account No.", "Description", "Posting Group", "Amount", "Amount (LCY)", "Debit Amount", "Credit Amount", "Bal. Account Type", "Bal. Account No.", "Selected Alloc. Account No.", "Applies-to Doc. Type", "Applies-to Doc. No.", "Correction", "Shortcut Dimension 1 Code", "Shortcut Dimension 2 Code"]);
     columns(m, "chart-of-accounts", &["No.", "Name", "Net Change", "Balance", "Income/Balance", "Account Category", "Account Type", "Totaling", "Gen. Posting Type", "Gen. Bus. Posting Group", "Gen. Prod. Posting Group", "Source Currency Posting", "Source Currency Code", "Cost Type No.", "Default Deferral Template Code"]);
+    columns(m, "column-layout", &["Column No.", "Column Header", "Include Date In Header", "Column Type", "Ledger Entry Type", "Amount Type", "Budget Name", "Formula", "Show Opposite Sign", "Comparison Date Formula", "Comparison Period Formula", "Show", "Rounding Factor", "G/L Account Totaling", "Show in ACY", "Internal Description"]);
+    columns(m, "column-layout-names", &["Name", "Description", "Analysis View Name", "Status", "Internal Description"]);
     columns(m, "comment-sheet", &["Date", "Comment"]);
     layout(
         m,
@@ -2989,6 +3102,7 @@ pub fn extend(m: &mut Metadata) {
         ],
     );
     columns(m, "fa-subclasses", &["Code", "Name", "FA Class Code", "Default FA Posting Group"]);
+    columns(m, "financial-reports", &["Name", "Description", "CategoryCode", "Financial Report Row Group", "Financial Report Column Group", "DimPerspective", "Status", "Internal Description"]);
     layout(
         m,
         "fixed-asset-card",
@@ -3976,6 +4090,14 @@ pub fn extend(m: &mut Metadata) {
     );
     actions(
         m,
+        "financial-reports",
+        &[
+            Nav { caption: "Show All Row Definitions", page: "account-schedule-names", link: &[], shortcut: "" },
+            Nav { caption: "Show All Column Definitions", page: "column-layout-names", link: &[], shortcut: "" },
+        ],
+    );
+    actions(
+        m,
         "fixed-asset-card",
         &[
             Nav { caption: "Depreciation &Books", page: "fa-depreciation-books", link: &[("FA No.", "No.")], shortcut: "" },
@@ -4302,6 +4424,13 @@ pub fn extend(m: &mut Metadata) {
     mirror(m, "sales-quotes", "sales-quote", &["Approvals", "Attach as PDF", "Send A&pproval Request", "Cancel Approval Re&quest"]);
     categories(
         m,
+        "account-schedule-names",
+        &[
+            ("Process", &["Edit Row Definition"]),
+        ],
+    );
+    categories(
+        m,
         "bank-account-card",
         &[
             ("Bank Account", &["Dimensions", "Co&mments", "Ledger E&ntries"]),
@@ -4338,6 +4467,13 @@ pub fn extend(m: &mut Metadata) {
             ("Account", &["Dimensions-&Multiple", "Dimensions-Single", "Co&mments", "Ledger E&ntries"]),
             ("Navigate", &["G/L Register", "General Journal"]),
             ("Report", &["G/L Register"]),
+        ],
+    );
+    categories(
+        m,
+        "column-layout-names",
+        &[
+            ("Process", &["Edit Column Definition"]),
         ],
     );
     categories(
@@ -4407,6 +4543,13 @@ pub fn extend(m: &mut Metadata) {
             ("General", &["FA Classes", "FA Subclasses", "FA Locations"]),
             ("Depreciation", &["Depreciation Books"]),
             ("Posting", &["FA Posting Groups"]),
+        ],
+    );
+    categories(
+        m,
+        "financial-reports",
+        &[
+            ("Definitions", &["Edit Row Definition", "Edit Column Definition", "Show All Row Definitions", "Show All Column Definitions"]),
         ],
     );
     categories(

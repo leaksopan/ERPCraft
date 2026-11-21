@@ -161,10 +161,10 @@ impl Dialog {
 fn cell(v: &Json) -> String {
     match v {
         Json::String(s) => {
-            // Numbers in reports come as decimal strings: group thousands.
+            // Amounts in reports come as decimal strings ("1234.50"): group thousands. Codes and
+            // short numbers without a decimal point (row no. "10", item "1000") stay as they are.
             if let Ok(d) = s.parse::<rust_decimal::Decimal>()
-                && s.contains(|c: char| c.is_ascii_digit())
-                && !s.chars().all(|c| c.is_ascii_digit() && s.len() == 5)
+                && (s.contains('.') || s.trim_start_matches('-').len() > 5)
             {
                 return erpcraft_engine::meta::format_decimal(d, 2);
             }

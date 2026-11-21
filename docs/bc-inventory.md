@@ -17,7 +17,7 @@ orders this list into phases.
 | CRM | 1 | 163 | 0 | 36 |
 | CashFlow | 0 | 22 | 0 | 3 |
 | CostAccounting | 0 | 30 | 0 | 21 |
-| Finance | 21 | 344 | 1 | 86 |
+| Finance | 26 | 344 | 1 | 86 |
 | FinancialMgt | 0 | 1 | 0 | 0 |
 | FixedAssets | 11 | 61 | 1 | 38 |
 | Foundation | 4 | 58 | 0 | 2 |
@@ -38,7 +38,7 @@ orders this list into phases.
 | Utilities | 0 | 12 | 0 | 2 |
 | Warehouse | 0 | 144 | 0 | 35 |
 | eServices | 0 | 25 | 0 | 0 |
-| **Base Application** | **111** | **2638** | **16** | **659** |
+| **Base Application** | **116** | **2638** | **16** | **659** |
 
 ### (root)
 
@@ -746,7 +746,7 @@ Pages 0 / 30, reports 0 / 21.
 
 ### Finance
 
-Pages 21 / 344, reports 1 / 86.
+Pages 26 / 344, reports 1 / 86.
 
 <details><summary>Finance / AllocationAccount: pages 0 / 5, reports 0 / 0</summary>
 
@@ -902,18 +902,18 @@ Pages 21 / 344, reports 1 / 86.
 
 </details>
 
-<details><summary>Finance / FinancialReports: pages 0 / 37, reports 0 / 11</summary>
+<details><summary>Finance / FinancialReports: pages 5 / 37, reports 0 / 11</summary>
 
-- [ ] Page 103 Account Schedule Names (List)
-- [ ] Page 104 Account Schedule (Worksheet)
+- [x] Page 103 Account Schedule Names (List)
+- [x] Page 104 Account Schedule (Worksheet)
 - [ ] Page 105 New Account Schedule Name (StandardDialog)
-- [ ] Page 108 Financial Reports (List)
+- [x] Page 108 Financial Reports (List)
 - [ ] Page 195 Acc. Sched. KPI Web Srv. Setup (List)
 - [ ] Page 196 Acc. Sched. KPI Web Srv. Lines (ListPart)
 - [ ] Page 197 Acc. Sched. KPI Web Service (List)
 - [ ] Page 198 Acc. Sched. KPI WS Dimensions (List)
-- [ ] Page 488 Column Layout Names (List)
-- [ ] Page 489 Column Layout (Worksheet)
+- [x] Page 488 Column Layout Names (List)
+- [x] Page 489 Column Layout (Worksheet)
 - [ ] Page 490 Acc. Schedule Overview (List)
 - [ ] Page 763 Account Schedules Chart Setup (Card)
 - [ ] Page 764 Acc. Sched. Chart Matrix (List)

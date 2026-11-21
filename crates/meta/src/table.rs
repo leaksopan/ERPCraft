@@ -57,6 +57,9 @@ pub struct FieldDef {
     /// AL `NotBlank`: the field must have a value when the record is inserted.
     pub not_blank: bool,
     pub tooltip: String,
+    /// AL `AutoFormatType` of a Decimal: 1 = amount (2 decimals), 2 = unit amount (2 to 5),
+    /// 0 = as many decimals as the value has (up to 5), like BC's default.
+    pub auto_format: u8,
 }
 
 impl FieldDef {
@@ -70,6 +73,7 @@ impl FieldDef {
             editable: true,
             not_blank: false,
             tooltip: String::new(),
+            auto_format: 0,
         }
     }
 
@@ -114,6 +118,10 @@ impl FieldDef {
     }
     pub fn not_blank(mut self) -> Self {
         self.not_blank = true;
+        self
+    }
+    pub fn auto_format(mut self, n: u8) -> Self {
+        self.auto_format = n;
         self
     }
     pub fn tooltip(mut self, t: &str) -> Self {

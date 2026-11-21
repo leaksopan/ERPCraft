@@ -45,9 +45,29 @@ This rewrites `crates/engine/src/schema/bc_gen.rs` from `schema::hand_written()`
 
 Hand-written definitions win. To change something BC defines, change the hand-written schema or the generator, then run `gen` again.
 
+The tool links the engine, which includes the current `bc_gen.rs`. If you change a `gen_support` signature, put a stub back in first: `use erpcraft_meta::Metadata; pub fn extend(_m: &mut Metadata) {}`. Then run `gen`.
+
 ## What the UI takes from BC
 
 - **Card captions.** Each caption has a dotted leader. Clicking it opens a callout with the caption and the field's description.
 - **Currency in captions.** "(LCY)" shows as the G/L Setup's Local Currency Symbol, for example "Balance (Rp)".
 - **Card dialog.** It covers everything below the black app bar.
 - **Wide lists.** They scroll sideways.
+
+## The list grid
+
+The grid copies BC's Items list. The measurements come from the live web client's DOM.
+
+- **Rows.** 34 px tall, with one 1 px line (#D3D6DA) across the full width between rows. Cell text is 14 px #212121. The selected row is #B2E9ED.
+- **Header.** Captions are 12 px #505C6D. They wrap to three lines and sit at the bottom of the header, with numeric captions right-aligned. Hovering a caption gives a grey background and "⌄". Clicking opens a menu: Ascending, Descending, Filter..., Filter to this value, Clear filter, What's this?. "What's this?" shows the field's description.
+- **Sort.** The sorted column shows ↑ or ↓. With no sort chosen, the key column shows ↑.
+- **Key column.** A teal link (#007E87). On the selected row it is darker and underlined. A click opens the card.
+- **⋮ column.** 30 px, right after the key column. It shows on hover and on the selected row. Its menu lists the page's actions by category, then View, Edit and Delete.
+- **Clicking a cell.** It selects the row and frames that cell. Up and Down move the selection.
+- **Values.** FlowFields are teal. A stored Boolean is a read-only check box, a FlowField Boolean reads Yes/No. Lookup fields are underlined on the selected row.
+- **Decimals.** They follow the field's `AutoFormatType`:
+  - amounts show 2 decimals;
+  - unit amounts show 2 to 5;
+  - other fields show only the decimals they have, so "510", not "510.00".
+
+  Cards and FactBoxes use the same format.

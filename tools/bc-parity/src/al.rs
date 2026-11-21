@@ -250,8 +250,6 @@ pub struct AlAction {
     pub name: String,
     pub caption: String,
     pub vis: Vis,
-    /// `processing`, `navigation`, `reporting`, `creation`.
-    pub area: String,
     /// `RunObject = Page "…"`: the page it opens.
     pub run_page: Option<String>,
     /// `RunPageLink = "Customer No." = field("No.")`, as (target field, source field).
@@ -364,7 +362,6 @@ fn collect_actions(n: &Node, area: &str, out: &mut Vec<AlAction>, promoted: &mut
                     name: unquote(args),
                     caption: k.caption_or(args),
                     vis: visibility(k),
-                    area: area.to_string(),
                     run_page,
                     link: k.prop("RunPageLink").map(page_link).unwrap_or_default(),
                     shortcut: k.prop("ShortCutKey").and_then(literal),
@@ -454,7 +451,6 @@ pub enum FieldClass {
 
 #[derive(Debug)]
 pub struct AlTableField {
-    pub id: u32,
     pub name: String,
     /// `Code[20]`, `Enum "Customer Blocked"`, `Option`, …
     pub ty: String,
@@ -467,6 +463,7 @@ pub struct AlTableField {
     pub relation: Option<String>,
     pub option_captions: Vec<String>,
     pub calc_formula: Option<String>,
+    pub auto_format: u8,
 }
 
 #[derive(Debug, Default)]
@@ -487,7 +484,7 @@ pub fn al_table(src: &str) -> Option<AlTable> {
             continue;
         }
         let parts = split_all(args, ';');
-        let (Some(id), Some(name), Some(ty)) = (parts.first().and_then(|s| s.parse().ok()), parts.get(1), parts.get(2)) else {
+        let (Some(_), Some(name), Some(ty)) = (parts.first().and_then(|s| s.parse::<u32>().ok()), parts.get(1), parts.get(2)) else {
             continue;
         };
         let class = match f.prop("FieldClass").map(str::to_ascii_lowercase).as_deref() {
@@ -500,7 +497,6 @@ pub fn al_table(src: &str) -> Option<AlTable> {
         });
         let options = f.prop("OptionCaption").and_then(literal).or_else(|| f.prop("OptionMembers").map(str::to_string));
         t.fields.push(AlTableField {
-            id,
             name: unquote(name),
             ty: ty.trim().to_string(),
             caption: f.caption_or(name),
@@ -511,6 +507,7 @@ pub fn al_table(src: &str) -> Option<AlTable> {
             relation: relation.map(unquote),
             option_captions: options.map(|o| split_all(&o, ',').into_iter().map(|s| unquote(s).trim_matches('\'').to_string()).collect()).unwrap_or_default(),
             calc_formula: f.prop("CalcFormula").map(str::to_string),
+            auto_format: f.prop("AutoFormatType").and_then(|v| v.trim().parse().ok()).filter(|n| *n <= 2).unwrap_or(0),
         });
     }
     Some(t)

@@ -20,6 +20,8 @@ pub struct ListState {
     /// Sort column and direction (descending when true); the page's key order otherwise.
     pub sort: Option<(String, bool)>,
     pub filter_pane: bool,
+    /// The column of the selected row that has focus (framed, like BC's current cell).
+    pub cell: Option<usize>,
 }
 
 /// Where a card was opened from, so ‹ › can step through the same records.
@@ -46,7 +48,7 @@ pub struct CardState {
 impl View {
     pub fn list(page: &str, filters: Vec<(String, String)>) -> Self {
         let filter_pane = !filters.is_empty();
-        View::List(ListState { page: page.to_string(), filters, search: String::new(), search_open: false, selected: None, sort: None, filter_pane })
+        View::List(ListState { page: page.to_string(), filters, search: String::new(), search_open: false, selected: None, sort: None, filter_pane, cell: None })
     }
 
     pub fn card(page: &str, key: Key) -> Self {

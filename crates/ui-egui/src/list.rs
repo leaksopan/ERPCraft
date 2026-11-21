@@ -190,7 +190,19 @@ fn action_menu(ui: &mut Ui, caption: &str, actions: &[&ActionDef], run: &mut Opt
     });
 }
 
+/// What a row's ⋮ menu asked for.
+enum RowAct {
+    Action(ActionDef),
+    View,
+    Edit,
+    Delete,
+}
+
+/// BC's list grid: 34 px rows with a line above each, the key column as a link, a ⋮ column with
+/// the row's actions, headers with a menu (sort, filter, What's this?), one framed current cell,
+/// arrow keys to move between rows.
 fn grid(app: &mut ErpApp, ui: &mut Ui, page: &PageDef, table: &TableDef, rows: &[Record], state: &mut ListState, inline_edit: bool) {
+    use erpcraft_engine::meta::FieldType;
     if rows.is_empty() {
         ui.add_space(30.0);
         ui.vertical_centered(|ui| ui.label(RichText::new("(There is nothing to show in this view)").italics().color(TOKENS.text_dim)));
@@ -199,9 +211,39 @@ fn grid(app: &mut ErpApp, ui: &mut Ui, page: &PageDef, table: &TableDef, rows: &
     let chosen = app.columns.get(&page.id).cloned().unwrap_or_else(|| page.columns.clone());
     let cols: Vec<&erpcraft_engine::meta::FieldDef> = chosen.iter().filter_map(|c| table.field(c)).collect();
     let lcy = app.lcy_symbol();
-    let mut open: Option<Key> = None;
+    let mut open: Option<(Key, bool)> = None;
     let mut commit: Option<(Key, String, serde_json::Value)> = None;
+    let mut row_act: Option<(Key, RowAct)> = None;
     let lookups = crate::card::lookups(app, table, cols.iter().map(|f| f.name.as_str()));
+
+    // Arrow keys move the current row when nothing else takes the keyboard.
+    let current = state.selected.as_ref().and_then(|k| rows.iter().position(|r| r.key(table) == *k));
+    let mut scroll_to = None;
+    if ui.is_enabled() && !ui.ctx().egui_wants_keyboard_input() {
+        let (down, up) = ui.input(|i| (i.key_pressed(egui::Key::ArrowDown), i.key_pressed(egui::Key::ArrowUp)));
+        let next = match (current, down, up) {
+            (Some(i), true, _) => Some((i + 1).min(rows.len() - 1)),
+            (Some(i), _, true) => Some(i.saturating_sub(1)),
+            (None, true, _) => Some(0),
+            _ => None,
+        };
+        if let Some(n) = next
+            && let Some(r) = rows.get(n)
+        {
+            state.selected = Some(r.key(table));
+            scroll_to = Some(n);
+        }
+    }
+    // The key column shows BC's ↑ while the list is in its key order.
+    let key_col = table.primary_key.last().cloned().unwrap_or_default();
+    let filter_value = state.selected.as_ref().and_then(|k| rows.iter().find(|r| r.key(table) == *k)).cloned();
+
+    // Row lines are drawn after the table, one across its full width (BC draws a line between rows,
+    // not under each cell).
+    let mut row_tops: Vec<f32> = Vec::new();
+    let mut span = (f32::MAX, f32::MIN);
+    let mut body_clip = egui::Rect::NOTHING;
+    ui.spacing_mut().item_spacing.y = 0.0;
     let mut builder = TableBuilder::new(ui)
         .id_salt(("list", &page.id))
         .striped(false)
@@ -209,88 +251,111 @@ fn grid(app: &mut ErpApp, ui: &mut Ui, page: &PageDef, table: &TableDef, rows: &
         .sense(egui::Sense::click())
         .auto_shrink([true, false])
         .cell_layout(Layout::left_to_right(Align::Center));
-    for f in &cols {
+    if let Some(n) = scroll_to {
+        builder = builder.scroll_to_row(n, None);
+    }
+    for (i, f) in cols.iter().enumerate() {
         let w = match f.ty {
-            erpcraft_engine::meta::FieldType::Decimal => 120.0,
-            erpcraft_engine::meta::FieldType::Text(n) if n > 50 => 200.0,
-            erpcraft_engine::meta::FieldType::Text(_) => 120.0,
-            erpcraft_engine::meta::FieldType::Boolean | erpcraft_engine::meta::FieldType::Option(_) => 80.0,
-            erpcraft_engine::meta::FieldType::Date => 95.0,
-            _ => 100.0,
+            FieldType::Decimal => 110.0,
+            FieldType::Text(n) if n > 50 => 210.0,
+            FieldType::Text(_) => 120.0,
+            FieldType::Boolean | FieldType::Option(_) => 90.0,
+            FieldType::Date => 95.0,
+            _ => 90.0,
         };
-        builder = builder.column(Column::initial(w).at_least(50.0).clip(true));
+        builder = builder.column(Column::initial(w).at_least(40.0).clip(true));
+        if i == 0 {
+            builder = builder.column(Column::exact(30.0));
+        }
     }
     builder
-        .header(28.0, |mut h| {
-            for f in &cols {
-                h.col(|ui| {
-                    let layout = if f.ty.is_numeric() { Layout::right_to_left(Align::Center) } else { Layout::left_to_right(Align::Center) };
-                    let arrow = match &state.sort {
-                        Some((s, desc)) if *s == f.name => if *desc { " ▼" } else { " ▲" },
-                        _ => "",
-                    };
-                    let r = ui.with_layout(layout, |ui| {
-                        ui.add(egui::Label::new(RichText::new(format!("{}{arrow}", widgets::lcy_caption(&f.caption, &lcy))).size(theme::SMALL).color(TOKENS.text_dim).strong()).sense(egui::Sense::click()))
-                    });
-                    let r = r.inner.on_hover_text("Sort by this column");
-                    if r.clicked() {
-                        state.sort = match &state.sort {
-                            Some((s, false)) if *s == f.name => Some((f.name.clone(), true)),
-                            Some((s, true)) if *s == f.name => None,
-                            _ => Some((f.name.clone(), false)),
-                        };
-                    }
-                });
+        .header(58.0, |mut h| {
+            for (i, f) in cols.iter().enumerate() {
+                h.col(|ui| header_cell(ui, f, &lcy, &key_col, state, filter_value.as_ref()));
+                if i == 0 {
+                    h.col(|_| {});
+                }
             }
         })
         .body(|body| {
-            body.rows(30.0, rows.len(), |mut row| {
+            body.rows(34.0, rows.len(), |mut row| {
                 let Some(r) = rows.get(row.index()) else { return };
                 let key = r.key(table);
-                row.set_selected(state.selected.as_ref() == Some(&key));
+                let selected = state.selected.as_ref() == Some(&key);
+                row.set_selected(selected);
                 for (i, f) in cols.iter().enumerate() {
-                    row.col(|ui| {
+                    let (_, cell_resp) = row.col(|ui| {
                         let cell = ui.max_rect();
-                        ui.painter().hline(egui::Rangef::new(cell.left() - 4.0, cell.right() + 4.0), cell.bottom(), egui::Stroke::new(1.0, TOKENS.divider));
+                        span.0 = span.0.min(cell.left());
+                        span.1 = span.1.max(cell.right());
+                        body_clip = body_clip.union(ui.clip_rect());
+                        if i == 0 {
+                            row_tops.push(cell.top());
+                        }
+                        if selected && state.cell == Some(i) {
+                            ui.painter().rect_stroke(cell.shrink2(vec2(0.5, 2.0)), 0.0, egui::Stroke::new(1.0, TOKENS.grid_text), egui::StrokeKind::Inside);
+                        }
                         let v = r.get(&f.name);
                         let editable = inline_edit && f.editable && !f.is_flow() && !table.primary_key.contains(&f.name);
                         if editable {
                             let id = format!("cell|{}|{}|{}", table.name, key.display(), f.name);
-                            let lk = lookups.get(&f.name);
-                            if let Some(val) = widgets::field_editor(&mut app.bufs, ui, &id, f, v, true, lk, ui.available_width() - 4.0) {
+                            if let Some(val) = widgets::field_editor(&mut app.bufs, ui, &id, f, v, true, lookups.get(&f.name), ui.available_width() - 4.0) {
                                 commit = Some((key.clone(), f.name.clone(), val));
                             }
                             return;
                         }
-                        let text = widgets::display(v, &f.ty);
-                        if i == 0 && page.card_page.is_some() {
-                            if widgets::strong_link(ui, &text).clicked() {
-                                open = Some(key.clone());
-                            }
-                        } else if f.ty.is_numeric() {
-                            ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
-                                let t = RichText::new(text);
-                                ui.label(if f.is_flow() { t.color(TOKENS.accent) } else { t });
-                            });
-                        } else {
-                            ui.label(text);
+                        if grid_value(ui, f, v, i == 0 && page.card_page.is_some(), selected) {
+                            open = Some((key.clone(), false));
                         }
                     });
+                    if cell_resp.clicked() {
+                        state.cell = Some(i);
+                    }
+                    if i == 0 {
+                        row.col(|ui| {
+                            let cell = ui.max_rect();
+                            span.1 = span.1.max(cell.right());
+                            let hovered = ui.ctx().pointer_hover_pos().is_some_and(|p| p.y >= cell.top() && p.y < cell.bottom() && ui.clip_rect().contains(p));
+                            if let Some(act) = row_menu(ui, page, selected || hovered) {
+                                row_act = Some((key.clone(), act));
+                            }
+                        });
+                    }
                 }
                 let resp = row.response();
                 if resp.clicked() {
                     state.selected = Some(key.clone());
                 }
                 if resp.double_clicked() && page.card_page.is_some() {
-                    open = Some(key.clone());
+                    open = Some((key.clone(), false));
                 }
             });
         });
-    let _ = vec2(0.0, 0.0);
+    if span.0 < span.1 {
+        let painter = ui.painter().with_clip_rect(body_clip);
+        for y in row_tops.iter().copied().chain(std::iter::once(row_tops.last().copied().unwrap_or(0.0) + 34.0)) {
+            painter.hline(egui::Rangef::new(span.0, span.1), y, egui::Stroke::new(1.0, TOKENS.grid_line));
+        }
+    }
     if let Some((key, field, value)) = commit {
         app.run("record.validate", json!({"table": table.name, "key": key.to_json(), "field": field, "value": value}));
     }
-    if let Some(k) = open {
+    if let Some((key, act)) = row_act {
+        state.selected = Some(key.clone());
+        match act {
+            RowAct::Action(a) => app.run_action(&a, Some((table.name.as_str(), &key))),
+            RowAct::View => open = Some((key, false)),
+            RowAct::Edit => open = Some((key, true)),
+            RowAct::Delete => {
+                app.dialog = Some(Dialog::Confirm {
+                    text: format!("Delete {} {}?", table.caption, key.display()),
+                    command: "record.delete".into(),
+                    params: json!({"table": table.name, "key": key.to_json()}),
+                });
+            }
+        }
+    }
+    if let Some((k, edit)) = open {
         state.selected = Some(k.clone());
         let target = app
             .session
@@ -300,8 +365,191 @@ fn grid(app: &mut ErpApp, ui: &mut Ui, page: &PageDef, table: &TableDef, rows: &
         if let Some(t) = target {
             let list = state.clone();
             app.open_card_from_list(&t, k, &list);
+            if edit && let Some(View::Card(c)) = app.stack.last_mut() {
+                c.editing = true;
+            }
         }
     }
+}
+
+/// One header cell: the caption (wrapping up to three lines, at the bottom), BC's sort arrow, a
+/// grey background and ⌄ on hover, and a menu on click.
+fn header_cell(ui: &mut Ui, f: &erpcraft_engine::meta::FieldDef, lcy: &str, key_col: &str, state: &mut ListState, row: Option<&Record>) {
+    let rect = ui.max_rect();
+    let id = ui.scope_id().with(("header", &f.name));
+    let hovered = ui.rect_contains_pointer(rect);
+    if hovered {
+        ui.painter().rect_filled(rect, 0.0, TOKENS.header_hover);
+    }
+    let arrow = match &state.sort {
+        Some((s, desc)) if *s == f.name => if *desc { " ↓" } else { " ↑" },
+        None if f.name == key_col => " ↑",
+        _ => "",
+    };
+    let caption = widgets::lcy_caption(&f.caption, lcy);
+    let text = format!("{caption}{arrow}{}", if hovered { "  ⌄" } else { "" });
+    let layout = if f.ty.is_numeric() { Layout::bottom_up(Align::Max) } else { Layout::bottom_up(Align::Min) };
+    ui.with_layout(layout, |ui| {
+        ui.add_space(9.0);
+        ui.add(egui::Label::new(RichText::new(text).size(theme::SMALL).color(TOKENS.grid_header)).wrap());
+    });
+    let resp = ui.interact(rect, id, egui::Sense::click());
+    if hovered {
+        ui.ctx().set_cursor_icon(egui::CursorIcon::PointingHand);
+    }
+    let whats_this = id.with("whats_this");
+    if resp.clicked() {
+        ui.ctx().data_mut(|d| d.insert_temp(whats_this, false));
+    }
+    egui::Popup::from_toggle_button_response(&resp)
+        .close_behavior(egui::PopupCloseBehavior::CloseOnClickOutside)
+        .width(220.0)
+        .layout(Layout::top_down_justified(Align::LEFT))
+        .show(|ui| {
+            menu_style(ui);
+            if ui.ctx().data(|d| d.get_temp::<bool>(whats_this)).unwrap_or(false) {
+                egui::Frame::new().inner_margin(egui::Margin::symmetric(12, 8)).show(ui, |ui| {
+                    ui.set_max_width(320.0);
+                    ui.label(RichText::new(&caption).font(theme::bold(theme::BODY)).color(TOKENS.text));
+                    ui.add_space(6.0);
+                    let tip = if f.tooltip.is_empty() { "No description is available for this field." } else { f.tooltip.as_str() };
+                    ui.label(RichText::new(tip).color(TOKENS.text));
+                });
+                return;
+            }
+            let filtered = state.filters.iter().any(|(n, _)| *n == f.name);
+            if ui.button("↑   Ascending").clicked() {
+                state.sort = Some((f.name.clone(), false));
+                ui.close();
+            }
+            if ui.button("↓   Descending").clicked() {
+                state.sort = Some((f.name.clone(), true));
+                ui.close();
+            }
+            if ui.button("⏷   Filter...").clicked() {
+                if !filtered {
+                    state.filters.push((f.name.clone(), String::new()));
+                }
+                state.filter_pane = true;
+                ui.close();
+            }
+            if ui.add_enabled(row.is_some(), egui::Button::new("⏷   Filter to this value")).clicked()
+                && let Some(r) = row
+            {
+                let v = r.get(&f.name).to_string();
+                let expr = if v.is_empty() { "''".to_string() } else { v };
+                state.filters.retain(|(n, _)| *n != f.name);
+                state.filters.push((f.name.clone(), expr));
+                state.filter_pane = true;
+                ui.close();
+            }
+            if ui.add_enabled(filtered, egui::Button::new("✕   Clear filter")).clicked() {
+                state.filters.retain(|(n, _)| *n != f.name);
+                ui.close();
+            }
+            if ui.button("?   What's this?").clicked() {
+                ui.ctx().data_mut(|d| d.insert_temp(whats_this, true));
+            }
+        });
+}
+
+/// BC's context menus: full-width, flat items that highlight on hover.
+fn menu_style(ui: &mut Ui) {
+    let s = ui.style_mut();
+    s.spacing.button_padding = vec2(10.0, 7.0);
+    s.spacing.item_spacing.y = 0.0;
+    s.visuals.widgets.inactive.weak_bg_fill = egui::Color32::TRANSPARENT;
+    s.visuals.widgets.inactive.bg_stroke = egui::Stroke::NONE;
+    s.visuals.widgets.hovered.weak_bg_fill = TOKENS.header_hover;
+    s.visuals.widgets.hovered.bg_stroke = egui::Stroke::NONE;
+    s.visuals.widgets.active.weak_bg_fill = TOKENS.border;
+}
+
+/// One cell's value. Returns true when the key link was clicked.
+fn grid_value(ui: &mut Ui, f: &erpcraft_engine::meta::FieldDef, v: &erpcraft_engine::meta::Value, key_link: bool, selected: bool) -> bool {
+    use erpcraft_engine::meta::FieldType;
+    let link = if selected { TOKENS.link_selected } else { TOKENS.link };
+    let text = widgets::display_field(v, f);
+    let body = |t: &str| RichText::new(t).size(14.0);
+    if key_link {
+        let mut t = body(&text).color(link);
+        if selected {
+            t = t.underline();
+        }
+        let r = ui.add(egui::Label::new(t).sense(egui::Sense::click()));
+        if r.hovered() {
+            ui.ctx().set_cursor_icon(egui::CursorIcon::PointingHand);
+        }
+        return r.clicked();
+    }
+    match &f.ty {
+        // A stored Boolean is a read-only check box; a calculated one reads Yes / No as a link.
+        FieldType::Boolean if !f.is_flow() => {
+            let (rect, _) = ui.allocate_exact_size(vec2(14.0, 14.0), egui::Sense::hover());
+            ui.painter().rect(rect, 1.0, egui::Color32::from_rgb(0xEB, 0xED, 0xEF), egui::Stroke::new(1.0, TOKENS.grid_line), egui::StrokeKind::Inside);
+            if v.as_bool() {
+                let p = |x: f32, y: f32| egui::pos2(rect.left() + x * rect.width(), rect.top() + y * rect.height());
+                ui.painter().line(vec![p(0.22, 0.52), p(0.42, 0.72), p(0.78, 0.3)], egui::Stroke::new(1.5, TOKENS.text_dim));
+            }
+        }
+        _ if f.ty.is_numeric() => {
+            ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
+                ui.add_space(14.0);
+                let t = body(&text);
+                ui.label(if f.is_flow() { t.color(link) } else { t.color(TOKENS.grid_text) });
+            });
+        }
+        _ if f.is_flow() => {
+            ui.label(body(&text).color(link));
+        }
+        _ => {
+            let mut t = body(&text).color(TOKENS.grid_text);
+            if selected && f.relation.is_some() && !text.is_empty() {
+                t = t.underline();
+            }
+            ui.label(t);
+        }
+    }
+    false
+}
+
+/// The ⋮ of a row (shown on hover and on the current row): the page's actions by category, then
+/// View, Edit and Delete.
+fn row_menu(ui: &mut Ui, page: &PageDef, show: bool) -> Option<RowAct> {
+    let resp = ui.add_visible(show, egui::Button::new(RichText::new("⋮").size(16.0).color(TOKENS.grid_text)).frame(false));
+    let mut out = None;
+    egui::Popup::from_toggle_button_response(&resp)
+        .close_behavior(egui::PopupCloseBehavior::CloseOnClickOutside)
+        .width(240.0)
+        .layout(Layout::top_down_justified(Align::LEFT))
+        .show(|ui| {
+            menu_style(ui);
+            for tab in crate::card::action_tab_list(page).into_iter().filter(|t| t.caption != "More options") {
+                ui.label(RichText::new(&tab.caption).font(theme::bold(theme::SMALL)).color(TOKENS.text));
+                for a in tab.actions {
+                    if ui.button(format!("{}   {}", widgets::glyph(&a.icon), a.caption.replace('&', ""))).clicked() {
+                        out = Some(RowAct::Action(a.clone()));
+                        ui.close();
+                    }
+                }
+            }
+            ui.separator();
+            if page.card_page.is_some() {
+                if ui.button("👁   View").clicked() {
+                    out = Some(RowAct::View);
+                    ui.close();
+                }
+                if ui.button("✎   Edit").clicked() {
+                    out = Some(RowAct::Edit);
+                    ui.close();
+                }
+            }
+            if (page.editable || page.card_page.is_some()) && ui.button("🗑   Delete").clicked() {
+                out = Some(RowAct::Delete);
+                ui.close();
+            }
+        });
+    out
 }
 
 /// BC's filter pane: "Filter list by" with one expression per field (`10000..20000`, `<>0`,

@@ -86,6 +86,9 @@ fn field_expr(f: &AlTableField, meta: &Metadata, enums: &BTreeMap<String, Vec<St
     if read_only {
         e.push_str(".read_only()");
     }
+    if f.auto_format > 0 && lower == "decimal" {
+        let _ = write!(e, ".auto_format({})", f.auto_format);
+    }
     if !f.tooltip.is_empty() {
         let _ = write!(e, ".tooltip({:?})", f.tooltip);
     }
@@ -126,8 +129,12 @@ pub fn generate(meta: &Metadata, src: &Sources) -> String {
         let labels: Vec<String> = al
             .fields
             .iter()
-            .filter_map(|a| t.field(&a.name).filter(|h| h.caption != a.caption || (h.tooltip.is_empty() && !a.tooltip.is_empty())).map(|h| (h, a)))
-            .map(|(h, a)| format!("            ({:?}, {:?}, {:?}),", h.name, a.caption, a.tooltip))
+            .filter_map(|a| {
+                t.field(&a.name)
+                    .filter(|h| h.caption != a.caption || (h.tooltip.is_empty() && !a.tooltip.is_empty()) || h.auto_format != a.auto_format)
+                    .map(|h| (h, a))
+            })
+            .map(|(h, a)| format!("            ({:?}, {:?}, {:?}, {}),", h.name, a.caption, a.tooltip, a.auto_format))
             .collect();
         if !labels.is_empty() {
             let _ = writeln!(out, "    relabel(\n        m,\n        {:?},\n        &[\n{}\n        ],\n    );", t.name, labels.join("\n"));

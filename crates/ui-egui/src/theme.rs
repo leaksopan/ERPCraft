@@ -25,6 +25,13 @@ pub struct Tokens {
     pub input_line: Color32,
     pub scrim: Color32,
     pub table_header: Color32,
+    /// BC's list grid: row lines, header captions, cell text, links, header hover.
+    pub grid_line: Color32,
+    pub grid_header: Color32,
+    pub grid_text: Color32,
+    pub link: Color32,
+    pub link_selected: Color32,
+    pub header_hover: Color32,
 }
 
 pub const TOKENS: Tokens = Tokens {
@@ -40,7 +47,7 @@ pub const TOKENS: Tokens = Tokens {
     accent_hover: Color32::from_rgb(0x00, 0x5B, 0x60),
     accent_soft: Color32::from_rgb(0xE0, 0xF2, 0xF3),
     row_hover: Color32::from_rgb(0xF3, 0xF2, 0xF1),
-    row_selected: Color32::from_rgb(0xC4, 0xEC, 0xF0),
+    row_selected: Color32::from_rgb(0xB2, 0xE9, 0xED),
     cue: Color32::from_rgb(0x00, 0x8C, 0x93),
     cue_text: Color32::from_rgb(0xFF, 0xFF, 0xFF),
     danger: Color32::from_rgb(0xA4, 0x26, 0x2C),
@@ -48,6 +55,12 @@ pub const TOKENS: Tokens = Tokens {
     input_line: Color32::from_rgb(0x8A, 0x88, 0x86),
     scrim: Color32::from_rgb(0xC8, 0xC6, 0xC4),
     table_header: Color32::from_rgb(0xFA, 0xF9, 0xF8),
+    grid_line: Color32::from_rgb(0xD3, 0xD6, 0xDA),
+    grid_header: Color32::from_rgb(0x50, 0x5C, 0x6D),
+    grid_text: Color32::from_rgb(0x21, 0x21, 0x21),
+    link: Color32::from_rgb(0x00, 0x7E, 0x87),
+    link_selected: Color32::from_rgb(0x00, 0x68, 0x6F),
+    header_hover: Color32::from_rgb(0xF3, 0xF2, 0xF1),
 };
 
 pub const BODY: f32 = 13.5;

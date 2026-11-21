@@ -50,12 +50,14 @@ mod gen_support {
         }
     }
 
-    /// Hand-written fields get BC's caption and, where they have none, its tooltip.
-    pub fn relabel(m: &mut Metadata, table: &str, labels: &[(&str, &str, &str)]) {
+    /// Hand-written fields get BC's caption, its number format and, where they have none, its
+    /// tooltip.
+    pub fn relabel(m: &mut Metadata, table: &str, labels: &[(&str, &str, &str, u8)]) {
         let Some(t) = m.tables.get_mut(table) else { return };
-        for (name, caption, tooltip) in labels {
+        for (name, caption, tooltip, auto_format) in labels {
             if let Some(f) = t.fields.iter_mut().find(|f| f.name == *name) {
                 f.caption = (*caption).to_string();
+                f.auto_format = *auto_format;
                 if f.tooltip.is_empty() {
                     f.tooltip = (*tooltip).to_string();
                 }

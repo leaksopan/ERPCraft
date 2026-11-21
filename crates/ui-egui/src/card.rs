@@ -418,7 +418,7 @@ fn fasttab(app: &mut ErpApp, ui: &mut Ui, page: &PageDef, table: &TableDef, rec:
             let summary: Vec<String> = g
                 .promoted
                 .iter()
-                .filter_map(|f| table.field(f).map(|fd| widgets::display(rec.get(&fd.name), &fd.ty)))
+                .filter_map(|f| table.field(f).map(|fd| widgets::display_field(rec.get(&fd.name), fd)))
                 .filter(|s| !s.is_empty())
                 .collect();
             ui.add_space(8.0);
@@ -685,7 +685,7 @@ pub fn factboxes(app: &ErpApp, ui: &mut Ui, page: &PageDef, rec: Option<&Record>
                 .fields
                 .iter()
                 .filter_map(|f| t.field(f))
-                .map(|f| (widgets::lcy_caption(&f.caption, &lcy), widgets::display(r.get(&f.name), &f.ty), f.ty.is_numeric()))
+                .map(|f| (widgets::lcy_caption(&f.caption, &lcy), widgets::display_field(r.get(&f.name), f), f.ty.is_numeric()))
                 .collect(),
             _ => vec![("".into(), "(no record selected)".into(), false)],
         };

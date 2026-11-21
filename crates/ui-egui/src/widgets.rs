@@ -115,6 +115,19 @@ pub fn display(v: &Value, ty: &FieldType) -> String {
     }
 }
 
+/// A field's value as BC shows it: decimals by `AutoFormatType` (amounts with 2 decimals, unit
+/// amounts with 2 to 5, others with only the decimals they have).
+pub fn display_field(v: &Value, f: &FieldDef) -> String {
+    match (v, &f.ty) {
+        (Value::Dec(d), _) => match f.auto_format {
+            1 => erpcraft_engine::meta::format_decimal(d.round_dp(2), 2),
+            2 => erpcraft_engine::meta::format_decimal(*d, 2),
+            _ => erpcraft_engine::meta::format_decimal(*d, 0),
+        },
+        _ => display(v, &f.ty),
+    }
+}
+
 /// Right-aligned for numbers.
 pub fn is_numeric(ty: &FieldType) -> bool {
     ty.is_numeric()
@@ -137,7 +150,7 @@ pub fn field_editor(
 ) -> Option<Json> {
     // Narrow grid cells can report no room at all; egui panics on negative widths.
     let width = if width.is_finite() { width.max(24.0) } else { 120.0 };
-    let shown = display(v, &f.ty);
+    let shown = display_field(v, f);
     if !editable || f.is_flow() {
         let text = RichText::new(if shown.is_empty() && f.ty.is_numeric() { "0.00".to_string() } else { shown });
         let text = if f.is_flow() { text.color(TOKENS.accent) } else { text.color(TOKENS.text) };
@@ -227,7 +240,7 @@ pub fn field_editor(
 /// `Input readOnly`); clicking it switches the card to edit mode.
 pub fn view_value(ui: &mut Ui, f: &FieldDef, v: &Value, width: f32) -> egui::Response {
     let width = if width.is_finite() { width.max(24.0) } else { 120.0 };
-    let text = display(v, &f.ty);
+    let text = display_field(v, f);
     let inner = egui::Frame::new()
         .fill(TOKENS.table_header)
         .stroke(Stroke::new(1.0, TOKENS.divider))

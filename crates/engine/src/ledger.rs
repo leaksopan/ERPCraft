@@ -413,6 +413,7 @@ pub fn post_bank_entry(
     e.set("Bal. Account Type", Value::text(bal_type));
     e.set("Bal. Account No.", Value::text(bal_no));
     e.set("Open", Value::Bool(true));
+    e.set("Statement Status", Value::text("Open"));
     e.set("Transaction No.", Value::Int(txn.no));
     e.set("Source Code", Value::text(&txn.source_code));
     e.set("User ID", Value::text(ctx.user.to_uppercase()));

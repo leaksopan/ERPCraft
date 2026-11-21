@@ -79,6 +79,42 @@ pub fn extend(m: &mut Metadata) {
     );
     relabel(
         m,
+        "Bank Acc. Reconciliation",
+        &[
+            ("Bank Account No.", "Bank Account No.", "Specifies the number of the bank account that you want to reconcile with the bank's statement.", 0),
+            ("Statement No.", "Statement No.", "Specifies the number of the bank account statement.", 0),
+            ("Statement Ending Balance", "Statement Ending Balance", "Specifies the ending balance shown on the bank's statement that you want to reconcile with the bank account.", 2),
+            ("Statement Date", "Statement Date", "Specifies the date on the bank account statement.", 0),
+            ("Balance Last Statement", "Balance Last Statement", "Specifies the ending balance shown on the last bank statement, which was used in the last posted bank reconciliation for this bank account.", 1),
+            ("Total Transaction Amount", "Total Transaction Amount", "Specifies the sum of values in the Statement Amount field on all the lines in the Bank Acc. Reconciliation and Payment Reconciliation Journal windows.", 1),
+            ("Total Difference", "Total Difference", "Specifies the total amount that exists on the bank account per the last time it was reconciled.", 1),
+        ],
+    );
+    fields(
+        m,
+        "Bank Acc. Reconciliation",
+        vec![
+            F::text("Bank Account Name", 100).calc(CalcFormula::new(CalcFunc::Lookup, "Bank Account", "Name", &[("No.", "Bank Account No.")], &[])).tooltip("Specifies the name of the bank account that you want to reconcile."),
+            F::boolean("Allow Duplicated Transactions").caption("Import Duplicated Transactions").tooltip("Specifies whether to allow bank account reconciliation lines to have the same transaction ID."),
+        ],
+    );
+    relabel(
+        m,
+        "Bank Acc. Reconciliation Line",
+        &[
+            ("Document No.", "Document No.", "Specifies a number of your choice that will appear on the reconciliation line.", 0),
+            ("Transaction Date", "Transaction Date", "Specifies the posting date of the bank account or check ledger entry on the reconciliation line when the Suggest Lines function is used.", 0),
+            ("Description", "Description", "Specifies a description for the transaction on the reconciliation line.", 0),
+            ("Statement Amount", "Statement Amount", "Specifies the amount that was paid into the bank account and then imported as a bank statement line represented by the journal line.", 1),
+            ("Difference", "Difference", "Specifies the difference between the amount in the Statement Amount field and the amount in the Applied Amount field.", 1),
+            ("Applied Amount", "Applied Amount", "Specifies the amount of the transaction on the reconciliation line that has been applied to a bank account or check ledger entry.", 1),
+            ("Applied Entries", "Applied Entries", "Specifies whether the transaction on the bank's statement has been applied to one or more bank account or check ledger entries.", 0),
+            ("Value Date", "Value Date", "Specifies the value date of the transaction on the bank reconciliation line.", 0),
+            ("Check No.", "Check No.", "Specifies the check number for the transaction on the reconciliation line.", 0),
+        ],
+    );
+    relabel(
+        m,
         "Bank Account",
         &[
             ("No.", "No.", "Specifies the number of the involved entry or record, according to the specified number series.", 0),
@@ -150,6 +186,9 @@ pub fn extend(m: &mut Metadata) {
             ("Open", "Open", "Specifies whether the amount on the bank account entry has been fully applied to, or if there is a remaining amount that must be applied to.", 0),
             ("Bal. Account Type", "Bal. Account Type", "Specifies the type of account that a balancing entry is posted to, such as BANK for a cash account.", 0),
             ("Bal. Account No.", "Bal. Account No.", "Specifies the number of the general ledger, customer, vendor, or bank account that the balancing entry is posted to, such as a cash account for cash purchases.", 0),
+            ("Statement Status", "Statement Status", "Specifies the statement status of the bank account ledger entry.", 0),
+            ("Statement No.", "Statement No.", "Specifies the bank account statement that the ledger entry has been applied to, if the Statement Status is Bank Account Ledger Applied.", 0),
+            ("Statement Line No.", "Statement Line No.", "Specifies the number of the statement line that has been applied to by this ledger entry line.", 0),
             ("Reversed", "Reversed", "Specifies if the entry has been part of a reverse transaction.", 0),
             ("Reversed by Entry No.", "Reversed by Entry No.", "Specifies the number of the correcting entry that replaced the original entry in the reverse transaction.", 0),
             ("Reversed Entry No.", "Reversed Entry No.", "Specifies the number of the original entry that was undone by the reverse transaction.", 0),
@@ -181,6 +220,40 @@ pub fn extend(m: &mut Metadata) {
         &[
             ("Code", "Code", "Specifies the code for the G/L account that bank transactions, such as bank payment reconciliations, are posted to when the bank account card contains this code.", 0),
             ("G/L Account No.", "G/L Account No.", "Specifies the general ledger account to which bank account entries in this posting group are posted.", 0),
+        ],
+    );
+    relabel(
+        m,
+        "Bank Account Statement",
+        &[
+            ("Bank Account No.", "Bank Account No.", "Specifies the number of the bank account that has been reconciled with this Bank Account Statement.", 0),
+            ("Statement No.", "Statement No.", "Specifies the number of the bank's statement that has been reconciled with the bank account.", 0),
+            ("Statement Ending Balance", "Statement Ending Balance", "Specifies the ending balance on the bank's statement that has been reconciled with the bank account.", 1),
+            ("Statement Date", "Statement Date", "Specifies the date on the bank's statement that has been reconciled with the bank account.", 0),
+            ("Balance Last Statement", "Balance Last Statement", "Specifies the ending balance on the bank account statement from the last posted bank account reconciliation.", 1),
+            ("Bank Account Name", "Bank Account Name", "Specifies the name of the bank account that has been reconciled.", 0),
+        ],
+    );
+    relabel(
+        m,
+        "Bank Account Statement Line",
+        &[
+            ("Document No.", "Document No.", "Specifies the document number of this line.", 0),
+            ("Transaction Date", "Transaction Date", "Specifies the posting date of the bank account or check ledger entry that the transaction on this line has been applied to.", 0),
+            ("Description", "Description", "Specifies a description for the transaction on this line.", 0),
+            ("Statement Amount", "Statement Amount", "Specifies the amount of the transaction on the bank's statement on this line.", 1),
+            ("Difference", "Difference", "Specifies the difference between the amount in the Statement Amount field and Applied Amount field on this line.", 1),
+            ("Applied Amount", "Applied Amount", "Specifies the amount on the bank account or check ledger entry that the transaction on this line has been applied to.", 1),
+            ("Applied Entries", "Applied Entries", "Specifies whether the transaction on this line has been applied to one or more ledger entries.", 0),
+            ("Value Date", "Value Date", "Specifies the value date of the transaction on this line.", 0),
+            ("Check No.", "Check No.", "Specifies the check number for the transaction on this line.", 0),
+        ],
+    );
+    fields(
+        m,
+        "Bank Account Statement Line",
+        vec![
+            F::option("Type", &["Bank Account Ledger Entry", "Check Ledger Entry", "Difference"]).tooltip("Specifies the type of ledger entry, or a difference that has been reconciled with the transaction on the bank's statement on this line."),
         ],
     );
     relabel(
@@ -3080,6 +3153,19 @@ pub fn extend(m: &mut Metadata) {
     columns(m, "attached-documents", &["File Name", "File Extension", "File Type", "User", "Attached Date", "Document Flow Purchase", "Document Flow Sales", "Document Flow Production"]);
     layout(
         m,
+        "bank-acc-reconciliation",
+        &[
+            Tab {
+                caption: "General",
+                fields: &["Bank Account No.", "Statement No.", "Statement Date", "Balance Last Statement", "Statement Ending Balance"],
+                ..Tab::default()
+            },
+        ],
+    );
+    columns(m, "bank-acc-reconciliation-lines", &["Transaction Date", "Description", "Statement Amount", "Applied Amount", "Difference"]);
+    columns(m, "bank-acc-reconciliation-list", &["Bank Account No.", "Bank Account Name", "Statement No.", "Statement Date", "Balance Last Statement", "Statement Ending Balance", "Allow Duplicated Transactions"]);
+    layout(
+        m,
         "bank-account-card",
         &[
             Tab {
@@ -3114,6 +3200,19 @@ pub fn extend(m: &mut Metadata) {
     );
     columns(m, "bank-account-ledger-entries", &["Posting Date", "Document Type", "Document No.", "Bank Account No.", "Description", "Global Dimension 1 Code", "Global Dimension 2 Code", "Amount", "Debit Amount", "Credit Amount", "Amount (LCY)", "Debit Amount (LCY)", "Credit Amount (LCY)", "Open", "Entry No.", "Shortcut Dimension 3 Code", "Shortcut Dimension 4 Code", "Shortcut Dimension 5 Code", "Shortcut Dimension 6 Code", "Shortcut Dimension 7 Code", "Shortcut Dimension 8 Code"]);
     columns(m, "bank-account-list", &["No.", "Name", "Phone No.", "Contact", "Balance", "Balance (LCY)"]);
+    layout(
+        m,
+        "bank-account-statement",
+        &[
+            Tab {
+                caption: "Control1",
+                fields: &["Bank Account No.", "Statement No.", "Statement Date", "Balance Last Statement", "Statement Ending Balance"],
+                ..Tab::default()
+            },
+        ],
+    );
+    columns(m, "bank-account-statement-lines", &["Transaction Date", "Type", "Description", "Statement Amount", "Applied Amount", "Difference"]);
+    columns(m, "bank-account-statement-list", &["Bank Account No.", "Bank Account Name", "Statement No.", "Statement Date", "Balance Last Statement", "Statement Ending Balance"]);
     columns(m, "bank-posting-groups", &["Code", "G/L Account No."]);
     columns(m, "cash-receipt-journal", &["Posting Date", "Document Type", "Document No.", "Account Type", "Account No.", "Description", "Posting Group", "Amount", "Amount (LCY)", "Debit Amount", "Credit Amount", "Bal. Account Type", "Bal. Account No.", "Selected Alloc. Account No.", "Applies-to Doc. Type", "Applies-to Doc. No.", "Correction", "Shortcut Dimension 1 Code", "Shortcut Dimension 2 Code"]);
     columns(m, "chart-of-accounts", &["No.", "Name", "Net Change", "Balance", "Income/Balance", "Account Category", "Account Type", "Totaling", "Gen. Posting Type", "Gen. Bus. Posting Group", "Gen. Prod. Posting Group", "Source Currency Posting", "Source Currency Code", "Cost Type No.", "Default Deferral Template Code"]);
@@ -4202,8 +4301,16 @@ pub fn extend(m: &mut Metadata) {
     columns(m, "workflows", &["Description", "Enabled"]);
     actions(
         m,
+        "bank-acc-reconciliation",
+        &[
+            Nav { caption: "&Bank Account Card", page: "bank-account-card", link: &[("No.", "Bank Account No.")], shortcut: "Shift+F7" },
+        ],
+    );
+    actions(
+        m,
         "bank-account-card",
         &[
+            Nav { caption: "St&atements", page: "bank-account-statement-list", link: &[("Bank Account No.", "No.")], shortcut: "" },
             Nav { caption: "Cash Receipt Journals", page: "cash-receipt-journal", link: &[], shortcut: "" },
             Nav { caption: "Payment Journals", page: "payment-journal", link: &[], shortcut: "" },
         ],
@@ -4214,6 +4321,14 @@ pub fn extend(m: &mut Metadata) {
         &[
             Nav { caption: "Co&mments", page: "comment-sheet", link: &[("No.", "No.")], shortcut: "" },
             Nav { caption: "Dimensions-Single", page: "default-dimensions", link: &[("No.", "No.")], shortcut: "Alt+D" },
+            Nav { caption: "St&atements", page: "bank-account-statement-list", link: &[("Bank Account No.", "No.")], shortcut: "" },
+        ],
+    );
+    actions(
+        m,
+        "bank-account-statement",
+        &[
+            Nav { caption: "&Card", page: "bank-account-card", link: &[("No.", "Bank Account No.")], shortcut: "Shift+F7" },
         ],
     );
     actions(
@@ -4602,6 +4717,7 @@ pub fn extend(m: &mut Metadata) {
             Nav { caption: "Pay Vendor", page: "vendor-ledger-entries", link: &[("Vendor No.", "No.")], shortcut: "" },
         ],
     );
+    mirror(m, "bank-acc-reconciliation-list", "bank-acc-reconciliation", &["P&ost"]);
     mirror(m, "posted-purchase-credit-memos", "posted-purchase-credit-memo", &["Attach as PDF"]);
     mirror(m, "posted-purchase-invoices", "posted-purchase-invoice", &["Attach as PDF"]);
     mirror(m, "posted-purchase-receipts", "posted-purchase-receipt", &["&Print"]);
@@ -4633,9 +4749,25 @@ pub fn extend(m: &mut Metadata) {
     );
     categories(
         m,
+        "bank-acc-reconciliation",
+        &[
+            ("Process", &["Suggest Lines", "P&ost"]),
+            ("Bank", &["&Bank Account Card"]),
+            ("Matching", &["Match Automatically", "Remove Match"]),
+        ],
+    );
+    categories(
+        m,
+        "bank-acc-reconciliation-list",
+        &[
+            ("Process", &["P&ost"]),
+        ],
+    );
+    categories(
+        m,
         "bank-account-card",
         &[
-            ("Bank Account", &["Dimensions", "Co&mments", "Ledger E&ntries"]),
+            ("Bank Account", &["Dimensions", "Co&mments", "St&atements", "Ledger E&ntries"]),
             ("Navigate", &["Cash Receipt Journals", "Payment Journals"]),
         ],
     );
@@ -5274,6 +5406,21 @@ pub fn extend(m: &mut Metadata) {
             ("Process", &["Pay Vendor"]),
             ("New Document", &["Purchase Invoice", "Purchase Order", "Purchase Credit Memo"]),
             ("Vendor", &["Ledger E&ntries", "Statistics", "Dimensions-&Multiple", "Dimensions-Single", "Co&mments", "Orders", "Quotes"]),
+        ],
+    );
+    calcs(
+        m,
+        "Bank Acc. Reconciliation",
+        vec![
+            ("Total Balance on Bank Account", CalcFormula::new(CalcFunc::Sum, "Bank Account Ledger Entry", "Amount", &[("Bank Account No.", "Bank Account No.")], &[])),
+        ],
+    );
+    drilldowns(
+        m,
+        "Bank Acc. Reconciliation",
+        &[
+            ("Total Balance on Bank Account", "bank-account-ledger-entries", &[("Bank Account No.", "Bank Account No.")], &[]),
+            ("Bank Account Name", "bank-account-list", &[("No.", "Bank Account No.")], &[]),
         ],
     );
     calcs(

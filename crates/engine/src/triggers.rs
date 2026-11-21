@@ -28,6 +28,9 @@ pub fn on_insert(ctx: &mut Ctx, t: &TableDef, r: &mut Record) -> Result<()> {
         crate::item_journal::on_insert(ctx, r)?;
         return crate::approvals::on_journal_line_insert(ctx, &t.name, r);
     }
+    if t.name == crate::schema::bank_rec::BANK_REC {
+        return crate::bank_rec::on_insert(ctx, r);
+    }
     if t.name == crate::schema::fiscal::GL_BUDGET_ENTRY {
         crate::fiscal::on_budget_insert(ctx, r);
         return Ok(());
@@ -186,6 +189,9 @@ pub fn on_delete(ctx: &mut Ctx, t: &TableDef, r: &Record) -> Result<()> {
 /// Field `OnValidate`: runs after the new value is set; `old` is the previous value.
 pub fn on_validate(ctx: &mut Ctx, t: &TableDef, r: &mut Record, field: &str, old: &Value) -> Result<()> {
     crate::dimensions::on_validate(ctx, t, r, field)?;
+    if t.name == crate::schema::bank_rec::BANK_REC_LINE {
+        crate::bank_rec::on_line_validate(ctx, r, field);
+    }
     if t.name == crate::schema::approvals::APPROVAL_COMMENT && field == "Record ID to Approve" {
         crate::approvals::comment_record_table(ctx, r);
     }

@@ -69,6 +69,8 @@ pub fn register(m: &mut Metadata) {
                 vec![
                     L::new("Bank Accounts", "bank-account-list"),
                     L::new("Bank Account Ledger Entries", "bank-account-ledger-entries"),
+                    L::new("Bank Account Reconciliations", "bank-acc-reconciliation-list"),
+                    L::new("Bank Account Statements", "bank-account-statement-list"),
                     L::new("Payment Terms", "payment-terms"),
                 ],
             ),

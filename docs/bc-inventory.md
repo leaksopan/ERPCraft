@@ -13,7 +13,7 @@ orders this list into phases.
 | --- | ---: | ---: | ---: | ---: |
 | (root) | 0 | 44 | 0 | 1 |
 | Assembly | 0 | 31 | 0 | 9 |
-| Bank | 4 | 78 | 0 | 17 |
+| Bank | 10 | 78 | 0 | 17 |
 | CRM | 1 | 163 | 0 | 36 |
 | CashFlow | 0 | 22 | 0 | 3 |
 | CostAccounting | 0 | 30 | 0 | 21 |
@@ -38,7 +38,7 @@ orders this list into phases.
 | Utilities | 0 | 12 | 0 | 2 |
 | Warehouse | 0 | 144 | 0 | 35 |
 | eServices | 0 | 25 | 0 | 0 |
-| **Base Application** | **125** | **2638** | **16** | **659** |
+| **Base Application** | **131** | **2638** | **16** | **659** |
 
 ### (root)
 
@@ -170,7 +170,7 @@ Pages 0 / 31, reports 0 / 9.
 
 ### Bank
 
-Pages 4 / 78, reports 0 / 17.
+Pages 10 / 78, reports 0 / 17.
 
 <details><summary>Bank / BankAccount: pages 3 / 11, reports 0 / 0</summary>
 
@@ -246,11 +246,11 @@ Pages 4 / 78, reports 0 / 17.
 
 </details>
 
-<details><summary>Bank / Reconciliation: pages 0 / 27, reports 0 / 3</summary>
+<details><summary>Bank / Reconciliation: pages 3 / 27, reports 0 / 3</summary>
 
-- [ ] Page 379 Bank Acc. Reconciliation (ListPlus)
-- [ ] Page 380 Bank Acc. Reconciliation Lines (ListPart)
-- [ ] Page 388 Bank Acc. Reconciliation List (List)
+- [x] Page 379 Bank Acc. Reconciliation (ListPlus)
+- [x] Page 380 Bank Acc. Reconciliation Lines (ListPart)
+- [x] Page 388 Bank Acc. Reconciliation List (List)
 - [ ] Page 412 Bank Rec. Line Match Details (Card)
 - [ ] Page 417 Post Pmts and Rec. Bank Acc. (StandardDialog)
 - [ ] Page 496 Payment Rec. Related Entries (NavigatePage)
@@ -306,11 +306,11 @@ Pages 4 / 78, reports 0 / 17.
 
 </details>
 
-<details><summary>Bank / Statement: pages 0 / 6, reports 0 / 0</summary>
+<details><summary>Bank / Statement: pages 3 / 6, reports 0 / 0</summary>
 
-- [ ] Page 383 Bank Account Statement (ListPlus)
-- [ ] Page 384 Bank Account Statement Lines (ListPart)
-- [ ] Page 389 Bank Account Statement List (List)
+- [x] Page 383 Bank Account Statement (ListPlus)
+- [x] Page 384 Bank Account Statement Lines (ListPart)
+- [x] Page 389 Bank Account Statement List (List)
 - [ ] Page 1221 Bank Statement Line Details (List)
 - [ ] Page 1269 Auto. Bank Stmt. Import Setup (StandardDialog)
 - [ ] Page 1298 Bank Statement Filter (StandardDialog)

@@ -603,9 +603,14 @@ fn lines_part(app: &mut ErpApp, ui: &mut Ui, host: &PageDef, header: &Record, pa
         }
         v
     };
+    // Sales and purchase lines get BC's item helpers (a new line is an item, Select items).
+    let side_lines = matches!(lt.name.as_str(), "Sales Line" | "Purchase Line");
     let new_line = |app: &mut ErpApp, state: &mut CardState, cell: Option<usize>| {
         let mut values = link_values();
-        values.insert("Type".into(), json!("Item"));
+        // Document lines start as items, as in BC; other line tables have no Type.
+        if lt.field("Type").is_some() && side_lines {
+            values.insert("Type".into(), json!("Item"));
+        }
         match app.session.run("record.new", &json!({"table": lt.name, "values": values})) {
             Ok(r) => {
                 state.selected_line = Key::from_json(lt, r.get("key").unwrap_or(&Json::Null)).ok();
@@ -660,7 +665,7 @@ fn lines_part(app: &mut ErpApp, ui: &mut Ui, host: &PageDef, header: &Record, pa
                     app.error("Select a line to delete.");
                 }
             }
-            if widgets::action_button(ui, "▤", "Select items...").on_hover_text("Add two or more items from the full list of your inventory items.").clicked() {
+            if side_lines && widgets::action_button(ui, "▤", "Select items...").on_hover_text("Add two or more items from the full list of your inventory items.").clicked() {
                 let items: Vec<(String, String, bool)> = app.session.db().rows("Item").map(|r| (r.str("No.").to_string(), r.str("Description").to_string(), false)).collect();
                 let base = json!({"document_type": header.str("Document Type"), "no": header.str("No.")});
                 app.dialog = Some(Dialog::SelectItems { command: format!("{side_prefix}.document.select_items"), base, items });

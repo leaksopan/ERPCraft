@@ -37,6 +37,17 @@ pub fn register(m: &mut Metadata) {
         "Gen. Journal Line",
         vec![F::code("Currency Code", 10).relation("Currency"), F::decimal("Currency Factor").read_only(), F::decimal("Amount (LCY)").read_only().auto_format(1)],
     );
+    // Payment discounts: terms, documents, entries and the posting groups' accounts.
+    ensure(m, "Payment Terms", vec![F::code("Discount Date Calculation", 20), F::decimal("Discount %")]);
+    for header in ["Sales Header", "Purchase Header"] {
+        ensure(m, header, vec![F::decimal("Payment Discount %"), F::date("Pmt. Discount Date")]);
+    }
+    for t in [crate::schema::tables::CUST_LEDGER, crate::schema::tables::VEND_LEDGER] {
+        ensure(m, t, vec![F::date("Pmt. Discount Date"), F::decimal("Original Pmt. Disc. Possible").read_only().auto_format(1), F::decimal("Remaining Pmt. Disc. Possible").auto_format(1)]);
+    }
+    for g in ["Customer Posting Group", "Vendor Posting Group"] {
+        ensure(m, g, vec![F::code("Payment Disc. Debit Acc.", 20).relation("G/L Account"), F::code("Payment Disc. Credit Acc.", 20).relation("G/L Account")]);
+    }
     for t in [crate::schema::finance::DTLD_CUST_LEDGER, crate::schema::finance::DTLD_VEND_LEDGER] {
         ensure(m, t, vec![F::decimal("Debit Amount (LCY)"), F::decimal("Credit Amount (LCY)")]);
     }

@@ -87,7 +87,7 @@ The order follows impact for Auto Craft (a workshop and auto-parts business): mo
 - [ ] **Recurring journals**, allocations, allocation accounts, deferrals with Deferral Schedule
 - [ ] **Bank account reconciliation**, payment reconciliation journal, bank statement import, check printing (bank account reconciliation with Suggest Lines, Match Automatically, Post and bank account statements done; payment reconciliation journal, statement import, checks to do)
 - [x] **Reminders and finance charge memos**, customer statements (reminder terms and levels, Create / Suggest / Issue, finance charge terms with interest, Issue, Reminder/Fin. Charge Entries, Statement with aging)
-- [ ] Payment tolerance and discount, payment methods, payment terms with discount
+- [ ] Payment tolerance and discount, payment methods, payment terms with discount (payment terms with discount, discount on application and unapply done; payment tolerance, VAT adjustment of discounts to do)
 - [ ] Intercompany partners, IC inbox and outbox, consolidation
 - [ ] Every Finance and Bank report in the inventory
 

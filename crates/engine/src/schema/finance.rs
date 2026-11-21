@@ -26,7 +26,7 @@ pub const PURCH_RCPT_LINE: &str = "Purch. Rcpt. Line";
 
 pub const ACCOUNT_TYPES: &[&str] = &["G/L Account", "Customer", "Vendor", "Bank Account", "Fixed Asset"];
 pub const TEMPLATE_TYPES: &[&str] = &["General", "Sales", "Purchases", "Cash Receipts", "Payments", "Assets"];
-pub const DTLD_ENTRY_TYPES: &[&str] = &["", "Initial Entry", "Application", "Unrealized Loss", "Unrealized Gain", "Realized Loss", "Realized Gain"];
+pub const DTLD_ENTRY_TYPES: &[&str] = &["", "Initial Entry", "Application", "Unrealized Loss", "Unrealized Gain", "Realized Loss", "Realized Gain", "Payment Discount"];
 
 /// The standard journals: (template, type, page id, page object id, caption, number series).
 pub const JOURNALS: &[(&str, &str, &str, u32, &str, &str)] = &[

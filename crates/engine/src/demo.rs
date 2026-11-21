@@ -157,6 +157,7 @@ pub fn setup(ctx: &mut Ctx) -> Result<()> {
         ("40700", "Unrealized Exchange Rate Gains", "Posting", "Income Statement", "Income", ""),
         ("40800", "Reminder Fees", "Posting", "Income Statement", "Income", ""),
         ("40900", "Finance Charge Interest", "Posting", "Income Statement", "Income", ""),
+        ("40950", "Payment Discounts Received", "Posting", "Income Statement", "Income", ""),
         ("40999", "Total Revenue", "End-Total", "Income Statement", "Income", "40100..40999"),
         ("50100", "Cost of Goods Sold", "Begin-Total", "Income Statement", "Cost of Goods Sold", ""),
         ("50200", "COGS - Spare Parts", "Posting", "Income Statement", "Cost of Goods Sold", ""),
@@ -171,6 +172,7 @@ pub fn setup(ctx: &mut Ctx) -> Result<()> {
         ("60600", "Loss on Disposal of Assets", "Posting", "Income Statement", "Expense", ""),
         ("60700", "Realized Exchange Rate Losses", "Posting", "Income Statement", "Expense", ""),
         ("60800", "Unrealized Exchange Rate Losses", "Posting", "Income Statement", "Expense", ""),
+        ("60900", "Payment Discounts Granted", "Posting", "Income Statement", "Expense", ""),
         ("60999", "Total Operating Expenses", "End-Total", "Income Statement", "Expense", "60100..60999"),
         ("99999", "NET INCOME", "Total", "Income Statement", "", "40000..69999"),
     ];
@@ -246,7 +248,8 @@ pub fn setup(ctx: &mut Ctx) -> Result<()> {
     raw(ctx, "Gen. Journal Template", json!({"Name": "ASSETS", "Description": "Fixed Asset G/L Journal", "Type": "Assets", "No. Series": "FA-JNL", "Source Code": "FAGLJNL"}))?;
     raw(ctx, "Gen. Journal Batch", json!({"Journal Template Name": "ASSETS", "Name": "DEFAULT", "Description": "Default journal", "No. Series": "FA-JNL"}))?;
     fixed_asset_setup(ctx)?;
-    raw(ctx, "Customer Posting Group", json!({"Code": "DOMESTIC", "Description": "Domestic customers", "Receivables Account": "10200", "Additional Fee Account": "40800", "Interest Account": "40900"}))?;
+    raw(ctx, "Customer Posting Group", json!({"Code": "DOMESTIC", "Description": "Domestic customers", "Receivables Account": "10200", "Additional Fee Account": "40800", "Interest Account": "40900",
+                                                   "Payment Disc. Debit Acc.": "60900", "Payment Disc. Credit Acc.": "60900"}))?;
     // Reminder terms (three levels, a fee from the second) and finance charge terms of 1.5% a month.
     raw(ctx, "Reminder Terms", json!({"Code": "DOMESTIC", "Description": "Domestic customers", "Post Additional Fee": true, "Post Interest": true, "Max. No. of Reminders": 3}))?;
     for (no, grace, fee, due) in [(1, "5D", 0, "7D"), (2, "7D", 50_000, "7D"), (3, "7D", 100_000, "5D")] {
@@ -258,11 +261,12 @@ pub fn setup(ctx: &mut Ctx) -> Result<()> {
         json!({"Code": "1.5 DOM.", "Description": "1.5% for domestic customers", "Interest Rate": 1.5, "Interest Period (Days)": 30, "Interest Calculation Method": "Average Daily Balance",
                "Grace Period": "5D", "Due Date Calculation": "1M", "Post Interest": true, "Post Additional Fee": true, "Line Description": "%1 %2 is overdue"}),
     )?;
-    raw(ctx, "Vendor Posting Group", json!({"Code": "DOMESTIC", "Description": "Domestic vendors", "Payables Account": "20200"}))?;
+    raw(ctx, "Vendor Posting Group", json!({"Code": "DOMESTIC", "Description": "Domestic vendors", "Payables Account": "20200", "Payment Disc. Debit Acc.": "40950", "Payment Disc. Credit Acc.": "40950"}))?;
     raw(ctx, "Bank Account Posting Group", json!({"Code": "OPERATING", "Description": "Operating accounts", "G/L Account No.": "10120"}))?;
     for (code, formula, desc) in [("COD", "0D", "Cash on delivery"), ("14 DAYS", "14D", "Net 14 days"), ("30 DAYS", "30D", "Net 30 days"), ("CM", "CM", "End of current month")] {
         raw(ctx, "Payment Terms", json!({"Code": code, "Due Date Calculation": formula, "Description": desc}))?;
     }
+    raw(ctx, "Payment Terms", json!({"Code": "2% 8 DAYS", "Due Date Calculation": "1M", "Discount Date Calculation": "8D", "Discount %": 2, "Description": "Net 1 month, 2% within 8 days"}))?;
     // Currencies with their gain / loss accounts and rates (IDR per unit) for 2025 and 2026.
     for (code, desc, sym, r2025, r2026) in [("USD", "US Dollar", "$", 15_500, 16_000), ("EUR", "Euro", "€", 16_800, 17_500), ("SGD", "Singapore Dollar", "S$", 11_500, 12_000)] {
         raw(
@@ -462,7 +466,7 @@ fn demo_financial_reports(ctx: &mut Ctx) -> Result<()> {
         ("42", "Utilities", "Posting Accounts", "60300", false, false, 1, ""),
         ("43", "Salaries & Wages", "Posting Accounts", "60400", false, false, 1, ""),
         ("44", "Depreciation", "Posting Accounts", "60500", false, false, 1, ""),
-        ("45", "Other Expenses", "Posting Accounts", "60600..60899", false, false, 1, ""),
+        ("45", "Other Expenses", "Posting Accounts", "60600..60998", false, false, 1, ""),
         ("49", "Total Operating Expenses", "Formula", "41..45", false, true, 0, ""),
         ("50", "Net Income", "Formula", "30-49", false, true, 0, ""),
     ];

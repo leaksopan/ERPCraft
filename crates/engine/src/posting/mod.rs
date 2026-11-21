@@ -554,7 +554,7 @@ pub fn post_document(ctx: &mut Ctx, side: &Side, doc_type: &str, no: &str, mode:
         let currency = header.str("Currency Code").to_string();
         let person = header.str(side.person).to_string();
         let group = header.str(side.posting_group).to_string();
-        post_party_entry(
+        let party_entry = post_party_entry(
             ctx,
             side,
             &txn,
@@ -575,6 +575,17 @@ pub fn post_document(ctx: &mut Ctx, side: &Side, doc_type: &str, no: &str, mode:
                 posting_group: &group,
             },
         )?;
+        // Payment discount possible (BC: % of the amount including VAT, until the discount date).
+        let disc_pct = header.get("Payment Discount %").as_dec();
+        if !disc_pct.is_zero() {
+            let let_ = ctx.table(side.ledger)?;
+            let mut e = ctx.get(side.ledger, &Key(vec![Value::Int(party_entry)]))?;
+            let disc = round_amount(g * total_incl * disc_pct / Decimal::ONE_HUNDRED);
+            e.set("Pmt. Discount Date", header.get("Pmt. Discount Date").clone());
+            e.set("Original Pmt. Disc. Possible", dec(disc));
+            e.set("Remaining Pmt. Disc. Possible", dec(disc));
+            ctx.db.modify(let_, e)?;
+        }
         let mut ph = pht.init_record();
         copy_common(&header, pht, &mut ph);
         ph.set("No.", Value::text(&posted_no));

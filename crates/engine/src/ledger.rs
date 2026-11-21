@@ -162,7 +162,7 @@ fn detailed(
     d.set(entry_field(side), Value::Int(ledger_entry));
     d.set("Entry Type", Value::text(entry_type));
     // SetLedgerEntryAmount (BC's OnInsert): applications don't count in the entry's amounts.
-    d.set("Ledger Entry Amount", Value::Bool(!matches!(entry_type, "Application" | "Appln. Rounding")));
+    d.set("Ledger Entry Amount", Value::Bool(entry_type == "Initial Entry"));
     d.set("Posting Date", Value::Date(posting_date));
     d.set("Document Type", Value::text(doc_type));
     d.set("Document No.", Value::text(doc_no));
@@ -187,7 +187,19 @@ fn ledger_entry(ctx: &Ctx, side: &Side, entry_no: i64) -> Result<Record> {
 
 /// The detailed entry types one application writes (and an unapply reverses).
 fn is_application_part(ty: &str) -> bool {
-    matches!(ty, "Application" | "Realized Gain" | "Realized Loss" | "Unrealized Gain" | "Unrealized Loss")
+    matches!(ty, "Application" | "Realized Gain" | "Realized Loss" | "Unrealized Gain" | "Unrealized Loss" | "Payment Discount")
+}
+
+/// The posting group account a payment discount of `disc` (sign of the entry) goes to.
+fn discount_account(ctx: &Ctx, side: &Side, entry: &Record, disc: Decimal) -> Result<String> {
+    let (table, debit) = if side.sales { ("Customer Posting Group", disc > Decimal::ZERO) } else { ("Vendor Posting Group", disc > Decimal::ZERO) };
+    let field = if debit { "Payment Disc. Debit Acc." } else { "Payment Disc. Credit Acc." };
+    let group = entry.str(side.posting_group);
+    let g = ctx.get(table, &erpcraft_meta::Key(vec![Value::text(group)]))?;
+    match g.str(field) {
+        "" => refuse!("{field} must have a value in {table}: Code={group}. It cannot be zero or empty."),
+        a => Ok(a.to_string()),
+    }
 }
 
 /// The entry's remaining LCY (sum of its detailed entries' Amount (LCY)).
@@ -244,7 +256,15 @@ pub fn apply(ctx: &mut Ctx, side: &Side, applying: i64, targets: &[i64], posting
         if !t.get("Open").as_bool() || rem.is_zero() || rem.is_sign_positive() == left.is_sign_positive() {
             refuse!("{} Ledger Entry {tno} cannot be applied: it must be open and have the opposite sign.", side.party_caption);
         }
-        let take = left.abs().min(rem.abs());
+        // BC's payment discount: paid by the discount date and covering the rest, the discount
+        // closes the entry.
+        let disc = t.get("Remaining Pmt. Disc. Possible").as_dec();
+        let disc_ok = currency.is_empty()
+            && !disc.is_zero()
+            && t.get("Pmt. Discount Date").as_date().is_some_and(|d| posting_date <= d)
+            && left.abs() >= (rem - disc).abs();
+        let disc = if disc_ok { disc } else { Decimal::ZERO };
+        let take = left.abs().min((rem - disc).abs());
         // Each entry moves toward zero by `take`.
         let on_target = if rem.is_sign_positive() { -take } else { take };
         let on_applying = -on_target;
@@ -252,6 +272,12 @@ pub fn apply(ctx: &mut Ctx, side: &Side, applying: i64, targets: &[i64], posting
         if currency.is_empty() {
             detailed(ctx, side, txn.no, tno, "Application", posting_date, &doc_type, &doc_no, &party, (on_target, on_target), applying, application_no)?;
             detailed(ctx, side, txn.no, applying, "Application", posting_date, &doc_type, &doc_no, &party, (on_applying, on_applying), tno, application_no)?;
+            if !disc.is_zero() {
+                detailed(ctx, side, txn.no, tno, "Payment Discount", posting_date, &doc_type, &doc_no, &party, (-disc, -disc), applying, application_no)?;
+                let party_acc = crate::currency::party_account(ctx, side, &t)?;
+                let acc = discount_account(ctx, side, &t, disc)?;
+                crate::currency::post_gain_loss(ctx, &txn, posting_date, &doc_no, &party_acc, &acc, -disc, "Payment Discount")?;
+            }
         } else {
             // Reverse the applied share of each side's unrealized adjustment.
             for (entry, on_x, before) in [(&t, on_target, rem), (&a, on_applying, left)] {
@@ -283,8 +309,11 @@ pub fn apply(ctx: &mut Ctx, side: &Side, applying: i64, targets: &[i64], posting
                 crate::currency::post_gain_loss(ctx, &txn, posting_date, &doc_no, &party_acc, &acc, realized, ty)?;
             }
         }
-        t.set("Remaining Amount", dec(rem + on_target));
-        if (rem + on_target).is_zero() {
+        t.set("Remaining Amount", dec(rem + on_target - disc));
+        if !disc.is_zero() {
+            t.set("Remaining Pmt. Disc. Possible", dec(Decimal::ZERO));
+        }
+        if (rem + on_target - disc).is_zero() {
             t.set("Open", Value::Bool(false));
             t.set("Closed by Entry No.", Value::Int(applying));
         }
@@ -343,7 +372,11 @@ pub fn unapply(ctx: &mut Ctx, side: &Side, entry_no: i64) -> Result<Json> {
         if ty != "Application" && !amount_lcy.is_zero() {
             let entry = ledger_entry(ctx, side, le)?;
             let party_acc = crate::currency::party_account(ctx, side, &entry)?;
-            let acc = crate::currency::gain_loss_account(ctx, entry.str("Currency Code"), ty.starts_with("Realized"), ty.ends_with("Gain"))?;
+            let acc = if ty == "Payment Discount" {
+                discount_account(ctx, side, &entry, -amount)?
+            } else {
+                crate::currency::gain_loss_account(ctx, entry.str("Currency Code"), ty.starts_with("Realized"), ty.ends_with("Gain"))?
+            };
             crate::currency::post_gain_loss(ctx, &txn, ctx.work_date, o.str("Document No."), &party_acc, &acc, -amount_lcy, &format!("Unapply {ty}"))?;
         }
         let mut undo = ctx.get(&dt.name, &erpcraft_meta::Key(vec![Value::Int(new_no)]))?;
@@ -355,7 +388,10 @@ pub fn unapply(ctx: &mut Ctx, side: &Side, entry_no: i64) -> Result<Json> {
         orig.set("Unapplied by Entry No.", Value::Int(new_no));
         ctx.db.modify(dt, orig)?;
         let mut e = ledger_entry(ctx, side, le)?;
-        let rem = e.get("Remaining Amount").as_dec() - if ty == "Application" { amount } else { Decimal::ZERO };
+        let rem = e.get("Remaining Amount").as_dec() - if matches!(ty, "Application" | "Payment Discount") { amount } else { Decimal::ZERO };
+        if ty == "Payment Discount" {
+            e.set("Remaining Pmt. Disc. Possible", dec(-amount));
+        }
         e.set("Remaining Amount", dec(rem));
         e.set("Open", Value::Bool(!rem.is_zero()));
         e.set("Closed by Entry No.", Value::Int(0));

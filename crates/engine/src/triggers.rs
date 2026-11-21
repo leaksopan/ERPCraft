@@ -360,12 +360,16 @@ fn update_due_date(ctx: &Ctx, r: &mut Record) -> Result<()> {
         return Ok(());
     };
     let terms = r.str("Payment Terms Code").to_string();
-    let formula = if terms.is_empty() {
-        String::new()
+    let (formula, disc_formula, disc) = if terms.is_empty() {
+        (String::new(), String::new(), Decimal::ZERO)
     } else {
-        ctx.get_code(PAYMENT_TERMS, &terms)?.str("Due Date Calculation").to_string()
+        let t = ctx.get_code(PAYMENT_TERMS, &terms)?;
+        (t.str("Due Date Calculation").to_string(), t.str("Discount Date Calculation").to_string(), t.get("Discount %").as_dec())
     };
     r.set("Due Date", Value::Date(crate::dateformula::calc(&formula, base)?));
+    // BC: Payment Discount % and Pmt. Discount Date come with the payment terms.
+    r.set("Payment Discount %", dec(disc));
+    r.set("Pmt. Discount Date", if disc.is_zero() { Value::Null } else { Value::Date(crate::dateformula::calc(&disc_formula, base)?) });
     Ok(())
 }
 

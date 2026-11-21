@@ -201,7 +201,8 @@ pub fn post_item(ctx: &mut Ctx, e: &ItemEntry) -> Result<i64> {
     r.set("Unit of Measure Code", e.uom.clone());
     r.set("Source Type", Value::text(e.source_type));
     r.set("Source No.", Value::text(e.source_no));
-    ctx.db.insert(t, r)?;
+    ctx.db.insert(t, r.clone())?;
+    crate::costing::on_item_entry(ctx, &r)?;
     Ok(no)
 }
 

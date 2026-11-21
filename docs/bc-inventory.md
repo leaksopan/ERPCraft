@@ -23,7 +23,7 @@ orders this list into phases.
 | Foundation | 8 | 58 | 0 | 2 |
 | HumanResources | 0 | 57 | 0 | 15 |
 | Integration | 0 | 87 | 0 | 0 |
-| Inventory | 32 | 312 | 1 | 101 |
+| Inventory | 33 | 312 | 1 | 101 |
 | Invoicing | 0 | 7 | 0 | 0 |
 | Manufacturing | 0 | 134 | 0 | 50 |
 | Modules | 2 | 93 | 0 | 1 |
@@ -38,7 +38,7 @@ orders this list into phases.
 | Utilities | 0 | 12 | 0 | 2 |
 | Warehouse | 0 | 144 | 0 | 35 |
 | eServices | 0 | 25 | 0 | 0 |
-| **Base Application** | **172** | **2638** | **16** | **659** |
+| **Base Application** | **173** | **2638** | **16** | **659** |
 
 ### (root)
 
@@ -1754,7 +1754,7 @@ Pages 0 / 87, reports 0 / 0.
 
 ### Inventory
 
-Pages 32 / 312, reports 1 / 101.
+Pages 33 / 312, reports 1 / 101.
 
 <details><summary>Inventory / Analysis: pages 0 / 34, reports 0 / 8</summary>
 
@@ -2061,7 +2061,7 @@ Pages 32 / 312, reports 1 / 101.
 
 </details>
 
-<details><summary>Inventory / Ledger: pages 1 / 13, reports 0 / 1</summary>
+<details><summary>Inventory / Ledger: pages 2 / 13, reports 0 / 1</summary>
 
 - [x] Page 38 Item Ledger Entries (List)
 - [ ] Page 117 Item Registers (List)
@@ -2071,7 +2071,7 @@ Pages 32 / 312, reports 1 / 101.
 - [ ] Page 521 Application Worksheet (Worksheet)
 - [ ] Page 522 View Applied Entries (Worksheet)
 - [ ] Page 523 Item Application Entry History (List)
-- [ ] Page 5802 Value Entries (List)
+- [x] Page 5802 Value Entries (List)
 - [ ] Page 5804 Applied Item Entries (List)
 - [ ] Page 5807 Value Entries Preview (List)
 - [ ] Page 5823 G/L - Item Ledger Relation (List)

@@ -1586,8 +1586,10 @@ pub fn extend(m: &mut Metadata) {
         m,
         "Inventory Setup",
         &[
+            ("Automatic Cost Posting", "Automatic Cost Posting", "Specifies if value entries are automatically posted to the inventory account, adjustment account, and COGS account in the general ledger when an item transaction is posted. Alternatively, you can manually post the values at regular intervals with the Post Inventory Cost to G/L batch job. Note that costs must be adjusted before posting to the general ledger.", 0),
             ("Location Mandatory", "Location Mandatory", "Specifies if a location code is required when posting item transactions. This field, together with the Components at Location field in the Manufacturing Setup window, is very important in governing how the planning system handles demand lines with/without location codes. For more information, see \"Planning with or without Locations\" in Help.", 0),
             ("Item Nos.", "Item Nos.", "Specifies the number series that will be used to assign numbers to items.", 0),
+            ("Automatic Cost Adjustment", "Automatic Cost Adjustment", "Specifies if item value entries are automatically adjusted when an item transaction is posted. This ensures correct inventory valuation in the general ledger, so that sales and profit statistics are up to date. The cost adjustment forwards any cost changes from inbound entries, such as those for purchases or production output, to the related outbound entries, such as sales or transfers. To minimize reduced performance during posting, select a time option to define how far back in time from the work date an inbound transaction can occur to potentially trigger adjustment of related outbound value entries. Alternatively, you can manually adjust costs at regular intervals with the Adjust Cost - Item Entries batch job.", 0),
             ("Prevent Negative Inventory", "Prevent Negative Inventory", "Specifies whether you can post a transaction that will bring the item's inventory below zero. Negative inventory is always prevented for Consumption and Transfer type transactions.", 0),
             ("Transfer Order Nos.", "Transfer Order Nos.", "Specifies the number series that will be used to assign numbers to transfer orders.", 0),
             ("Posted Transfer Shpt. Nos.", "Posted Transfer Shpt. Nos.", "Specifies the number series that will be used to assign numbers to posted transfer shipments.", 0),
@@ -1598,8 +1600,6 @@ pub fn extend(m: &mut Metadata) {
         m,
         "Inventory Setup",
         vec![
-            F::boolean("Automatic Cost Posting").tooltip("Specifies if value entries are automatically posted to the inventory account, adjustment account, and COGS account in the general ledger when an item transaction is posted. Alternatively, you can manually post the values at regular intervals with the Post Inventory Cost to G/L batch job. Note that costs must be adjusted before posting to the general ledger."),
-            F::option("Automatic Cost Adjustment", &["Never", "Day", "Week", "Month", "Quarter", "Year", "Always"]).tooltip("Specifies if item value entries are automatically adjusted when an item transaction is posted. This ensures correct inventory valuation in the general ledger, so that sales and profit statistics are up to date. The cost adjustment forwards any cost changes from inbound entries, such as those for purchases or production output, to the related outbound entries, such as sales or transfers. To minimize reduced performance during posting, select a time option to define how far back in time from the work date an inbound transaction can occur to potentially trigger adjustment of related outbound value entries. Alternatively, you can manually adjust costs at regular intervals with the Adjust Cost - Item Entries batch job."),
             F::option("Cost Adjustment Logging", &["Disabled", "Errors Only", "All"]).tooltip("Specifies if you want to log cost adjustments runs. Disabled: No logging. Errors Only: The program will only log cost adjustment runs that have errors. All: The program will log all cost adjustment runs."),
             F::date("Earliest Allowed Val. Date").caption("Earliest Allowed Valuation Date").tooltip("Specifies the earliest date allowed for a Valuation Date on new value entries. If set, user-initiated postings with a Valuation Date before this date are blocked. System-generated entries such as cost adjustments, rounding, and expected-to-actual corrections are exempt. Leave blank to allow all dates."),
             F::boolean("Variant Mandatory if Exists").tooltip("Specifies whether a variant must be selected if variants exist for an item. This is the default setting for all items. However, the same option is available on the Item Card page for items. That setting applies to the specific item."),
@@ -1941,6 +1941,7 @@ pub fn extend(m: &mut Metadata) {
             F::code("Shortcut Dimension 7 Code", 20).calc(CalcFormula::new(CalcFunc::Lookup, "Dimension Set Entry", "Dimension Value Code", &[("Dimension Set ID", "Dimension Set ID")], &[("Global Dimension No.", "7")])).tooltip("Specifies the code for Shortcut Dimension 7, which is one of dimension codes that you set up in the General Ledger Setup window."),
             F::code("Shortcut Dimension 8 Code", 20).calc(CalcFormula::new(CalcFunc::Lookup, "Dimension Set Entry", "Dimension Value Code", &[("Dimension Set ID", "Dimension Set ID")], &[("Global Dimension No.", "8")])).tooltip("Specifies the code for Shortcut Dimension 8, which is one of dimension codes that you set up in the General Ledger Setup window."),
             F::boolean("Applied Entry to Adjust").tooltip("Specifies whether there is one or more applied entries, which need to be adjusted."),
+            F::decimal("Cost Amount (Non-Invtbl.)").calc(CalcFormula::new(CalcFunc::Sum, "Value Entry", "Cost Amount (Non-Invtbl.)", &[("Item Ledger Entry No.", "Entry No.")], &[])).auto_format(1),
             F::date("Warranty Date").tooltip("Specifies the last day of warranty for the item on the line."),
             F::code("Package No.", 50).tooltip("Specifies a package number if the posted item carries such a number."),
         ],
@@ -3715,6 +3716,49 @@ pub fn extend(m: &mut Metadata) {
     );
     relabel(
         m,
+        "Value Entry",
+        &[
+            ("Entry No.", "Entry No.", "Specifies the number of the entry, as assigned from the specified number series when the entry was created.", 0),
+            ("Item No.", "Item No.", "Specifies the number of the item that this value entry is linked to.", 0),
+            ("Posting Date", "Posting Date", "Specifies the posting date of this entry.", 0),
+            ("Item Ledger Entry Type", "Item Ledger Entry Type", "Specifies the type of item ledger entry that caused this value entry.", 0),
+            ("Source No.", "Source No.", "Specifies the number of the source document that the entry originates from.", 0),
+            ("Document No.", "Document No.", "Specifies the document number of the entry.", 0),
+            ("Description", "Description", "Specifies a description of the entry.", 0),
+            ("Location Code", "Location Code", "Specifies the code for the location of the item that the entry is linked to.", 0),
+            ("Item Ledger Entry No.", "Item Ledger Entry No.", "Specifies the number of the item ledger entry that this value entry is linked to.", 0),
+            ("Valued Quantity", "Valued Quantity", "Specifies the quantity that the adjusted cost and the amount of the entry belongs to.", 0),
+            ("Item Ledger Entry Quantity", "Item Ledger Entry Quantity", "Specifies the average cost calculation.", 0),
+            ("Invoiced Quantity", "Invoiced Quantity", "Specifies how many units of the item are invoiced by the posting that the value entry line represents.", 0),
+            ("Cost per Unit", "Cost per Unit", "Specifies the cost for one base unit of the item in the entry.", 2),
+            ("User ID", "User ID", "Specifies the ID of the user who posted the entry, to be used, for example, in the change log.", 0),
+            ("Source Type", "Source Type", "Specifies the source type that applies to the source number that is shown in the Source No. field.", 0),
+            ("Cost Posted to G/L", "Cost Posted to G/L", "Specifies the amount that has been posted to the general ledger.", 1),
+            ("Gen. Bus. Posting Group", "Gen. Bus. Posting Group", "Specifies the vendor's or customer's trade type to link transactions made for this business partner with the appropriate general ledger account according to the general posting setup.", 0),
+            ("Gen. Prod. Posting Group", "Gen. Prod. Posting Group", "Specifies the item's product type to link transactions made for this item with the appropriate general ledger account according to the general posting setup.", 0),
+            ("Document Type", "Document Type", "Specifies what type of document was posted to create the value entry.", 0),
+            ("Item Charge No.", "Item Charge No.", "Specifies the item charge number of the value entry.", 0),
+            ("Valuation Date", "Valuation Date", "Specifies the valuation date from which the entry is included in the average cost calculation.", 0),
+            ("Entry Type", "Entry Type", "Specifies the type of value described in this entry.", 0),
+            ("Adjustment", "Adjustment", "Specifies if this entry has been cost adjusted.", 0),
+        ],
+    );
+    fields(
+        m,
+        "Value Entry",
+        vec![
+            F::code("Global Dimension 1 Code", 20).tooltip("Specifies the code for the global dimension that is linked to the record or entry for analysis purposes. Two global dimensions, typically for the company's most important activities, are available on all cards, documents, reports, and lists."),
+            F::code("Global Dimension 2 Code", 20).tooltip("Specifies the code for the global dimension that is linked to the record or entry for analysis purposes. Two global dimensions, typically for the company's most important activities, are available on all cards, documents, reports, and lists."),
+            F::code("External Document No.", 35).tooltip("Specifies a document number that refers to the customer's or vendor's numbering system."),
+            F::decimal("Cost per Unit (ACY)").auto_format(2),
+            F::option("Order Type", &["", "Production", "Transfer", "Service", "Assembly"]).read_only().tooltip("Specifies which type of order that the entry was created in."),
+            F::boolean("Valued By Average Cost").tooltip("Specifies if the adjusted cost for the inventory decrease is calculated by the average cost of the item at the valuation date."),
+            F::decimal("Cost Amount (Expected)").auto_format(1),
+            F::decimal("Cost Amount (Non-Invtbl.)").auto_format(1),
+        ],
+    );
+    relabel(
+        m,
         "Vendor",
         &[
             ("No.", "No.", "Specifies the number of the vendor. The field is either filled automatically from a defined number series, or you enter the number manually because you have enabled manual number entry in the number-series setup.", 0),
@@ -4438,7 +4482,7 @@ pub fn extend(m: &mut Metadata) {
     );
     columns(m, "item-journal", &["Posting Date", "Price Calculation Method", "Document No.", "Item No.", "Description", "Location Code", "Quantity", "Unit of Measure Code", "Unit Amount", "Amount", "Discount Amount", "Unit Cost", "Applies-to Entry", "Serial No.", "Lot No.", "Package No.", "Expiration Date", "Warranty Date", "Shortcut Dimension 1 Code", "Shortcut Dimension 2 Code"]);
     columns(m, "item-journal-templates", &["Name", "Description", "Type", "Recurring", "No. Series", "Posting No. Series", "Source Code", "Reason Code", "Increment Batch Name"]);
-    columns(m, "item-ledger-entries", &["Posting Date", "Entry Type", "Document Type", "Document No.", "Item No.", "Description", "Global Dimension 1 Code", "Global Dimension 2 Code", "Location Code", "Quantity", "Invoiced Quantity", "Remaining Quantity", "Sales Amount (Actual)", "Cost Amount (Actual)", "Open", "Applied Entry to Adjust", "Order Type", "Entry No.", "Shortcut Dimension 3 Code", "Shortcut Dimension 4 Code", "Shortcut Dimension 5 Code", "Shortcut Dimension 6 Code", "Shortcut Dimension 7 Code", "Shortcut Dimension 8 Code"]);
+    columns(m, "item-ledger-entries", &["Posting Date", "Entry Type", "Document Type", "Document No.", "Item No.", "Description", "Global Dimension 1 Code", "Global Dimension 2 Code", "Location Code", "Quantity", "Invoiced Quantity", "Remaining Quantity", "Sales Amount (Actual)", "Cost Amount (Actual)", "Cost Amount (Non-Invtbl.)", "Open", "Applied Entry to Adjust", "Order Type", "Entry No.", "Shortcut Dimension 3 Code", "Shortcut Dimension 4 Code", "Shortcut Dimension 5 Code", "Shortcut Dimension 6 Code", "Shortcut Dimension 7 Code", "Shortcut Dimension 8 Code"]);
     columns(m, "item-list", &["No.", "Description", "Type", "Inventory", "Substitutes Exist", "Base Unit of Measure", "Cost is Adjusted", "Unit Cost", "Unit Price", "Vendor No.", "Default Deferral Template Code"]);
     columns(m, "item-reclass-journal", &["Posting Date", "Document No.", "Item No.", "Description", "Location Code", "New Location Code", "Quantity", "Unit of Measure Code", "Applies-to Entry", "Shortcut Dimension 1 Code", "New Shortcut Dimension 1 Code", "Shortcut Dimension 2 Code", "New Shortcut Dimension 2 Code"]);
     columns(m, "item-reference-entries", &["Reference Type", "Reference Type No.", "Reference No.", "Unit of Measure", "Description", "Starting Date", "Ending Date"]);
@@ -5283,6 +5327,7 @@ pub fn extend(m: &mut Metadata) {
     columns(m, "units-of-measure", &["Code", "Description", "International Standard Code"]);
     columns(m, "user-setup", &["User ID", "Allow Posting From", "Allow Posting To", "Allow VAT Date From", "Allow VAT Date To", "Allow Deferral Posting From", "Allow Deferral Posting To", "Sales Invoice Posting Policy", "Purch. Invoice Posting Policy", "Register Time", "Salespers./Purch. Code", "Sales Resp. Ctr. Filter", "Purchase Resp. Ctr. Filter", "Time Sheet Admin.", "E-Mail", "Phone No."]);
     columns(m, "users", &["User Name", "Full Name", "State"]);
+    columns(m, "value-entries", &["Posting Date", "Item Ledger Entry Type", "Entry Type", "Adjustment", "Document Type", "Document No.", "Item Charge No.", "Description", "Sales Amount (Actual)", "Cost Amount (Expected)", "Cost Amount (Actual)", "Cost Amount (Non-Invtbl.)", "Cost Posted to G/L", "Item Ledger Entry Quantity", "Valued Quantity", "Invoiced Quantity", "Cost per Unit", "Cost per Unit (ACY)", "Item No.", "Gen. Bus. Posting Group", "Gen. Prod. Posting Group", "Global Dimension 1 Code", "Global Dimension 2 Code", "Source Type", "Source No.", "External Document No.", "Order Type", "Valued By Average Cost", "Item Ledger Entry No.", "Entry No."]);
     columns(m, "vat-bus-posting-groups", &["Code", "Description"]);
     columns(m, "vat-entries", &["Entry No.", "G/L Register No.", "Transaction No.", "VAT Bus. Posting Group", "VAT Prod. Posting Group", "VAT Reporting Date", "Posting Date", "Document No.", "Document Type", "Type", "Base", "Amount", "Non-Deductible VAT Base", "Non-Deductible VAT Amount", "Unrealized Amount", "Unrealized Base", "Remaining Unrealized Amount", "Remaining Unrealized Base", "Non-Deductible VAT Base ACY", "Non-Deductible VAT Amount ACY", "Non-Deductible VAT Diff.", "VAT Calculation Type", "Bill-to/Pay-to No.", "Country/Region Code", "EU 3-Party Trade", "Closed", "Closed by Entry No.", "Internal Ref. No."]);
     columns(m, "vat-posting-setup", &["VAT Bus. Posting Group", "VAT Prod. Posting Group", "Description", "Blocked", "VAT Identifier", "VAT %", "Allow Non-Deductible VAT", "Non-Deductible VAT %", "VAT Calculation Type", "Unrealized VAT Type", "Adjust for Payment Discount", "Sales VAT Account", "Sales VAT Unreal. Account", "Purchase VAT Account", "Purch. VAT Unreal. Account", "Non-Ded. Purchase VAT Account", "Reverse Chrg. VAT Acc.", "Reverse Chrg. VAT Unreal. Acc.", "VAT Clause Code", "EU Service", "Tax Category"]);
@@ -6204,7 +6249,7 @@ pub fn extend(m: &mut Metadata) {
         m,
         "item-ledger-entries",
         &[
-            ("Process", &["Find entries...", "Dimensions", "Set Dimension Filter"]),
+            ("Process", &["Find entries...", "Dimensions", "Set Dimension Filter", "&Value Entries"]),
         ],
     );
     categories(
@@ -6866,6 +6911,7 @@ pub fn extend(m: &mut Metadata) {
             ("Shortcut Dimension 6 Code", "dimension-set-entries", &[("Dimension Set ID", "Dimension Set ID")], &[("Global Dimension No.", "6")]),
             ("Shortcut Dimension 7 Code", "dimension-set-entries", &[("Dimension Set ID", "Dimension Set ID")], &[("Global Dimension No.", "7")]),
             ("Shortcut Dimension 8 Code", "dimension-set-entries", &[("Dimension Set ID", "Dimension Set ID")], &[("Global Dimension No.", "8")]),
+            ("Cost Amount (Non-Invtbl.)", "value-entries", &[("Item Ledger Entry No.", "Entry No.")], &[]),
         ],
     );
     calcs(

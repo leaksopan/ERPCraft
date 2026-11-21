@@ -118,7 +118,7 @@ pub fn setup(ctx: &mut Ctx) -> Result<()> {
                "Credit Memo Nos.": "P-CR", "Return Order Nos.": "P-RET", "Posted Invoice Nos.": "PP-INV", "Posted Credit Memo Nos.": "PP-CR", "Posted Receipt Nos.": "PP-RCPT",
                "Ext. Doc. No. Mandatory": false}),
     )?;
-    raw(ctx, "Inventory Setup", json!({"Primary Key": "", "Item Nos.": "ITEM", "Transfer Order Nos.": "T-ORD", "Posted Transfer Shpt. Nos.": "T-SHPT", "Posted Transfer Rcpt. Nos.": "T-RCPT"}))?;
+    raw(ctx, "Inventory Setup", json!({"Primary Key": "", "Item Nos.": "ITEM", "Automatic Cost Posting": true, "Transfer Order Nos.": "T-ORD", "Posted Transfer Shpt. Nos.": "T-SHPT", "Posted Transfer Rcpt. Nos.": "T-RCPT"}))?;
     for (template, ty, _, _, caption, series) in crate::schema::finance::JOURNALS {
         let source = match *template {
             "CASHRCPT" => "CASHRECJNL",

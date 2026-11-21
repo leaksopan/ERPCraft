@@ -224,8 +224,51 @@ pub fn register(m: &mut Metadata) {
         Act::command("Suggest Item &Charge Assignment", A::Process, "purchase.charge.suggest").icon("apply").ask(&["method"]).tooltip("Use a function that assigns and distributes the item charge when the document has more than one line of type Item."),
     ];
     m.add_page(assign);
+    if let Some(p) = m.pages.get_mut("item-charge-assignment-purch") {
+        p.actions.push(
+            Act::command("Get &Receipt Lines", A::Process, "purchase.charge.get_receipt_lines")
+                .icon("list")
+                .ask(&["document_no"])
+                .tooltip("Select a posted purchase receipt for the item that you want to assign the item charge to, for example, if you received an invoice for the item charge after you posted the original purchase receipt."),
+        );
+    }
     if let Some(p) = m.pages.get_mut("purchase-lines") {
         p.actions.push(Act::command("Item Charge &Assignment", A::Navigate, "purchase.charge.assignment").icon("list").shortcut("Alt+I").tooltip("Record additional direct costs, for example for freight. This action is available only for Charge (Item) line types."));
+    }
+    // The sales side (5809, page 5814).
+    m.add_table(
+        TableDef::new(crate::item_charge::ASSIGNMENT_SALES, 5809)
+            .fields(vec![
+                F::option("Document Type", crate::schema::tables::SALES_DOC_TYPES),
+                F::code("Document No.", 20),
+                F::integer("Document Line No."),
+                F::integer("Line No."),
+                F::code("Item Charge No.", 20),
+                F::code("Item No.", 20),
+                F::text("Description", 100),
+                F::decimal("Qty. to Assign"),
+                F::decimal("Qty. Assigned").read_only(),
+                F::decimal("Unit Cost"),
+                F::decimal("Amount to Assign").auto_format(1).read_only(),
+                F::option("Applies-to Doc. Type", &["Quote", "Order", "Invoice", "Credit Memo", "Blanket Order", "Return Order", "Shipment", "Return Receipt"]),
+                F::code("Applies-to Doc. No.", 20),
+                F::integer("Applies-to Doc. Line No."),
+            ])
+            .key(&["Document Type", "Document No.", "Document Line No.", "Line No."]),
+    );
+    let mut sassign = PageDef::new("item-charge-assignment-sales", 5814, "Item Charge Assignment (Sales)", PageKind::List, Some(crate::item_charge::ASSIGNMENT_SALES));
+    sassign.columns = ["Applies-to Doc. Type", "Applies-to Doc. No.", "Applies-to Doc. Line No.", "Item No.", "Description", "Qty. to Assign", "Qty. Assigned", "Amount to Assign"].iter().map(|c| (*c).to_string()).collect();
+    sassign.editable = true;
+    sassign.actions = vec![
+        Act::command("Get &Shipment Lines", A::Process, "sales.charge.get_shipment_lines").icon("list").ask(&["document_no"]).tooltip("Select multiple shipments to the same customer because you want to combine them on one invoice."),
+        Act::command("Suggest Item &Charge Assignment", A::Process, "sales.charge.suggest")
+            .icon("apply")
+            .ask(&["method"])
+            .tooltip("Use a function that assigns and distributes the item charge when the document has more than one line of type Item. You can select between four distribution methods. "),
+    ];
+    m.add_page(sassign);
+    if let Some(p) = m.pages.get_mut("sales-lines") {
+        p.actions.push(Act::command("Item Charge &Assignment", A::Navigate, "sales.charge.assignment").icon("list").shortcut("Alt+I").tooltip("Record additional direct costs, for example for freight. This action is available only for Charge (Item) line types."));
     }
     let mut codes = PageDef::new("item-tracking-codes", 6502, "Item Tracking Codes", PageKind::List, Some(TRACKING_CODE));
     codes.columns = ["Code", "Description"].iter().map(|c| (*c).to_string()).collect();

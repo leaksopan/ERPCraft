@@ -1890,6 +1890,29 @@ pub fn extend(m: &mut Metadata) {
     );
     relabel(
         m,
+        "Item Charge Assignment (Sales)",
+        &[
+            ("Item No.", "Item No.", "Specifies the item number on the document line that this item charge is assigned to.", 0),
+            ("Description", "Description", "Specifies a description of the item on the document line that this item charge is assigned to.", 0),
+            ("Qty. to Assign", "Qty. to Assign", "Specifies how many units of the item charge will be assigned to the document line. If the document has more than one line of type Item, then this quantity reflects the distribution that you selected when you chose the Suggest Item Charge Assignment action.", 0),
+            ("Qty. Assigned", "Qty. Assigned", "Specifies the number of units of the item charge will be assigned to the document line.", 0),
+            ("Unit Cost", "Unit Cost", "", 2),
+            ("Amount to Assign", "Amount to Assign", "Specifies the value of the item charge that is going to be assigned to the document line.", 1),
+            ("Applies-to Doc. Type", "Applies-to Doc. Type", "Specifies the type of the document that this document or journal line will be applied to when you post, for example to register payment.", 0),
+            ("Applies-to Doc. No.", "Applies-to Doc. No.", "Specifies the number of the document that this document or journal line will be applied to when you post, for example to register payment.", 0),
+            ("Applies-to Doc. Line No.", "Applies-to Doc. Line No.", "Specifies the number of the line on the document that this document or journal line will be applied to when you post, for example to register payment.", 0),
+        ],
+    );
+    fields(
+        m,
+        "Item Charge Assignment (Sales)",
+        vec![
+            F::decimal("Qty. to Handle").tooltip("Specifies how many items the item charge will be assigned to on the line. It can be either equal to Qty. to Assign or to zero. If it is zero, the item charge will not be assigned to the line."),
+            F::decimal("Amount to Handle").auto_format(1).tooltip("Specifies the value of the item charge that will be actually assigned to the document line."),
+        ],
+    );
+    relabel(
+        m,
         "Item Journal Line",
         &[
             ("Journal Template Name", "Journal Template Name", "Specifies the name of the journal template, the basis of the journal batch, that the entries were posted from.", 0),
@@ -2650,6 +2673,7 @@ pub fn extend(m: &mut Metadata) {
             ("No.", "No.", "Specifies the number of the involved entry or record, according to the specified number series.", 0),
             ("Description", "Description", "Specifies either the name of or a description of the item or general ledger account.", 0),
             ("Quantity", "Quantity", "Specifies the number of units of the item specified on the line.", 0),
+            ("Direct Unit Cost", "Direct Unit Cost", "Specifies the cost of one unit of the selected item or resource.", 2),
             ("Qty. Rcd. Not Invoiced", "Qty. Rcd. Not Invoiced", "Specifies the quantity of the received item that has been posted as received but that has not yet been posted as invoiced.", 0),
             ("Quantity Invoiced", "Quantity Invoiced", "Specifies how many units of the item on the line have been posted as invoiced.", 0),
             ("Order No.", "Order No.", "Specifies the line number of the order that created the entry.", 0),
@@ -3580,6 +3604,9 @@ pub fn extend(m: &mut Metadata) {
             F::decimal("Qty. to Assemble to Order").tooltip("Specifies how many units of the sales line quantity that you want to supply by assembly."),
             F::code("Selected Alloc. Account No.", 20).caption("Allocation Account No.").tooltip("Specifies the allocation account number that will be used to distribute the amounts during the posting process."),
             F::code("Item Reference No.", 50).tooltip("Specifies the referenced item number."),
+            F::decimal("Qty. to Assign").calc(CalcFormula::new(CalcFunc::Sum, "Item Charge Assignment (Sales)", "Qty. to Assign", &[("Document Type", "Document Type"), ("Document No.", "Document No."), ("Document Line No.", "Line No.")], &[])).tooltip("Specifies how many units of the item charge will be assigned to the line."),
+            F::decimal("Qty. Assigned").calc(CalcFormula::new(CalcFunc::Sum, "Item Charge Assignment (Sales)", "Qty. Assigned", &[("Document Type", "Document Type"), ("Document No.", "Document No."), ("Document Line No.", "Line No.")], &[])).tooltip("Specifies the quantity of the item charge that was assigned to a specified item when you posted this sales line."),
+            F::decimal("Item Charge Qty. to Handle").calc(CalcFormula::new(CalcFunc::Sum, "Item Charge Assignment (Sales)", "Qty. to Handle", &[("Document Type", "Document Type"), ("Document No.", "Document No."), ("Document Line No.", "Line No.")], &[])).tooltip("Specifies how many items the item charge will be assigned to on the line. It can be either equal to Qty. to Assign or to zero. If it is zero, the item charge will not be assigned to the line."),
         ],
     );
     relabel(
@@ -4876,6 +4903,7 @@ pub fn extend(m: &mut Metadata) {
         ],
     );
     columns(m, "item-charge-assignment-purch", &["Applies-to Doc. Type", "Applies-to Doc. No.", "Applies-to Doc. Line No.", "Item No.", "Description", "Qty. to Assign", "Qty. to Handle", "Qty. Assigned", "Amount to Assign", "Amount to Handle"]);
+    columns(m, "item-charge-assignment-sales", &["Applies-to Doc. Type", "Applies-to Doc. No.", "Applies-to Doc. Line No.", "Item No.", "Description", "Qty. to Assign", "Qty. to Handle", "Qty. Assigned", "Amount to Assign", "Amount to Handle"]);
     columns(m, "item-charges", &["No.", "Description", "Gen. Prod. Posting Group", "Tax Group Code", "VAT Prod. Posting Group", "Search Description"]);
     columns(m, "item-journal", &["Posting Date", "Price Calculation Method", "Document No.", "Item No.", "Description", "Location Code", "Quantity", "Unit of Measure Code", "Unit Amount", "Amount", "Discount Amount", "Unit Cost", "Applies-to Entry", "Serial No.", "Lot No.", "Package No.", "Expiration Date", "Warranty Date", "Shortcut Dimension 1 Code", "Shortcut Dimension 2 Code"]);
     columns(m, "item-journal-templates", &["Name", "Description", "Type", "Recurring", "No. Series", "Posting No. Series", "Source Code", "Reason Code", "Increment Batch Name"]);
@@ -5613,7 +5641,7 @@ pub fn extend(m: &mut Metadata) {
         ],
     );
     columns(m, "sales-invoice-list", &["No.", "Sell-to Customer No.", "Sell-to Customer Name", "External Document No.", "Sell-to Contact", "Posting Date", "Location Code", "Assigned User ID", "Due Date", "Job Queue Status", "Amount"]);
-    columns(m, "sales-lines", &["Type", "No.", "Item Reference No.", "Description", "Location Code", "Quantity", "Qty. to Assemble to Order", "Reserved Quantity", "Unit of Measure Code", "Unit Price", "Tax Area Code", "Tax Group Code", "Line Discount %", "Line Amount", "Selected Alloc. Account No.", "Qty. to Ship", "Quantity Shipped", "Qty. to Invoice", "Quantity Invoiced", "Shipment Date", "Shortcut Dimension 1 Code", "Shortcut Dimension 2 Code"]);
+    columns(m, "sales-lines", &["Type", "No.", "Item Reference No.", "Description", "Location Code", "Quantity", "Qty. to Assemble to Order", "Reserved Quantity", "Unit of Measure Code", "Unit Price", "Tax Area Code", "Tax Group Code", "Line Discount %", "Line Amount", "Selected Alloc. Account No.", "Qty. to Ship", "Quantity Shipped", "Qty. to Invoice", "Quantity Invoiced", "Qty. to Assign", "Item Charge Qty. to Handle", "Qty. Assigned", "Shipment Date", "Shortcut Dimension 1 Code", "Shortcut Dimension 2 Code"]);
     layout(
         m,
         "sales-order",
@@ -6792,7 +6820,14 @@ pub fn extend(m: &mut Metadata) {
         m,
         "item-charge-assignment-purch",
         &[
-            ("Process", &["Suggest &Item Charge Assignment"]),
+            ("Process", &["Suggest &Item Charge Assignment", "Get &Receipt Lines"]),
+        ],
+    );
+    categories(
+        m,
+        "item-charge-assignment-sales",
+        &[
+            ("Item Charge", &["Get &Shipment Lines", "Suggest Item &Charge Assignment"]),
         ],
     );
     categories(
@@ -7659,6 +7694,9 @@ pub fn extend(m: &mut Metadata) {
         &[
             ("Reserved Quantity", "reservation-entries", &[("Source ID", "Document No."), ("Source Ref. No.", "Line No."), ("Source Subtype", "Document Type")], &[("Source Type", "37"), ("Reservation Status", "Reservation")]),
             ("Reserved Qty. (Base)", "reservation-entries", &[("Source ID", "Document No."), ("Source Ref. No.", "Line No."), ("Source Subtype", "Document Type")], &[("Source Type", "37"), ("Reservation Status", "Reservation")]),
+            ("Qty. to Assign", "item-charge-assignment-sales", &[("Document Type", "Document Type"), ("Document No.", "Document No."), ("Document Line No.", "Line No.")], &[]),
+            ("Qty. Assigned", "item-charge-assignment-sales", &[("Document Type", "Document Type"), ("Document No.", "Document No."), ("Document Line No.", "Line No.")], &[]),
+            ("Item Charge Qty. to Handle", "item-charge-assignment-sales", &[("Document Type", "Document Type"), ("Document No.", "Document No."), ("Document Line No.", "Line No.")], &[]),
         ],
     );
     drilldowns(

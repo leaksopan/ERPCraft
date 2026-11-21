@@ -190,6 +190,7 @@ fn tables(m: &mut Metadata) {
                     F::code("Order No.", 20),
                     F::integer("Order Line No."),
                     F::integer("Item Ledger Entry No."),
+                    F::decimal(if sales { "Unit Price" } else { "Direct Unit Cost" }).auto_format(2),
                 ])
                 .key(&["Document No.", "Line No."])
                 .describe_by("Description"),

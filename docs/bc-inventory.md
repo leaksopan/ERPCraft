@@ -32,13 +32,13 @@ orders this list into phases.
 | Projects | 0 | 135 | 0 | 40 |
 | Purchases | 26 | 153 | 5 | 51 |
 | RoleCenters | 0 | 16 | 0 | 0 |
-| Sales | 41 | 222 | 8 | 78 |
+| Sales | 42 | 222 | 8 | 78 |
 | Service | 0 | 192 | 0 | 55 |
 | System | 4 | 173 | 0 | 15 |
 | Utilities | 0 | 12 | 0 | 2 |
 | Warehouse | 0 | 144 | 0 | 35 |
 | eServices | 0 | 25 | 0 | 0 |
-| **Base Application** | **198** | **2638** | **16** | **659** |
+| **Base Application** | **199** | **2638** | **16** | **659** |
 
 ### (root)
 
@@ -3270,7 +3270,7 @@ Pages 0 / 16, reports 0 / 0.
 
 ### Sales
 
-Pages 41 / 222, reports 8 / 78.
+Pages 42 / 222, reports 8 / 78.
 
 <details><summary>Sales / Analysis: pages 0 / 18, reports 0 / 2</summary>
 
@@ -3359,7 +3359,7 @@ Pages 41 / 222, reports 8 / 78.
 
 </details>
 
-<details><summary>Sales / Document: pages 9 / 39, reports 4 / 22</summary>
+<details><summary>Sales / Document: pages 10 / 39, reports 4 / 22</summary>
 
 - [x] Page 41 Sales Quote (Document)
 - [x] Page 42 Sales Order (Document)
@@ -3384,7 +3384,7 @@ Pages 41 / 222, reports 8 / 78.
 - [ ] Page 664 Sales Prepayment Percentages (Worksheet)
 - [ ] Page 1160 Sales Documents (ListPart)
 - [ ] Page 1401 Sales No. Series Setup (ListPlus)
-- [ ] Page 5814 Item Charge Assignment (Sales) (Worksheet)
+- [x] Page 5814 Item Charge Assignment (Sales) (Worksheet)
 - [ ] Page 6630 Sales Return Order (Document)
 - [ ] Page 6631 Sales Return Order Subform (ListPart)
 - [ ] Page 6633 Sales Return Orders (List)

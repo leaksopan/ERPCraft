@@ -23,7 +23,7 @@ orders this list into phases.
 | Foundation | 8 | 58 | 0 | 2 |
 | HumanResources | 0 | 57 | 0 | 15 |
 | Integration | 0 | 87 | 0 | 0 |
-| Inventory | 29 | 312 | 1 | 101 |
+| Inventory | 32 | 312 | 1 | 101 |
 | Invoicing | 0 | 7 | 0 | 0 |
 | Manufacturing | 0 | 134 | 0 | 50 |
 | Modules | 2 | 93 | 0 | 1 |
@@ -38,7 +38,7 @@ orders this list into phases.
 | Utilities | 0 | 12 | 0 | 2 |
 | Warehouse | 0 | 144 | 0 | 35 |
 | eServices | 0 | 25 | 0 | 0 |
-| **Base Application** | **169** | **2638** | **16** | **659** |
+| **Base Application** | **172** | **2638** | **16** | **659** |
 
 ### (root)
 
@@ -1754,7 +1754,7 @@ Pages 0 / 87, reports 0 / 0.
 
 ### Inventory
 
-Pages 29 / 312, reports 1 / 101.
+Pages 32 / 312, reports 1 / 101.
 
 <details><summary>Inventory / Analysis: pages 0 / 34, reports 0 / 8</summary>
 
@@ -2221,7 +2221,7 @@ Pages 29 / 312, reports 1 / 101.
 
 </details>
 
-<details><summary>Inventory / Tracking: pages 0 / 31, reports 0 / 4</summary>
+<details><summary>Inventory / Tracking: pages 3 / 31, reports 0 / 4</summary>
 
 - [ ] Page 305 Reservation Worksheet (Worksheet)
 - [ ] Page 316 Allocation Policies (List)
@@ -2234,8 +2234,8 @@ Pages 29 / 312, reports 1 / 101.
 - [ ] Page 505 Reservation Summary (List)
 - [ ] Page 5818 Matched Order Lines (List)
 - [ ] Page 6500 Item Tracking Summary (Worksheet)
-- [ ] Page 6501 Item Tracking Entries (List)
-- [ ] Page 6502 Item Tracking Codes (List)
+- [x] Page 6501 Item Tracking Entries (List)
+- [x] Page 6502 Item Tracking Codes (List)
 - [ ] Page 6503 Avail. - Item Tracking Lines (List)
 - [ ] Page 6504 Serial No. Information Card (Card)
 - [ ] Page 6505 Lot No. Information Card (Card)
@@ -2245,7 +2245,7 @@ Pages 29 / 312, reports 1 / 101.
 - [ ] Page 6509 Serial No. Information List (List)
 - [ ] Page 6510 Item Tracking Lines (Worksheet)
 - [ ] Page 6511 Posted Item Tracking Lines (List)
-- [ ] Page 6512 Item Tracking Code Card (Card)
+- [x] Page 6512 Item Tracking Code Card (Card)
 - [ ] Page 6513 Enter Quantity to Create (StandardDialog)
 - [ ] Page 6515 Enter Customized SN (StandardDialog)
 - [ ] Page 6516 Package No. Information List (List)

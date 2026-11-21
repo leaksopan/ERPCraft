@@ -28,6 +28,9 @@ pub fn on_insert(ctx: &mut Ctx, t: &TableDef, r: &mut Record) -> Result<()> {
         crate::item_journal::on_insert(ctx, r)?;
         return crate::approvals::on_journal_line_insert(ctx, &t.name, r);
     }
+    if crate::tracking::on_insert(ctx, t, r) {
+        return Ok(());
+    }
     if crate::transfer::on_insert(ctx, t, r)? {
         return Ok(());
     }
@@ -201,6 +204,7 @@ pub fn on_validate(ctx: &mut Ctx, t: &TableDef, r: &mut Record, field: &str, old
     crate::dimensions::on_validate(ctx, t, r, field)?;
     crate::item_setup::on_validate(ctx, t, r, field)?;
     crate::transfer::on_validate(ctx, t, r, field)?;
+    crate::tracking::on_validate(ctx, t, r, field)?;
     if t.name == crate::schema::bank_rec::BANK_REC_LINE {
         crate::bank_rec::on_line_validate(ctx, r, field);
     }

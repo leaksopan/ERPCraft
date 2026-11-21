@@ -378,6 +378,9 @@ pub fn master_data(ctx: &mut Ctx) -> Result<()> {
                    "Vendor No.": vendor, "Reorder Point": if *ty == "Service" { 0 } else { 10 }}),
         )?;
     }
+    // Item tracking codes: by lot, by serial number.
+    raw(ctx, "Item Tracking Code", json!({"Code": "LOTALL", "Description": "Lot specific tracking", "Lot Specific Tracking": true, "Lot Warehouse Tracking": true}))?;
+    raw(ctx, "Item Tracking Code", json!({"Code": "SNALL", "Description": "Serial number specific tracking", "SN Specific Tracking": true, "SN Warehouse Tracking": true}))?;
     // Engine oil also comes by the box of 12.
     raw(ctx, "Item Unit of Measure", json!({"Item No.": "1000", "Code": "BOX", "Qty. per Unit of Measure": 12}))?;
     for template in ["CASHRCPT", "PAYMENT"] {

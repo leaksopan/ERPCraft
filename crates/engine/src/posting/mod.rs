@@ -221,11 +221,15 @@ fn post_item_entry(
     sales_amount: Decimal,
     uom: &Value,
     party_no: &str,
+    line: &Record,
 ) -> Result<i64> {
     if qty < Decimal::ZERO {
         crate::item_journal::check_negative(ctx, item.str("No."), location, -qty)?;
     }
-    post_item(
+    // Per lot / serial number for a tracked item.
+    let source = crate::tracking::source_of(side.line, line);
+    let parts = crate::tracking::parts_for(ctx, item, source.as_ref(), location, qty)?;
+    let no = crate::tracking::post_parts(
         ctx,
         &ItemEntry {
             item,
@@ -242,7 +246,12 @@ fn post_item_entry(
             source_type: if side.sales { "Customer" } else { "Vendor" },
             source_no: party_no,
         },
-    )
+        &parts,
+    )?;
+    if let Some(s) = source {
+        crate::tracking::consume(ctx, &s)?;
+    }
+    Ok(no)
 }
 
 /// Line amounts for `qty` of a line whose full amounts are for `Quantity`.
@@ -387,7 +396,7 @@ pub fn post_document(ctx: &mut Ctx, side: &Side, doc_type: &str, no: &str, mode:
                 } else {
                     (qb, lcy(portion(l, "Amount", q)))
                 };
-                ile = post_item_entry(ctx, side, &it, posting_date, ile_doc, &shipment_no, l.str("Description"), l.str("Location Code"), qty, cost, Decimal::ZERO, l.get("Unit of Measure Code"), &party_no)?;
+                ile = post_item_entry(ctx, side, &it, posting_date, ile_doc, &shipment_no, l.str("Description"), l.str("Location Code"), qty, cost, Decimal::ZERO, l.get("Unit of Measure Code"), &party_no, l)?;
                 if !side.sales {
                     update_item_cost(ctx, it.str("No."), qb, cost)?;
                 }
@@ -504,7 +513,7 @@ pub fn post_document(ctx: &mut Ctx, side: &Side, doc_type: &str, no: &str, mode:
                         (false, true) => "Purchase Credit Memo",
                     };
                     let sales_amount = if side.sales { if credit { -amount } else { amount } } else { Decimal::ZERO };
-                    post_item_entry(ctx, side, it, posting_date, ile_doc, &posted_no, &line_desc, l.str("Location Code"), signed, cost, sales_amount, l.get("Unit of Measure Code"), &party_no)?;
+                    post_item_entry(ctx, side, it, posting_date, ile_doc, &posted_no, &line_desc, l.str("Location Code"), signed, cost, sales_amount, l.get("Unit of Measure Code"), &party_no, l)?;
                     if !side.sales && !credit && !qty.is_zero() {
                         update_item_cost(ctx, it.str("No."), qty * per(l), amount)?;
                     }

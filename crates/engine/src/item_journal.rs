@@ -12,7 +12,7 @@ use crate::ctx::{Ctx, dec, round_amount};
 use crate::error::{EngineError, Result};
 use crate::ledger::Txn;
 use crate::noseries;
-use crate::posting::{GlDoc, GlLine, ItemEntry, check_posting_date, inventory_account, post_gl, post_item, update_item_cost};
+use crate::posting::{GlDoc, GlLine, ItemEntry, check_posting_date, inventory_account, post_gl, update_item_cost};
 use crate::refuse;
 use crate::schema::inventory::{ITEM_JNL_BATCH, ITEM_JNL_LINE, ITEM_JNL_TEMPLATE};
 use crate::schema::tables::{GEN_POSTING_SETUP, INVENTORY_SETUP, ITEM, ITEM_LEDGER};
@@ -236,7 +236,12 @@ pub fn post(ctx: &mut Ctx, template: &str, batch: &str) -> Result<Json> {
                     }
                     let signed = if positive { qty } else { -qty };
                     let cost = round_amount(signed * unit);
-                    post_item(ctx, &ItemEntry { item: &item, posting_date: date, entry_type: t, doc_type: "", doc_no: doc, description: &desc, location: &loc, qty: signed, cost, sales_amount: Decimal::ZERO, uom: l.get("Unit of Measure Code"), source_type: "", source_no: "" })?;
+                    let source = crate::tracking::source_of(ITEM_JNL_LINE, l);
+                    let parts = crate::tracking::parts_for(ctx, &item, source.as_ref(), &loc, signed)?;
+                    crate::tracking::post_parts(ctx, &ItemEntry { item: &item, posting_date: date, entry_type: t, doc_type: "", doc_no: doc, description: &desc, location: &loc, qty: signed, cost, sales_amount: Decimal::ZERO, uom: l.get("Unit of Measure Code"), source_type: "", source_no: "" }, &parts)?;
+                    if let Some(s) = &source {
+                        crate::tracking::consume(ctx, s)?;
+                    }
                     if positive && !qty.is_zero() {
                         update_item_cost(ctx, item.str("No."), qty, cost)?;
                     }
@@ -252,8 +257,14 @@ pub fn post(ctx: &mut Ctx, template: &str, batch: &str) -> Result<Json> {
                     }
                     check_negative(ctx, item.str("No."), &loc, qty)?;
                     let cost = round_amount(qty * item.get("Unit Cost").as_dec());
-                    post_item(ctx, &ItemEntry { item: &item, posting_date: date, entry_type: "Transfer", doc_type: "", doc_no: doc, description: &desc, location: &loc, qty: -qty, cost: -cost, sales_amount: Decimal::ZERO, uom: l.get("Unit of Measure Code"), source_type: "", source_no: "" })?;
-                    post_item(ctx, &ItemEntry { item: &item, posting_date: date, entry_type: "Transfer", doc_type: "", doc_no: doc, description: &desc, location: &to, qty, cost, sales_amount: Decimal::ZERO, uom: l.get("Unit of Measure Code"), source_type: "", source_no: "" })?;
+                    let source = crate::tracking::source_of(ITEM_JNL_LINE, l);
+                    let out = crate::tracking::parts_for(ctx, &item, source.as_ref(), &loc, -qty)?;
+                    let inbound: Vec<crate::tracking::Part> = out.iter().map(|p| crate::tracking::Part { qty: -p.qty, ..p.clone() }).collect();
+                    crate::tracking::post_parts(ctx, &ItemEntry { item: &item, posting_date: date, entry_type: "Transfer", doc_type: "", doc_no: doc, description: &desc, location: &loc, qty: -qty, cost: -cost, sales_amount: Decimal::ZERO, uom: l.get("Unit of Measure Code"), source_type: "", source_no: "" }, &out)?;
+                    crate::tracking::post_parts(ctx, &ItemEntry { item: &item, posting_date: date, entry_type: "Transfer", doc_type: "", doc_no: doc, description: &desc, location: &to, qty, cost, sales_amount: Decimal::ZERO, uom: l.get("Unit of Measure Code"), source_type: "", source_no: "" }, &inbound)?;
+                    if let Some(s) = &source {
+                        crate::tracking::consume(ctx, s)?;
+                    }
                     let (from_acc, to_acc) = (inventory_account(ctx, &item, &loc)?, inventory_account(ctx, &item, &to)?);
                     if from_acc != to_acc {
                         gl.push(GlLine { account: to_acc, amount: cost, vat_amount: Decimal::ZERO, description: desc.clone(), gen_posting_type: "" });

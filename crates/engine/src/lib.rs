@@ -35,6 +35,7 @@ pub mod reminders;
 pub mod recurring;
 pub mod item_setup;
 pub mod transfer;
+pub mod tracking;
 mod error;
 pub mod fa;
 pub mod item_journal;

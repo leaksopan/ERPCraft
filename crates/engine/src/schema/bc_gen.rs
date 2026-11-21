@@ -1763,9 +1763,12 @@ pub fn extend(m: &mut Metadata) {
             ("Price Includes VAT", "Price Includes VAT", "Specifies if the Unit Price and Line Amount fields on sales document lines for this item should be shown with or without VAT.", 0),
             ("Gen. Prod. Posting Group", "Gen. Prod. Posting Group", "Specifies the item's product type to link transactions made for this item with the appropriate general ledger account according to the general posting setup.", 0),
             ("VAT Prod. Posting Group", "VAT Prod. Posting Group", "Specifies the VAT product posting group. Links business transactions made for the item, resource, or G/L account with the general ledger, to account for VAT amounts resulting from trade with that record.", 0),
+            ("Serial Nos.", "Serial Nos.", "Specifies a number series code to assign consecutive serial numbers to items produced.", 0),
             ("Sales Unit of Measure", "Sales Unit of Measure", "Specifies the unit of measure code used when you sell the item.", 0),
             ("Purch. Unit of Measure", "Purch. Unit of Measure", "Specifies the unit of measure code used when you purchase the item.", 0),
             ("Item Category Code", "Item Category Code", "Specifies the category that the item belongs to. Item categories also contain any assigned item attributes.", 0),
+            ("Item Tracking Code", "Item Tracking Code", "Specifies how serial, lot or package numbers assigned to the item are tracked in the supply chain.", 0),
+            ("Lot Nos.", "Lot Nos.", "Specifies the number series code that will be used when assigning lot numbers.", 0),
             ("Sales Blocked", "Sales Blocked", "Specifies that transactions with the item cannot be sold, for example, because the item is in quarantine.", 0),
             ("Purchasing Blocked", "Purchasing Blocked", "Specifies that the item cannot be entered on purchase documents, except return orders and credit memos, and journals.", 0),
         ],
@@ -1796,12 +1799,9 @@ pub fn extend(m: &mut Metadata) {
             F::option("Variant Mandatory if Exists", &["Default", "No", "Yes"]).tooltip("Specifies whether a variant must be selected if variants exist for the item."),
             F::code("GTIN", 14).tooltip("Specifies the number that is used for barcodes etc."),
             F::code("Default Deferral Template Code", 10).tooltip("Specifies the default template that governs how to defer revenues and expenses to the periods when they occurred."),
-            F::code("Serial Nos.", 20).tooltip("Specifies a number series code to assign consecutive serial numbers to items produced."),
             F::boolean("Created From Nonstock Item").caption("Created From Catalog Item").read_only().tooltip("Specifies that the item was created from a catalog item."),
             F::boolean("Substitutes Exist").calc(CalcFormula::new(CalcFunc::Exist, "Item Substitution", "", &[("No.", "No.")], &[("Type", "Item")])).tooltip("Specifies that a substitute exists for this item."),
             F::code("Purchasing Code", 10).tooltip("Specifies the code for a special procurement method, such as drop shipment."),
-            F::code("Item Tracking Code", 10).tooltip("Specifies how serial, lot or package numbers assigned to the item are tracked in the supply chain."),
-            F::code("Lot Nos.", 20).tooltip("Specifies the number series code that will be used when assigning lot numbers."),
             F::code("Expiration Calculation", 32).tooltip("Specifies the date formula for calculating the expiration date on the item tracking line. Note: This field will be ignored if the involved item has Require Expiration Date Entry set to Yes on the Item Tracking Code page."),
             F::code("Over-Receipt Code", 20).tooltip("Specifies the policy that will be used for the item if more items than ordered are received."),
             F::boolean("Critical").tooltip("Specifies if the item is included in availability calculations to promise a shipment date for its parent item."),
@@ -1920,6 +1920,9 @@ pub fn extend(m: &mut Metadata) {
             ("Unit of Measure Code", "Unit of Measure Code", "Specifies how each unit of the item or resource is measured, such as in pieces or hours. By default, the value in the Base Unit of Measure field on the item or resource card is inserted.", 0),
             ("Cost Amount (Actual)", "Cost Amount (Actual)", "", 1),
             ("Sales Amount (Actual)", "Sales Amount (Actual)", "", 1),
+            ("Serial No.", "Serial No.", "Specifies a serial number if the posted item carries such a number.", 0),
+            ("Lot No.", "Lot No.", "Specifies a lot number if the posted item carries such a number.", 0),
+            ("Expiration Date", "Expiration Date", "Specifies the last date that the item on the line can be used.", 0),
         ],
     );
     fields(
@@ -1929,6 +1932,7 @@ pub fn extend(m: &mut Metadata) {
             F::decimal("Invoiced Quantity").tooltip("Specifies how many units of the item on the line have been invoiced."),
             F::code("Global Dimension 1 Code", 20).tooltip("Specifies the code for the global dimension that is linked to the record or entry for analysis purposes. Two global dimensions, typically for the company's most important activities, are available on all cards, documents, reports, and lists."),
             F::code("Global Dimension 2 Code", 20).tooltip("Specifies the code for the global dimension that is linked to the record or entry for analysis purposes. Two global dimensions, typically for the company's most important activities, are available on all cards, documents, reports, and lists."),
+            F::boolean("Positive").tooltip("Specifies whether the item in the item ledge entry is positive."),
             F::option("Order Type", &["", "Production", "Transfer", "Service", "Assembly"]).read_only().tooltip("Specifies which type of order that the entry was created in."),
             F::code("Shortcut Dimension 3 Code", 20).calc(CalcFormula::new(CalcFunc::Lookup, "Dimension Set Entry", "Dimension Value Code", &[("Dimension Set ID", "Dimension Set ID")], &[("Global Dimension No.", "3")])).tooltip("Specifies the code for Shortcut Dimension 3, which is one of dimension codes that you set up in the General Ledger Setup window."),
             F::code("Shortcut Dimension 4 Code", 20).calc(CalcFormula::new(CalcFunc::Lookup, "Dimension Set Entry", "Dimension Value Code", &[("Dimension Set ID", "Dimension Set ID")], &[("Global Dimension No.", "4")])).tooltip("Specifies the code for Shortcut Dimension 4, which is one of dimension codes that you set up in the General Ledger Setup window."),
@@ -1937,6 +1941,8 @@ pub fn extend(m: &mut Metadata) {
             F::code("Shortcut Dimension 7 Code", 20).calc(CalcFormula::new(CalcFunc::Lookup, "Dimension Set Entry", "Dimension Value Code", &[("Dimension Set ID", "Dimension Set ID")], &[("Global Dimension No.", "7")])).tooltip("Specifies the code for Shortcut Dimension 7, which is one of dimension codes that you set up in the General Ledger Setup window."),
             F::code("Shortcut Dimension 8 Code", 20).calc(CalcFormula::new(CalcFunc::Lookup, "Dimension Set Entry", "Dimension Value Code", &[("Dimension Set ID", "Dimension Set ID")], &[("Global Dimension No.", "8")])).tooltip("Specifies the code for Shortcut Dimension 8, which is one of dimension codes that you set up in the General Ledger Setup window."),
             F::boolean("Applied Entry to Adjust").tooltip("Specifies whether there is one or more applied entries, which need to be adjusted."),
+            F::date("Warranty Date").tooltip("Specifies the last day of warranty for the item on the line."),
+            F::code("Package No.", 50).tooltip("Specifies a package number if the posted item carries such a number."),
         ],
     );
     relabel(
@@ -1967,6 +1973,66 @@ pub fn extend(m: &mut Metadata) {
             ("Interchangeable", "Interchangeable", "Specifies that the item and the substitute item are interchangeable.", 0),
             ("Condition", "Condition", "Specifies that a condition exists for this substitution.", 0),
             ("Substitute Type", "Substitute Type", "Specifies the type of the item that can be used as a substitute.", 0),
+        ],
+    );
+    relabel(
+        m,
+        "Item Tracking Code",
+        &[
+            ("Code", "Code", "Specifies the code of the record.", 0),
+            ("Description", "Description", "Specifies a description of the item tracking code.", 0),
+            ("Man. Expir. Date Entry Reqd.", "Man. Expir. Date Entry Reqd.", "Specifies that items that use this item tracking code must have an expiration date, and that you must enter the expiration date manually. The date formula specified in the Expiration Calculation field on the item card will be ignored.", 0),
+            ("Strict Expiration Posting", "Strict Expiration Posting", "Specifies if the expiration date is considered when you sell items. For example, you cannot post a sales order for an item that has passed its expiration date. For tracked items, this setting also uses the First-Expired-First-Out (FEFO) method to determine which items to pick, regardless of the Pick According to FEFO setting on the location.", 0),
+            ("Use Expiration Dates", "Use Expiration Dates", "Specifies that items that use this item tracking code can have an expiration date. This will enable checks for expiration dates, which can affect performance for documents with many Item Tracking Lines.", 0),
+            ("SN Specific Tracking", "SN Specific Tracking", "Specifies that when handling an outbound unit of the item in question, you must always specify which existing serial number to handle.", 0),
+            ("SN Warehouse Tracking", "SN Warehouse Tracking", "Specifies that warehouse document lines require serial numbers.", 0),
+            ("Lot Specific Tracking", "Lot Specific Tracking", "Specifies that when handling an outbound unit, always specify which existing lot number to handle.", 0),
+            ("Lot Warehouse Tracking", "Lot Warehouse Tracking", "Specifies that warehouse document lines require a lot number.", 0),
+        ],
+    );
+    fields(
+        m,
+        "Item Tracking Code",
+        vec![
+            F::code("Warranty Date Formula", 32).tooltip("Specifies the formula that calculates the warranty date entered in the Warranty Date field on item tracking line."),
+            F::boolean("Man. Warranty Date Entry Reqd.").tooltip("Specifies that a warranty date must be entered manually."),
+            F::boolean("SN Info. Inbound Must Exist").tooltip("Specifies that serial numbers on inbound document lines must have an information record in the Serial No. Information Card."),
+            F::boolean("SN Info. Outbound Must Exist").tooltip("Specifies that serial numbers on outbound document lines must have an information record in the Serial No. Information Card."),
+            F::boolean("SN Purchase Inbound Tracking").tooltip("Specifies that inbound purchase document lines require serial numbers."),
+            F::boolean("SN Purchase Outbound Tracking").tooltip("Specifies that outbound purchase document lines require serial numbers."),
+            F::boolean("SN Sales Inbound Tracking").tooltip("Specifies that inbound sales document lines require serial numbers."),
+            F::boolean("SN Sales Outbound Tracking").tooltip("Specifies that outbound sales document lines require serial numbers."),
+            F::boolean("SN Pos. Adjmt. Inb. Tracking").tooltip("Specifies that inbound item journal lines of type positive entry require serial numbers."),
+            F::boolean("SN Pos. Adjmt. Outb. Tracking").tooltip("Specifies that outbound item journal lines of type positive entry require serial numbers."),
+            F::boolean("SN Neg. Adjmt. Inb. Tracking").tooltip("Specifies that inbound item journal lines of type negative entry require serial numbers."),
+            F::boolean("SN Neg. Adjmt. Outb. Tracking").tooltip("Specifies that outbound item journal lines of type negative entry require serial numbers."),
+            F::boolean("SN Transfer Tracking").tooltip("Specifies that transfer order lines require serial numbers."),
+            F::boolean("Create SN Info on Posting").caption("Create SN Info. on posting").tooltip("Specifies that if the Serial No. Information card is missing for the document line, the card will be created during posting."),
+            F::boolean("Lot Info. Inbound Must Exist").tooltip("Specifies that lot numbers on inbound document lines must have an information record in the Lot No. Information Card."),
+            F::boolean("Lot Info. Outbound Must Exist").tooltip("Specifies that lot numbers on outbound document lines must have an information record in the Lot No. Information Card."),
+            F::boolean("Lot Purchase Inbound Tracking").tooltip("Specifies that inbound purchase document lines require a lot number."),
+            F::boolean("Lot Purchase Outbound Tracking").tooltip("Specifies that outbound purchase document lines require a lot number."),
+            F::boolean("Lot Sales Inbound Tracking").tooltip("Specifies that inbound sales document lines require a lot number."),
+            F::boolean("Lot Sales Outbound Tracking").tooltip("Specifies that outbound sales document lines require a lot number."),
+            F::boolean("Lot Pos. Adjmt. Inb. Tracking").tooltip("Specifies that inbound item journal lines of type positive entry require a lot number."),
+            F::boolean("Lot Pos. Adjmt. Outb. Tracking").tooltip("Specifies that outbound item journal lines of type positive entry require a lot number."),
+            F::boolean("Lot Neg. Adjmt. Inb. Tracking").tooltip("Specifies that inbound item journal lines of type negative entry require a lot number."),
+            F::boolean("Lot Neg. Adjmt. Outb. Tracking").tooltip("Specifies that outbound item journal lines of type negative entry require a lot number."),
+            F::boolean("Lot Transfer Tracking").tooltip("Specifies that transfer order lines require a lot number."),
+            F::boolean("Create Lot No. Info on posting").caption("Create Lot No. Info. on posting").tooltip("Specifies that if the Lot No. Information card is missing for the document line, the card will be created during posting."),
+            F::boolean("Package Specific Tracking").tooltip("Specifies that when handling an outbound unit, always specify which existing package number to handle."),
+            F::boolean("Package Warehouse Tracking").tooltip("Specifies that warehouse document lines require a package number."),
+            F::boolean("Package Info. Inb. Must Exist").tooltip("Specifies that package numbers on inbound document lines must have an information record in the Package No. Information Card."),
+            F::boolean("Package Info. Outb. Must Exist").caption("Lot Info. Outb. Must Exist").tooltip("Specifies that package numbers on outbound document lines must have an information record in the Package No. Information Card."),
+            F::boolean("Package Purchase Inb. Tracking").tooltip("Specifies that inbound purchase document lines require a package number."),
+            F::boolean("Package Purch. Outb. Tracking").tooltip("Specifies that outbound purchase document lines require a package number."),
+            F::boolean("Package Sales Inbound Tracking").tooltip("Specifies that inbound sales document lines require a package number."),
+            F::boolean("Package Sales Outb. Tracking").tooltip("Specifies that outbound sales document lines require a package number."),
+            F::boolean("Package Pos. Inb. Tracking").tooltip("Specifies that inbound item journal lines of type positive entry require a package number."),
+            F::boolean("Package Pos. Outb. Tracking").tooltip("Specifies that outbound item journal lines of type positive entry require a package number."),
+            F::boolean("Package Neg. Inb. Tracking").tooltip("Specifies that inbound item journal lines of type negative entry require a package number."),
+            F::boolean("Package Neg. Outb. Tracking").tooltip("Specifies that outbound item journal lines of type negative entry require a package number."),
+            F::boolean("Package Transfer Tracking").tooltip("Specifies that transfer order lines require a package number."),
         ],
     );
     relabel(
@@ -4377,6 +4443,49 @@ pub fn extend(m: &mut Metadata) {
     columns(m, "item-reclass-journal", &["Posting Date", "Document No.", "Item No.", "Description", "Location Code", "New Location Code", "Quantity", "Unit of Measure Code", "Applies-to Entry", "Shortcut Dimension 1 Code", "New Shortcut Dimension 1 Code", "Shortcut Dimension 2 Code", "New Shortcut Dimension 2 Code"]);
     columns(m, "item-reference-entries", &["Reference Type", "Reference Type No.", "Reference No.", "Unit of Measure", "Description", "Starting Date", "Ending Date"]);
     columns(m, "item-substitution-entry", &["Substitute Type", "Substitute No.", "Description", "Interchangeable", "Condition"]);
+    layout(
+        m,
+        "item-tracking-code-card",
+        &[
+            Tab {
+                caption: "General",
+                fields: &["Code", "Description"],
+                ..Tab::default()
+            },
+            Tab {
+                caption: "Serial No.",
+                fields: &["SN Specific Tracking", "Create SN Info on Posting", "SN Info. Inbound Must Exist", "SN Purchase Inbound Tracking", "SN Sales Inbound Tracking", "SN Pos. Adjmt. Inb. Tracking", "SN Neg. Adjmt. Inb. Tracking", "SN Warehouse Tracking", "SN Transfer Tracking", "SN Info. Outbound Must Exist", "SN Purchase Outbound Tracking", "SN Sales Outbound Tracking", "SN Pos. Adjmt. Outb. Tracking", "SN Neg. Adjmt. Outb. Tracking"],
+                breaks: &["SN Specific Tracking", "SN Info. Inbound Must Exist", "SN Warehouse Tracking", "SN Info. Outbound Must Exist"],
+                captions: &[("SN Info. Inbound Must Exist", "SN No. Info. Must Exist"), ("SN Purchase Inbound Tracking", "SN Purchase Tracking"), ("SN Sales Inbound Tracking", "SN Sales Tracking"), ("SN Pos. Adjmt. Inb. Tracking", "SN Positive Adjmt. Tracking"), ("SN Neg. Adjmt. Inb. Tracking", "SN Negative Adjmt. Tracking"), ("SN Info. Outbound Must Exist", "SN No. Info. Must Exist"), ("SN Purchase Outbound Tracking", "SN Purchase Tracking"), ("SN Sales Outbound Tracking", "SN Sales Tracking"), ("SN Pos. Adjmt. Outb. Tracking", "SN Positive Adjmt. Tracking"), ("SN Neg. Adjmt. Outb. Tracking", "SN Negative Adjmt. Tracking")],
+                headings: &[("SN Specific Tracking", "General"), ("SN Info. Inbound Must Exist", "Inbound"), ("SN Info. Outbound Must Exist", "Outbound")],
+                ..Tab::default()
+            },
+            Tab {
+                caption: "Lot No.",
+                fields: &["Lot Specific Tracking", "Create Lot No. Info on posting", "Lot Info. Inbound Must Exist", "Lot Purchase Inbound Tracking", "Lot Sales Inbound Tracking", "Lot Pos. Adjmt. Inb. Tracking", "Lot Neg. Adjmt. Inb. Tracking", "Lot Warehouse Tracking", "Lot Transfer Tracking", "Lot Info. Outbound Must Exist", "Lot Purchase Outbound Tracking", "Lot Sales Outbound Tracking", "Lot Pos. Adjmt. Outb. Tracking", "Lot Neg. Adjmt. Outb. Tracking"],
+                breaks: &["Lot Specific Tracking", "Lot Info. Inbound Must Exist", "Lot Warehouse Tracking", "Lot Info. Outbound Must Exist"],
+                captions: &[("Lot Info. Inbound Must Exist", "Lot No. Info. Must Exist"), ("Lot Purchase Inbound Tracking", "Lot Purchase Tracking"), ("Lot Sales Inbound Tracking", "Lot Sales Tracking"), ("Lot Pos. Adjmt. Inb. Tracking", "Lot Positive Adjmt. Tracking"), ("Lot Neg. Adjmt. Inb. Tracking", "Lot Negative Adjmt. Tracking"), ("Lot Info. Outbound Must Exist", "Lot No. Info. Must Exist"), ("Lot Purchase Outbound Tracking", "Lot Purchase Tracking"), ("Lot Sales Outbound Tracking", "Lot Sales Tracking"), ("Lot Pos. Adjmt. Outb. Tracking", "Lot Positive Adjmt. Tracking"), ("Lot Neg. Adjmt. Outb. Tracking", "Lot Negative Adjmt. Tracking")],
+                headings: &[("Lot Specific Tracking", "General"), ("Lot Info. Inbound Must Exist", "Inbound"), ("Lot Info. Outbound Must Exist", "Outbound")],
+                ..Tab::default()
+            },
+            Tab {
+                caption: "Package Tracking",
+                fields: &["Package Specific Tracking", "Package Info. Inb. Must Exist", "Package Purchase Inb. Tracking", "Package Sales Inbound Tracking", "Package Pos. Inb. Tracking", "Package Neg. Inb. Tracking", "Package Warehouse Tracking", "Package Transfer Tracking", "Package Info. Outb. Must Exist", "Package Purch. Outb. Tracking", "Package Sales Outb. Tracking", "Package Pos. Outb. Tracking", "Package Neg. Outb. Tracking"],
+                breaks: &["Package Specific Tracking", "Package Info. Inb. Must Exist", "Package Warehouse Tracking", "Package Info. Outb. Must Exist"],
+                captions: &[("Package Info. Inb. Must Exist", "Package No. Info. Must Exist"), ("Package Purchase Inb. Tracking", "Package Purchase Tracking"), ("Package Sales Inbound Tracking", "Package Sales Tracking"), ("Package Pos. Inb. Tracking", "Package Positive Adjmt. Tracking"), ("Package Neg. Inb. Tracking", "Package Negative Adjmt. Tracking"), ("Package Info. Outb. Must Exist", "Package No. Info. Must Exist"), ("Package Purch. Outb. Tracking", "Package Purchase Tracking"), ("Package Sales Outb. Tracking", "Package Sales Tracking"), ("Package Pos. Outb. Tracking", "Package Positive Adjmt. Tracking"), ("Package Neg. Outb. Tracking", "Package Negative Adjmt. Tracking")],
+                headings: &[("Package Specific Tracking", "General"), ("Package Info. Inb. Must Exist", "Inbound"), ("Package Info. Outb. Must Exist", "Outbound")],
+                ..Tab::default()
+            },
+            Tab {
+                caption: "Misc.",
+                fields: &["Warranty Date Formula", "Man. Warranty Date Entry Reqd.", "Use Expiration Dates", "Man. Expir. Date Entry Reqd.", "Strict Expiration Posting"],
+                captions: &[("Man. Warranty Date Entry Reqd.", "Require Warranty Date Entry"), ("Man. Expir. Date Entry Reqd.", "Require Expiration Date Entry")],
+                ..Tab::default()
+            },
+        ],
+    );
+    columns(m, "item-tracking-codes", &["Code", "Description", "SN Specific Tracking", "Lot Specific Tracking", "Package Specific Tracking"]);
+    columns(m, "item-tracking-entries", &["Positive", "Document No.", "Item No.", "Serial No.", "Lot No.", "Package No.", "Location Code", "Quantity", "Remaining Quantity", "Warranty Date", "Expiration Date", "Entry No."]);
     columns(m, "item-translations", &["Language Code", "Description"]);
     columns(m, "item-units-of-measure", &["Code", "Qty. per Unit of Measure", "Height", "Width", "Length", "Cubage", "Weight"]);
     columns(m, "item-variants", &["Blocked", "Sales Blocked", "Purchasing Blocked"]);
@@ -6088,7 +6197,7 @@ pub fn extend(m: &mut Metadata) {
         &[
             ("Process", &["P&ost", "Preview Posting", "Post and &Print"]),
             ("Approve", &["Comments"]),
-            ("Line", &["Dimensions", "Approvals"]),
+            ("Line", &["Item &Tracking Lines", "Dimensions", "Approvals"]),
         ],
     );
     categories(
@@ -6112,7 +6221,14 @@ pub fn extend(m: &mut Metadata) {
         "item-reclass-journal",
         &[
             ("Process", &["P&ost", "Preview Posting", "Post and &Print"]),
-            ("Line", &["Dimensions"]),
+            ("Line", &["Item &Tracking Lines", "Dimensions"]),
+        ],
+    );
+    categories(
+        m,
+        "item-tracking-entries",
+        &[
+            ("Process", &["Find entries..."]),
         ],
     );
     categories(
@@ -6146,7 +6262,7 @@ pub fn extend(m: &mut Metadata) {
             ("Process", &["P&ost", "Preview Posting", "Post and &Print"]),
             ("Approve", &["Comments"]),
             ("Prepare", &["Calculate &Inventory"]),
-            ("Line", &["Dimensions", "Approvals"]),
+            ("Line", &["Item &Tracking Lines", "Dimensions", "Approvals"]),
             ("Item", &["Card", "Ledger E&ntries"]),
         ],
     );

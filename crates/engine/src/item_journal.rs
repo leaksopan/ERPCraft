@@ -189,6 +189,7 @@ fn adjustment_account(ctx: &Ctx, l: &Record) -> Result<String> {
 }
 
 pub fn post(ctx: &mut Ctx, template: &str, batch: &str) -> Result<Json> {
+    crate::approvals::check_journal_post(ctx, ITEM_JNL_LINE, template, batch)?;
     let lt = ctx.table(ITEM_JNL_LINE)?;
     let mut lines: Vec<Record> = batch_lines(ctx, template, batch).cloned().collect();
     lines.sort_by_key(|l| l.get("Line No.").as_int());

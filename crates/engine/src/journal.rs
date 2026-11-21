@@ -220,6 +220,7 @@ struct Effect<'a> {
 
 /// Posts every line of the batch; documents become transactions; posted lines are deleted.
 pub fn post(ctx: &mut Ctx, template: &str, batch: &str) -> Result<Json> {
+    crate::approvals::check_journal_post(ctx, GEN_JNL_LINE, template, batch)?;
     let problems = check(ctx, template, batch)?;
     if let Some(p) = problems.first() {
         return Err(EngineError::refused(p.clone()));

@@ -2810,6 +2810,7 @@ pub fn extend(m: &mut Metadata) {
             F::boolean("View All Accounts on Lookup").tooltip("Specifies that all possible accounts are shown when you look up from a field. If the check box is not selected, then only accounts related to the involved account category are shown."),
         ],
     );
+    columns(m, "approval-comments", &["Comment", "User ID", "Date and Time"]);
     columns(m, "approval-entries", &["Limit Type", "Approval Type", "Sequence No.", "Status", "Sender ID", "Salespers./Purch. Code", "Approver ID", "Currency Code", "Amount (LCY)", "Available Credit Limit (LCY)", "Date-Time Sent for Approval", "Last Date-Time Modified", "Last Modified By User ID", "Due Date"]);
     columns(m, "attached-documents", &["File Name", "File Extension", "File Type", "User", "Attached Date", "Document Flow Purchase", "Document Flow Sales", "Document Flow Production"]);
     layout(
@@ -4326,7 +4327,8 @@ pub fn extend(m: &mut Metadata) {
         "cash-receipt-journal",
         &[
             ("Process", &["P&ost", "Preview Posting", "Post and &Print", "Test Report", "Renumber Document Numbers"]),
-            ("Line", &["Dimensions"]),
+            ("Approve", &["Comments"]),
+            ("Line", &["Dimensions", "Approvals"]),
         ],
     );
     categories(
@@ -4441,7 +4443,8 @@ pub fn extend(m: &mut Metadata) {
         "general-journal",
         &[
             ("Process", &["P&ost", "Preview Posting", "Post and &Print", "Test Report", "Renumber Document Numbers"]),
-            ("Line", &["Dimensions"]),
+            ("Approve", &["Comments"]),
+            ("Line", &["Dimensions", "Approvals"]),
         ],
     );
     categories(
@@ -4512,7 +4515,8 @@ pub fn extend(m: &mut Metadata) {
         "item-journal",
         &[
             ("Process", &["P&ost", "Preview Posting", "Post and &Print"]),
-            ("Line", &["Dimensions"]),
+            ("Approve", &["Comments"]),
+            ("Line", &["Dimensions", "Approvals"]),
         ],
     );
     categories(
@@ -4550,7 +4554,8 @@ pub fn extend(m: &mut Metadata) {
         "payment-journal",
         &[
             ("Process", &["P&ost", "Preview Posting", "Post and &Print", "Test Report", "Renumber Document Numbers"]),
-            ("Line", &["Dimensions"]),
+            ("Approve", &["Comments"]),
+            ("Line", &["Dimensions", "Approvals"]),
         ],
     );
     categories(
@@ -4558,8 +4563,9 @@ pub fn extend(m: &mut Metadata) {
         "phys-inventory-journal",
         &[
             ("Process", &["P&ost", "Preview Posting", "Post and &Print"]),
+            ("Approve", &["Comments"]),
             ("Prepare", &["Calculate &Inventory"]),
-            ("Line", &["Dimensions"]),
+            ("Line", &["Dimensions", "Approvals"]),
             ("Item", &["Card", "Ledger E&ntries"]),
         ],
     );

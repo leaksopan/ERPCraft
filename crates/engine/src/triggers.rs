@@ -21,10 +21,16 @@ pub fn on_insert(ctx: &mut Ctx, t: &TableDef, r: &mut Record) -> Result<()> {
         return Ok(());
     }
     if t.name == crate::schema::finance::GEN_JNL_LINE {
-        return crate::journal::on_insert(ctx, r);
+        crate::journal::on_insert(ctx, r)?;
+        return crate::approvals::on_journal_line_insert(ctx, &t.name, r);
     }
     if t.name == crate::schema::inventory::ITEM_JNL_LINE {
-        return crate::item_journal::on_insert(ctx, r);
+        crate::item_journal::on_insert(ctx, r)?;
+        return crate::approvals::on_journal_line_insert(ctx, &t.name, r);
+    }
+    if t.name == crate::schema::approvals::APPROVAL_COMMENT {
+        crate::approvals::on_comment_insert(ctx, r);
+        return Ok(());
     }
     if t.name == crate::schema::fixed_assets::FIXED_ASSET {
         return crate::fa::on_insert(ctx, r);
@@ -172,6 +178,9 @@ pub fn on_delete(ctx: &mut Ctx, t: &TableDef, r: &Record) -> Result<()> {
 /// Field `OnValidate`: runs after the new value is set; `old` is the previous value.
 pub fn on_validate(ctx: &mut Ctx, t: &TableDef, r: &mut Record, field: &str, old: &Value) -> Result<()> {
     crate::dimensions::on_validate(ctx, t, r, field)?;
+    if t.name == crate::schema::approvals::APPROVAL_COMMENT && field == "Record ID to Approve" {
+        crate::approvals::comment_record_table(ctx, r);
+    }
     if matches!(t.name.as_str(), CUSTOMER | VENDOR) && field == "Name" {
         r.set("Search Name", Value::text(r.str("Name").to_uppercase()));
     }

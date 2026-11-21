@@ -379,6 +379,9 @@ fn demo_workflows(ctx: &mut Ctx) -> Result<()> {
     for (_, _, code, description) in crate::schema::approvals::WORKFLOWS {
         raw(ctx, "Workflow", json!({"Code": code, "Description": description, "Enabled": false, "Category": "APPROVAL"}))?;
     }
+    for (code, description, category) in crate::schema::approvals::JOURNAL_WORKFLOWS {
+        raw(ctx, "Workflow", json!({"Code": code, "Description": description, "Enabled": false, "Category": category}))?;
+    }
     Ok(())
 }
 

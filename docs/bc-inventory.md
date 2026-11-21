@@ -27,7 +27,7 @@ orders this list into phases.
 | Invoicing | 0 | 7 | 0 | 0 |
 | Manufacturing | 0 | 134 | 0 | 50 |
 | Modules | 2 | 93 | 0 | 1 |
-| OtherCapabilities | 1 | 30 | 0 | 1 |
+| OtherCapabilities | 2 | 30 | 0 | 1 |
 | Pricing | 0 | 14 | 0 | 2 |
 | Projects | 0 | 135 | 0 | 40 |
 | Purchases | 25 | 153 | 5 | 51 |
@@ -38,7 +38,7 @@ orders this list into phases.
 | Utilities | 0 | 12 | 0 | 2 |
 | Warehouse | 0 | 144 | 0 | 35 |
 | eServices | 0 | 25 | 0 | 0 |
-| **Base Application** | **110** | **2638** | **16** | **659** |
+| **Base Application** | **111** | **2638** | **16** | **659** |
 
 ### (root)
 
@@ -2688,7 +2688,7 @@ Pages 2 / 93, reports 0 / 1.
 
 ### OtherCapabilities
 
-Pages 1 / 30, reports 0 / 1.
+Pages 2 / 30, reports 0 / 1.
 
 <details><summary>OtherCapabilities / AccountantPortal: pages 0 / 6, reports 0 / 0</summary>
 
@@ -2701,10 +2701,10 @@ Pages 1 / 30, reports 0 / 1.
 
 </details>
 
-<details><summary>OtherCapabilities / Approvals: pages 1 / 11, reports 0 / 1</summary>
+<details><summary>OtherCapabilities / Approvals: pages 2 / 11, reports 0 / 1</summary>
 
 - [x] Page 658 Approval Entries (List)
-- [ ] Page 660 Approval Comments (List)
+- [x] Page 660 Approval Comments (List)
 - [ ] Page 662 Approval Request Entries (List)
 - [ ] Page 663 Approval User Setup (List)
 - [ ] Page 832 Approvals (List)

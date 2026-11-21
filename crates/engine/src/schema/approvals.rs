@@ -6,6 +6,15 @@ use erpcraft_meta::{ActionArea as A, ActionDef as Act, FieldDef as F, Metadata, 
 pub const USER_SETUP: &str = "User Setup";
 pub const APPROVAL_ENTRY: &str = "Approval Entry";
 pub const WORKFLOW: &str = "Workflow";
+pub const APPROVAL_COMMENT: &str = "Approval Comment Line";
+pub const RESTRICTED_RECORD: &str = "Restricted Record";
+
+/// BC's journal approval workflow templates: (code, description, category).
+pub const JOURNAL_WORKFLOWS: &[(&str, &str, &str)] = &[
+    ("MS-GJBAPW", "General Journal Batch Approval Workflow", "FIN"),
+    ("MS-GJLAPW", "General Journal Line Approval Workflow", "FIN"),
+    ("MS-IJBAPW", "Item Journal Batch Approval Workflow", "INV"),
+];
 
 pub const APPROVAL_STATUS: &[&str] = &["Created", "Open", "Canceled", "Rejected", "Approved"];
 pub const APPROVAL_DOC_TYPES: &[&str] = &["Quote", "Order", "Invoice", "Credit Memo", "Blanket Order", "Return Order", " "];
@@ -66,9 +75,28 @@ pub fn register(m: &mut Metadata) {
                 F::decimal("Amount").auto_format(1),
                 F::decimal("Amount (LCY)").auto_format(1),
                 F::code("Currency Code", 10),
+                F::text("Record ID to Approve", 250),
             ])
             .key(&["Entry No."])
             .pages("approval-entries", None),
+    );
+    m.add_table(
+        TableDef::new(APPROVAL_COMMENT, 455)
+            .fields(vec![
+                F::integer("Entry No."),
+                F::integer("Table ID"),
+                F::text("Record ID to Approve", 250),
+                F::code("User ID", 50).read_only(),
+                F::text("Date and Time", 30).read_only(),
+                F::text("Comment", 250),
+            ])
+            .key(&["Entry No."])
+            .pages("approval-comments", None),
+    );
+    m.add_table(
+        TableDef::new(RESTRICTED_RECORD, 1550)
+            .fields(vec![F::integer("ID"), F::text("Record ID", 250), F::text("Details", 250)])
+            .key(&["ID"]),
     );
     m.add_table(
         TableDef::new(WORKFLOW, 1501)
@@ -96,9 +124,67 @@ pub fn register(m: &mut Metadata) {
     ];
     requests.keywords = "approve approval requests pending".to_string();
     m.add_page(requests);
+    m.add_page(list("approval-comments", 660, "Approval Comments", APPROVAL_COMMENT, &["Comment", "User ID", "Date and Time"], true));
     let mut wf = list("workflows", 1500, "Workflows", WORKFLOW, &["Code", "Description", "Category", "Enabled"], true);
     wf.keywords = "approval workflow".to_string();
     m.add_page(wf);
+
+    // Approval actions on journals: the batch, or (general journals) the selected lines.
+    let journals: Vec<(String, String, bool)> = m
+        .pages
+        .values()
+        .filter(|p| p.kind == PageKind::List)
+        .filter_map(|p| {
+            let item = match p.source_table.as_deref() {
+                Some("Gen. Journal Line") => false,
+                Some("Item Journal Line") => true,
+                _ => return None,
+            };
+            let template = p.view.iter().find(|v| v.field == "Journal Template Name")?.value.clone();
+            Some((p.id.clone(), template, item))
+        })
+        .collect();
+    for (id, template, item) in journals {
+        let Some(p) = m.pages.get_mut(&id) else { continue };
+        let prefix = if item { "item_journal" } else { "journal" };
+        let with = |a: Act| a.param("template", &template).param("batch", "DEFAULT");
+        p.actions.push(
+            with(Act::command("Send Approval Request: Journal Batch", A::Process, &format!("{prefix}.send_approval_request")))
+                .param("scope", "batch")
+                .icon("approve")
+                .tooltip("Send all journal lines for approval, also those that you may not see because of filters."),
+        );
+        p.actions.push(
+            with(Act::command("Cancel Approval Request: Journal Batch", A::Process, &format!("{prefix}.cancel_approval_request")))
+                .param("scope", "batch")
+                .icon("reject")
+                .tooltip("Cancel sending all journal lines for approval, also those that you may not see because of filters."),
+        );
+        if !item {
+            p.actions.push(
+                with(Act::command("Send Approval Request: Selected Journal Lines", A::Process, "journal.send_approval_request"))
+                    .param("scope", "lines")
+                    .icon("approve")
+                    .tooltip("Send selected journal lines for approval."),
+            );
+            p.actions.push(
+                with(Act::command("Cancel Approval Request: Selected Journal Lines", A::Process, "journal.cancel_approval_request"))
+                    .param("scope", "lines")
+                    .icon("reject")
+                    .tooltip("Cancel sending selected journal lines for approval."),
+            );
+        }
+        p.actions.push(
+            with(Act::command("Approvals", A::Navigate, &format!("{prefix}.approvals")))
+                .icon("approve")
+                .tooltip("View a list of the records that are waiting to be approved. For example, you can see who requested the record to be approved, when it was sent, and when it is due to be approved."),
+        );
+        p.actions.push(
+            with(Act::command("Comments", A::Navigate, &format!("{prefix}.approval_comments")))
+                .icon("comments")
+                .tooltip("View or add comments for the record."),
+        );
+    }
 
     // Approval actions on sales and purchase documents (not on posted ones).
     let docs: Vec<(String, bool)> = m

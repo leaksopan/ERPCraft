@@ -397,6 +397,7 @@ fn item_actions() -> Vec<Act> {
             .tooltip("View a detailed account of item turnover by periods after you have set the relevant filters for location and variant."),
         Act::command("Event", A::Navigate, "item.availability_by_event").icon("stats").tooltip("View how the actual and the projected available balance of an item will develop over time according to supply and demand events."),
         Act::command("Period", A::Navigate, "item.availability_by_period").icon("stats").tooltip("Show the projected quantity of the item over time according to time periods, such as day, week, or month."),
+        Act::command("Variant", A::Navigate, "item.availability_by_variant").icon("stats").tooltip("View how the inventory level of an item will develop over time according to the variant that you select."),
         Act::command("Location", A::Navigate, "item.availability_by_location").icon("stats").tooltip("View the actual and projected quantity of the item per location."),
         Act::command("Items b&y Location", A::Navigate, "item.by_location")
             .icon("list")

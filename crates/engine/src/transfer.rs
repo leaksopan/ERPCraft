@@ -239,7 +239,7 @@ fn move_stock(ctx: &mut Ctx, h: &Record, l: &Record, from: &str, to: &str, qty: 
     for (loc, q, c, parts) in [(from, -base, -cost, &out), (to, base, cost, &inbound)] {
         crate::tracking::post_parts(
             ctx,
-            &ItemEntry { item: &item, posting_date: date, entry_type: "Transfer", doc_type, doc_no, description: l.str("Description"), location: loc, qty: q, cost: c, sales_amount: Decimal::ZERO, uom: &uom, source_type: "", source_no: "" },
+            &ItemEntry { item: &item, posting_date: date, entry_type: "Transfer", doc_type, doc_no, description: l.str("Description"), location: loc, qty: q, cost: c, sales_amount: Decimal::ZERO, uom: &uom, source_type: "", source_no: "" , variant: l.str("Variant Code") },
             parts,
         )?;
     }

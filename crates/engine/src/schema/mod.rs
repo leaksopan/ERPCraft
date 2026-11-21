@@ -16,6 +16,7 @@ pub mod transfer;
 pub mod physinvt;
 pub mod sku;
 pub mod std_cost;
+pub mod catalog;
 pub mod tracking;
 pub mod finance;
 pub mod fixed_assets;
@@ -59,6 +60,7 @@ pub fn hand_written() -> Metadata {
     physinvt::register(&mut m);
     sku::register(&mut m);
     std_cost::register(&mut m);
+    catalog::register(&mut m);
     fixed_assets::register(&mut m);
     dimensions::register(&mut m);
     comments::register(&mut m);

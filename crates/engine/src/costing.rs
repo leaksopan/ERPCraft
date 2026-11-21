@@ -32,7 +32,7 @@ pub fn on_item_entry(ctx: &mut Ctx, ile: &Record) -> Result<()> {
     let cost = ile.get("Cost Amount (Actual)").as_dec();
     let mut v = t.init_record();
     v.set("Entry No.", Value::Int(ctx.db.next_entry_no(VALUE_ENTRY)));
-    for f in ["Item No.", "Posting Date", "Document No.", "Document Type", "Description", "Location Code", "Source Type", "Source No."] {
+    for f in ["Item No.", "Variant Code", "Posting Date", "Document No.", "Document Type", "Description", "Location Code", "Source Type", "Source No."] {
         v.set(f, ile.get(f).clone());
     }
     v.set("Item Ledger Entry Type", ile.get("Entry Type").clone());

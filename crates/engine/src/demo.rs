@@ -95,6 +95,7 @@ pub fn setup(ctx: &mut Ctx) -> Result<()> {
         ("T-SHPT", "Posted Transfer Shipments", "T-SHPT1001"),
         ("T-RCPT", "Posted Transfer Receipts", "T-RCPT1001"),
         ("PI-ORD", "Phys. Invt. Orders", "PI-ORD1001"),
+        ("NS-ITEM", "Catalog Items", "NS0001"),
         ("PI-PSTD", "Posted Phys. Invt. Orders", "PI-PSTD1001"),
         ("S-REM", "Reminders", "S-REM1001"),
         ("S-IREM", "Issued Reminders", "S-IREM1001"),
@@ -120,7 +121,7 @@ pub fn setup(ctx: &mut Ctx) -> Result<()> {
                "Credit Memo Nos.": "P-CR", "Return Order Nos.": "P-RET", "Posted Invoice Nos.": "PP-INV", "Posted Credit Memo Nos.": "PP-CR", "Posted Receipt Nos.": "PP-RCPT",
                "Ext. Doc. No. Mandatory": false}),
     )?;
-    raw(ctx, "Inventory Setup", json!({"Primary Key": "", "Item Nos.": "ITEM", "Automatic Cost Posting": true, "Transfer Order Nos.": "T-ORD", "Posted Transfer Shpt. Nos.": "T-SHPT", "Posted Transfer Rcpt. Nos.": "T-RCPT", "Phys. Invt. Order Nos.": "PI-ORD", "Posted Phys. Invt. Order Nos.": "PI-PSTD"}))?;
+    raw(ctx, "Inventory Setup", json!({"Primary Key": "", "Item Nos.": "ITEM", "Automatic Cost Posting": true, "Transfer Order Nos.": "T-ORD", "Posted Transfer Shpt. Nos.": "T-SHPT", "Posted Transfer Rcpt. Nos.": "T-RCPT", "Phys. Invt. Order Nos.": "PI-ORD", "Nonstock Item Nos.": "NS-ITEM", "Posted Phys. Invt. Order Nos.": "PI-PSTD"}))?;
     for (template, ty, _, _, caption, series) in crate::schema::finance::JOURNALS {
         let source = match *template {
             "CASHRCPT" => "CASHRECJNL",
@@ -388,6 +389,10 @@ pub fn master_data(ctx: &mut Ctx) -> Result<()> {
         raw(ctx, "Item Charge", json!({"No.": no, "Description": desc, "Gen. Prod. Posting Group": "PARTS", "VAT Prod. Posting Group": "STANDARD", "Search Description": desc.to_uppercase()}))?;
     }
     raw(ctx, "Standard Cost Worksheet Name", json!({"Name": "DEFAULT", "Description": "Default worksheet"}))?;
+    // Item templates and the catalog of items vendors can supply on request.
+    raw(ctx, "Item Templ.", json!({"Code": "PARTS", "Description": "Spare parts", "Type": "Inventory", "Base Unit of Measure": "PCS", "Gen. Prod. Posting Group": "PARTS", "VAT Prod. Posting Group": "STANDARD", "Inventory Posting Group": "PARTS", "Costing Method": "Average", "Reserve": "Optional"}))?;
+    raw(ctx, "Nonstock Item Setup", json!({"Primary Key": "", "No. Format": "Vendor Item No."}))?;
+    raw(ctx, "Nonstock Item", json!({"Entry No.": "NS0000", "Vendor No.": "10000", "Vendor Item No.": "AF-2041", "Description": "Air Filter Premium", "Unit of Measure": "PCS", "Published Cost": 120000, "Negotiated Cost": 105000, "Unit Price": 165000, "Item Templ. Code": "PARTS"}))?;
     // Counting periods for cycle counting.
     for (code, desc, freq) in [("FAST", "Fast moving items", 12), ("SLOW", "Slow moving items", 2)] {
         raw(ctx, "Phys. Invt. Counting Period", json!({"Code": code, "Description": desc, "Count Frequency per Year": freq}))?;
@@ -395,6 +400,10 @@ pub fn master_data(ctx: &mut Ctx) -> Result<()> {
     // Item tracking codes: by lot, by serial number.
     raw(ctx, "Item Tracking Code", json!({"Code": "LOTALL", "Description": "Lot specific tracking", "Lot Specific Tracking": true, "Lot Warehouse Tracking": true}))?;
     raw(ctx, "Item Tracking Code", json!({"Code": "SNALL", "Description": "Serial number specific tracking", "SN Specific Tracking": true, "SN Warehouse Tracking": true}))?;
+    // Engine oil comes in two viscosities.
+    for (code, desc) in [("5W30", "Engine Oil 5W-30 1L"), ("10W40", "Engine Oil 10W-40 1L")] {
+        raw(ctx, "Item Variant", json!({"Item No.": "1000", "Code": code, "Description": desc}))?;
+    }
     // Engine oil also comes by the box of 12.
     raw(ctx, "Item Unit of Measure", json!({"Item No.": "1000", "Code": "BOX", "Qty. per Unit of Measure": 12}))?;
     for template in ["CASHRCPT", "PAYMENT"] {

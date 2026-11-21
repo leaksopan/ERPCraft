@@ -31,6 +31,26 @@ pub const FROM_ITEM: &[&str] = &[
 ];
 
 pub fn register(m: &mut Metadata) {
+    // Item variants on lines and entries (BC's Variant Code, related to Item Variant).
+    for table in [
+        crate::schema::tables::SALES_LINE,
+        crate::schema::tables::PURCH_LINE,
+        crate::schema::inventory::ITEM_JNL_LINE,
+        crate::schema::tables::ITEM_LEDGER,
+        crate::costing::VALUE_ENTRY,
+        crate::schema::finance::SALES_SHIPMENT_LINE,
+        crate::schema::finance::PURCH_RCPT_LINE,
+        crate::schema::tables::SALES_INV_LINE,
+        crate::schema::tables::SALES_CR_LINE,
+        crate::schema::tables::PURCH_INV_LINE,
+        crate::schema::tables::PURCH_CR_LINE,
+    ] {
+        if let Some(t) = m.tables.get_mut(table)
+            && t.field("Variant Code").is_none()
+        {
+            t.fields.push(F::code("Variant Code", 10));
+        }
+    }
     m.add_table(
         TableDef::new(SKU, 5700)
             .fields(vec![

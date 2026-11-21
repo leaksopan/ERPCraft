@@ -67,6 +67,36 @@ pub fn on_validate(ctx: &mut Ctx, t: &TableDef, r: &mut Record, field: &str) -> 
                 }
             }
         }
+        (crate::schema::tables::SALES_LINE | crate::schema::tables::PURCH_LINE | crate::schema::inventory::ITEM_JNL_LINE | crate::schema::transfer::TRANSFER_LINE, "No." | "Item No.") => {
+            r.set("Variant Code", Value::text(""));
+        }
+        (crate::schema::tables::SALES_LINE | crate::schema::tables::PURCH_LINE | crate::schema::inventory::ITEM_JNL_LINE | crate::schema::transfer::TRANSFER_LINE, "Variant Code") => {
+            let code = r.str("Variant Code").to_string();
+            if code.is_empty() {
+                return Ok(());
+            }
+            let doc_line = matches!(t.name.as_str(), crate::schema::tables::SALES_LINE | crate::schema::tables::PURCH_LINE);
+            if doc_line && r.str("Type") != "Item" {
+                refuse!("Type must be equal to 'Item' in {}: Document Type={}, Document No.={}, Line No.={}. Current value is '{}'.", t.name, r.str("Document Type"), r.str("Document No."), r.get("Line No.").as_int(), r.str("Type"));
+            }
+            let item = r.str(if doc_line { "No." } else { "Item No." }).to_string();
+            let Some(v) = ctx.db.get(crate::schema::item_setup::ITEM_VARIANT, &Key(vec![Value::text(&item), Value::text(&code)])).cloned() else {
+                refuse!("The Item Variant does not exist. Identification fields and values: Item No.='{item}',Code='{code}'");
+            };
+            if v.get("Blocked").as_bool() {
+                refuse!("Blocked must be equal to 'No' in Item Variant: Item No.={item}, Code={code}. Current value is 'Yes'.");
+            }
+            if t.name == crate::schema::tables::SALES_LINE && v.get("Sales Blocked").as_bool() {
+                refuse!("You cannot sell Item Variant {code} for Item {item} because the Sales Blocked check box is selected on the item variant card.");
+            }
+            if t.name == crate::schema::tables::PURCH_LINE && v.get("Purchasing Blocked").as_bool() {
+                refuse!("You cannot purchase Item Variant {code} for Item {item} because the Purchasing Blocked check box is selected on the item variant card.");
+            }
+            if !v.str("Description").is_empty() {
+                r.set("Description", v.get("Description").clone());
+                r.set("Description 2", v.get("Description 2").clone());
+            }
+        }
         (ITEM_UOM, "Qty. per Unit of Measure") => {
             let base = ctx.db.get_code(crate::schema::tables::ITEM, r.str("Item No.")).map(|i| i.str("Base Unit of Measure").to_string()).unwrap_or_default();
             let q = r.get("Qty. per Unit of Measure").as_dec();

@@ -342,7 +342,7 @@ pub fn post(ctx: &mut Ctx, template: &str, batch: &str) -> Result<Json> {
                     let cost = round_amount(signed * unit);
                     let source = crate::tracking::source_of(ITEM_JNL_LINE, l);
                     let parts = crate::tracking::parts_for(ctx, &item, source.as_ref(), &loc, signed)?;
-                    crate::tracking::post_parts(ctx, &ItemEntry { item: &item, posting_date: date, entry_type: t, doc_type: "", doc_no: doc, description: &desc, location: &loc, qty: signed, cost, sales_amount: Decimal::ZERO, uom: l.get("Unit of Measure Code"), source_type: "", source_no: "" }, &parts)?;
+                    crate::tracking::post_parts(ctx, &ItemEntry { item: &item, posting_date: date, entry_type: t, doc_type: "", doc_no: doc, description: &desc, location: &loc, qty: signed, cost, sales_amount: Decimal::ZERO, uom: l.get("Unit of Measure Code"), source_type: "", source_no: "", variant: l.str("Variant Code") }, &parts)?;
                     if let Some(s) = &source {
                         crate::tracking::consume(ctx, s)?;
                     }
@@ -364,8 +364,8 @@ pub fn post(ctx: &mut Ctx, template: &str, batch: &str) -> Result<Json> {
                     let source = crate::tracking::source_of(ITEM_JNL_LINE, l);
                     let out = crate::tracking::parts_for(ctx, &item, source.as_ref(), &loc, -qty)?;
                     let inbound: Vec<crate::tracking::Part> = out.iter().map(|p| crate::tracking::Part { qty: -p.qty, ..p.clone() }).collect();
-                    crate::tracking::post_parts(ctx, &ItemEntry { item: &item, posting_date: date, entry_type: "Transfer", doc_type: "", doc_no: doc, description: &desc, location: &loc, qty: -qty, cost: -cost, sales_amount: Decimal::ZERO, uom: l.get("Unit of Measure Code"), source_type: "", source_no: "" }, &out)?;
-                    crate::tracking::post_parts(ctx, &ItemEntry { item: &item, posting_date: date, entry_type: "Transfer", doc_type: "", doc_no: doc, description: &desc, location: &to, qty, cost, sales_amount: Decimal::ZERO, uom: l.get("Unit of Measure Code"), source_type: "", source_no: "" }, &inbound)?;
+                    crate::tracking::post_parts(ctx, &ItemEntry { item: &item, posting_date: date, entry_type: "Transfer", doc_type: "", doc_no: doc, description: &desc, location: &loc, qty: -qty, cost: -cost, sales_amount: Decimal::ZERO, uom: l.get("Unit of Measure Code"), source_type: "", source_no: "", variant: l.str("Variant Code") }, &out)?;
+                    crate::tracking::post_parts(ctx, &ItemEntry { item: &item, posting_date: date, entry_type: "Transfer", doc_type: "", doc_no: doc, description: &desc, location: &to, qty, cost, sales_amount: Decimal::ZERO, uom: l.get("Unit of Measure Code"), source_type: "", source_no: "", variant: l.str("Variant Code") }, &inbound)?;
                     if let Some(s) = &source {
                         crate::tracking::consume(ctx, s)?;
                     }

@@ -193,6 +193,7 @@ pub(crate) struct Movement {
     pub source: &'static str,
     pub doc: String,
     pub line: i64,
+    pub variant: String,
 }
 
 fn per(l: &Record) -> Decimal {
@@ -223,6 +224,7 @@ pub(crate) fn movements(ctx: &Ctx, no: &str) -> Vec<Movement> {
                 source,
                 doc: l.str("Document No.").to_string(),
                 line: l.get("Line No.").as_int(),
+                variant: l.str("Variant Code").to_string(),
             });
         }
     }
@@ -231,10 +233,10 @@ pub(crate) fn movements(ctx: &Ctx, no: &str) -> Vec<Movement> {
         let inn = (l.get("Quantity").as_dec() - l.get("Quantity Received").as_dec()) * per(l);
         let doc = l.str("Document No.");
         if !out.is_zero() {
-            v.push(Movement { date: l.get("Shipment Date").as_date().unwrap_or(work), location: l.str("Transfer-from Code").to_string(), qty: -out, what: format!("Transfer Shipment {doc}"), source: "Transfer Line", doc: doc.to_string(), line: l.get("Line No.").as_int() });
+            v.push(Movement { date: l.get("Shipment Date").as_date().unwrap_or(work), location: l.str("Transfer-from Code").to_string(), qty: -out, what: format!("Transfer Shipment {doc}"), source: "Transfer Line", doc: doc.to_string(), line: l.get("Line No.").as_int(), variant: l.str("Variant Code").to_string() });
         }
         if !inn.is_zero() {
-            v.push(Movement { date: l.get("Receipt Date").as_date().unwrap_or(work), location: l.str("Transfer-to Code").to_string(), qty: inn, what: format!("Transfer Receipt {doc}"), source: "Transfer Line", doc: doc.to_string(), line: l.get("Line No.").as_int() });
+            v.push(Movement { date: l.get("Receipt Date").as_date().unwrap_or(work), location: l.str("Transfer-to Code").to_string(), qty: inn, what: format!("Transfer Receipt {doc}"), source: "Transfer Line", doc: doc.to_string(), line: l.get("Line No.").as_int(), variant: l.str("Variant Code").to_string() });
         }
     }
     v.sort_by(|a, b| a.date.cmp(&b.date).then(b.qty.cmp(&a.qty)));
@@ -306,6 +308,25 @@ fn by_availability_location(ctx: &mut Ctx, p: &Json) -> Result<Json> {
     Ok(json!({"report": {"title": format!("Item Availability by Location - {no}"), "columns": ["Code", "Name", "Inventory", "Gross Requirement", "Scheduled Receipt", "Projected Available Balance"], "rows": rows}}))
 }
 
+/// BC's Item Availability by Variant: per variant, inventory, requirements, receipts and the
+/// projected available balance.
+fn by_variant(ctx: &mut Ctx, p: &Json) -> Result<Json> {
+    let no = item_no(ctx, p)?;
+    let moves = movements(ctx, &no);
+    let mut variants: Vec<(String, String)> = vec![(String::new(), "(no variant)".to_string())];
+    variants.extend(ctx.db.rows(crate::schema::item_setup::ITEM_VARIANT).filter(|v| v.str("Item No.") == no).map(|v| (v.str("Code").to_string(), v.str("Description").to_string())));
+    let rows: Vec<Json> = variants
+        .iter()
+        .map(|(code, name)| {
+            let inv: Decimal = entries(ctx, &no).filter(|e| e.str("Variant Code") == code).map(|e| e.get("Quantity").as_dec()).sum();
+            let gross: Decimal = moves.iter().filter(|m| m.variant == *code && m.qty < Decimal::ZERO).map(|m| -m.qty).sum();
+            let receipts: Decimal = moves.iter().filter(|m| m.variant == *code && m.qty > Decimal::ZERO).map(|m| m.qty).sum();
+            json!([code, name, n(inv), n(gross), n(receipts), n(inv + receipts - gross)])
+        })
+        .collect();
+    Ok(json!({"report": {"title": format!("Item Availability by Variant - {no}"), "columns": ["Code", "Description", "Inventory", "Gross Requirement", "Scheduled Receipt", "Projected Available Balance"], "rows": rows}}))
+}
+
 fn s_no() -> Json {
     json!({"type": "object", "properties": {"no": {"type": "string"}, "table": {"type": "string"}, "key": {}}})
 }
@@ -316,6 +337,7 @@ pub static COMMANDS: &[CommandDef] = &[
     CommandDef { id: "item.turnover", label: "Turnover", group: "Inventory", summary: "An item's purchases and sales per month for the last twelve months.", mutates: false, params: s_no, run: turnover },
     CommandDef { id: "item.availability_by_event", label: "Event", group: "Inventory", summary: "An item's projected inventory after each open order, by date.", mutates: false, params: s_no, run: by_event },
     CommandDef { id: "item.availability_by_period", label: "Period", group: "Inventory", summary: "An item's requirements, receipts and projected balance per month.", mutates: false, params: s_no, run: by_period },
+    CommandDef { id: "item.availability_by_variant", label: "Variant", group: "Inventory", summary: "An item's inventory, requirements, receipts and projected balance per variant.", mutates: false, params: s_no, run: by_variant },
     CommandDef { id: "item.availability_by_location", label: "Location", group: "Inventory", summary: "An item's inventory, requirements, receipts and projected balance per location.", mutates: false, params: s_no, run: by_availability_location },
     CommandDef { id: "item.by_location", label: "Items by Location", group: "Inventory", summary: "An item's inventory at each location.", mutates: false, params: s_no, run: by_location },
 ];

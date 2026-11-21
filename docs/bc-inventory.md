@@ -23,7 +23,7 @@ orders this list into phases.
 | Foundation | 8 | 58 | 0 | 2 |
 | HumanResources | 0 | 57 | 0 | 15 |
 | Integration | 0 | 87 | 0 | 0 |
-| Inventory | 63 | 312 | 1 | 101 |
+| Inventory | 68 | 312 | 1 | 101 |
 | Invoicing | 0 | 7 | 0 | 0 |
 | Manufacturing | 0 | 134 | 0 | 50 |
 | Modules | 2 | 93 | 0 | 1 |
@@ -38,7 +38,7 @@ orders this list into phases.
 | Utilities | 0 | 12 | 0 | 2 |
 | Warehouse | 0 | 144 | 0 | 35 |
 | eServices | 0 | 25 | 0 | 0 |
-| **Base Application** | **205** | **2638** | **16** | **659** |
+| **Base Application** | **210** | **2638** | **16** | **659** |
 
 ### (root)
 
@@ -1754,7 +1754,7 @@ Pages 0 / 87, reports 0 / 0.
 
 ### Inventory
 
-Pages 63 / 312, reports 1 / 101.
+Pages 68 / 312, reports 1 / 101.
 
 <details><summary>Inventory / Analysis: pages 0 / 34, reports 0 / 8</summary>
 
@@ -1974,7 +1974,7 @@ Pages 63 / 312, reports 1 / 101.
 
 </details>
 
-<details><summary>Inventory / Item: pages 14 / 61, reports 0 / 2</summary>
+<details><summary>Inventory / Item: pages 19 / 61, reports 0 / 2</summary>
 
 - [x] Page 30 Item Card (Card)
 - [x] Page 31 Item List (List)
@@ -1992,8 +1992,8 @@ Pages 63 / 312, reports 1 / 101.
 - [ ] Page 729 Copy Item (StandardDialog)
 - [ ] Page 1327 Adjust Inventory (StandardDialog)
 - [ ] Page 1378 Select Item Templ. List (List)
-- [ ] Page 1383 Item Templ. List (List)
-- [ ] Page 1384 Item Templ. Card (Card)
+- [x] Page 1383 Item Templ. List (List)
+- [x] Page 1384 Item Templ. Card (Card)
 - [ ] Page 5400 Item Unit Group List (List)
 - [x] Page 5401 Item Variants (List)
 - [x] Page 5404 Item Units of Measure (List)
@@ -2003,13 +2003,13 @@ Pages 63 / 312, reports 1 / 101.
 - [ ] Page 5718 Item Substitution Entries (Worksheet)
 - [ ] Page 5719 Sub. Conditions (List)
 - [ ] Page 5720 Item Substitutions (List)
-- [ ] Page 5725 Catalog Item Card (Card)
-- [ ] Page 5726 Catalog Item List (List)
+- [x] Page 5725 Catalog Item Card (Card)
+- [x] Page 5726 Catalog Item List (List)
 - [ ] Page 5727 Purchasing Codes (List)
 - [ ] Page 5728 Manufacturers (List)
 - [ ] Page 5729 Purchasing Code List (List)
 - [x] Page 5730 Item Categories (List)
-- [ ] Page 5732 Catalog Item Setup (Card)
+- [x] Page 5732 Catalog Item Setup (Card)
 - [x] Page 5733 Item Category Card (Card)
 - [ ] Page 5734 Item Category Attributes (ListPart)
 - [ ] Page 5735 Item Reference List (List)

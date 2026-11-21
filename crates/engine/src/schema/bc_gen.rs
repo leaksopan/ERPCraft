@@ -1594,6 +1594,7 @@ pub fn extend(m: &mut Metadata) {
             ("Transfer Order Nos.", "Transfer Order Nos.", "Specifies the number series that will be used to assign numbers to transfer orders.", 0),
             ("Posted Transfer Shpt. Nos.", "Posted Transfer Shpt. Nos.", "Specifies the number series that will be used to assign numbers to posted transfer shipments.", 0),
             ("Posted Transfer Rcpt. Nos.", "Posted Transfer Rcpt. Nos.", "Specifies the number series that will be used to assign numbers to posted transfer receipts.", 0),
+            ("Nonstock Item Nos.", "Catalog Item Nos.", "Specifies the number series that will be used to assign numbers to catalog items.", 0),
             ("Phys. Invt. Order Nos.", "Phys. Invt. Order Nos.", "Specifies the number series that will be used to assign numbers to physical inventory orders.", 0),
             ("Posted Phys. Invt. Order Nos.", "Posted Phys. Invt. Order Nos.", "Specifies the number series that will be used to assign numbers to physical inventory orders when they are posted.", 0),
         ],
@@ -1612,7 +1613,6 @@ pub fn extend(m: &mut Metadata) {
             F::code("Invt. Cost Jnl. Batch Name", 10).caption("Jnl. Batch Name Cost Posting").tooltip("Specifies the name of the journal batch to use for automatic and expected cost posting."),
             F::boolean("Copy Comments Order to Shpt.").tooltip("Specifies that you want to copy the comments entered on the transfer order to the transfer shipment."),
             F::boolean("Copy Comments Order to Rcpt.").tooltip("Specifies that you want to copy the comments entered on the transfer order to the transfer receipt."),
-            F::code("Nonstock Item Nos.", 20).caption("Catalog Item Nos.").tooltip("Specifies the number series that will be used to assign numbers to catalog items."),
             F::boolean("Expected Cost Posting to G/L").tooltip("Specifies if value entries originating from receipt or shipment posting, but not from invoice posting are recoded in the general ledger. Expected costs represent the estimation of, for example, a purchased item's cost that you record before you receive the invoice for the item. To post expected costs, interim accounts must exist in the general ledger for the relevant posting groups. Expected costs are only managed for item transactions, not for immaterial transaction types, such as capacity and item charges."),
             F::option("Default Costing Method", &["FIFO", "LIFO", "Specific", "Average", "Standard"]).tooltip("Specifies how your items' cost flow is recorded and whether an actual or budgeted value is capitalized and used in the cost calculation. Your choice of costing method determines how the unit cost is calculated by making assumptions about the flow of physical items through your company. A different costing method on item cards will override this default. For more information, see \"Design Details: Costing Methods\" in Help."),
             F::option("Average Cost Calc. Type", &["", "Item", "Item & Location & Variant"]).tooltip("Specifies how costs are calculated for items using the Average costing method. Item: One average cost per item in the company is calculated. Item & Location & Variant: An average cost per item for each location and for each variant of the item in the company is calculated. This means that the average cost of this item depends on where it is stored and which variant, such as color, of the item you have selected."),
@@ -1758,6 +1758,8 @@ pub fn extend(m: &mut Metadata) {
             ("Reorder Point", "Reorder Point", "Specifies a stock quantity that sets the inventory below the level that you must replenish the item.", 0),
             ("Maximum Inventory", "Maximum Inventory", "Specifies a quantity that you want to use as a maximum inventory level.", 0),
             ("Reorder Quantity", "Reorder Quantity", "Specifies a standard lot size quantity to be used for all order proposals.", 0),
+            ("Gross Weight", "Gross Weight", "Specifies the gross weight of the item.", 0),
+            ("Net Weight", "Net Weight", "Specifies the net weight of the item.", 0),
             ("Blocked", "Blocked", "Specifies that transactions with the item cannot be posted, for example, because the item is in quarantine.", 0),
             ("Last Date Modified", "Last Date Modified", "Specifies when the item card was last modified.", 0),
             ("Inventory", "Inventory", "Specifies how many units, such as pieces, boxes, or cans, of the item are in inventory.", 0),
@@ -1775,6 +1777,7 @@ pub fn extend(m: &mut Metadata) {
             ("Purch. Unit of Measure", "Purch. Unit of Measure", "Specifies the unit of measure code used when you purchase the item.", 0),
             ("Reordering Policy", "Reordering Policy", "Specifies the reordering policy that is used to calculate the lot size per planning period (time bucket).", 0),
             ("Item Category Code", "Item Category Code", "Specifies the category that the item belongs to. Item categories also contain any assigned item attributes.", 0),
+            ("Created From Nonstock Item", "Created From Catalog Item", "Specifies that the item was created from a catalog item.", 0),
             ("Item Tracking Code", "Item Tracking Code", "Specifies how serial, lot or package numbers assigned to the item are tracked in the supply chain.", 0),
             ("Lot Nos.", "Lot Nos.", "Specifies the number series code that will be used when assigning lot numbers.", 0),
             ("Expiration Calculation", "Expiration Calculation", "Specifies the date formula for calculating the expiration date on the item tracking line. Note: This field will be ignored if the involved item has Require Expiration Date Entry set to Yes on the Item Tracking Code page.", 0),
@@ -1798,8 +1801,6 @@ pub fn extend(m: &mut Metadata) {
             F::boolean("Allow Invoice Disc.").tooltip("Specifies if the item should be included in the calculation of an invoice discount on documents where the item is traded."),
             F::option("Price/Profit Calculation", &["Profit=Price-Cost", "Price=Cost+Profit", "No Relationship"]).tooltip("Specifies the relationship between the Unit Cost, Unit Price, and Profit Percentage fields associated with this item."),
             F::boolean("Cost is Adjusted").read_only().tooltip("Specifies whether the item's unit cost has been adjusted, either automatically or manually."),
-            F::decimal("Gross Weight").tooltip("Specifies the gross weight of the item."),
-            F::decimal("Net Weight").tooltip("Specifies the net weight of the item."),
             F::decimal("Unit Volume").tooltip("Specifies the volume of one unit of the item."),
             F::code("Tariff No.", 20).tooltip("Specifies a code for the item's tariff number."),
             F::decimal("Net Invoiced Qty.").calc(CalcFormula::new(CalcFunc::Sum, "Item Ledger Entry", "Invoiced Quantity", &[("Item No.", "No.")], &[])).tooltip("Specifies how many units of the item in inventory have been invoiced."),
@@ -1812,7 +1813,6 @@ pub fn extend(m: &mut Metadata) {
             F::option("Variant Mandatory if Exists", &["Default", "No", "Yes"]).tooltip("Specifies whether a variant must be selected if variants exist for the item."),
             F::code("GTIN", 14).tooltip("Specifies the number that is used for barcodes etc."),
             F::code("Default Deferral Template Code", 10).tooltip("Specifies the default template that governs how to defer revenues and expenses to the periods when they occurred."),
-            F::boolean("Created From Nonstock Item").caption("Created From Catalog Item").read_only().tooltip("Specifies that the item was created from a catalog item."),
             F::boolean("Substitutes Exist").calc(CalcFormula::new(CalcFunc::Exist, "Item Substitution", "", &[("No.", "No.")], &[("Type", "Item")])).tooltip("Specifies that a substitute exists for this item."),
             F::code("Purchasing Code", 10).tooltip("Specifies the code for a special procurement method, such as drop shipment."),
             F::code("Over-Receipt Code", 20).tooltip("Specifies the policy that will be used for the item if more items than ordered are received."),
@@ -1933,6 +1933,7 @@ pub fn extend(m: &mut Metadata) {
             ("New Location Code", "New Location Code", "Specifies the new location to link to the items on this journal line.", 0),
             ("Gen. Bus. Posting Group", "Gen. Bus. Posting Group", "Specifies the vendor's or customer's trade type to link transactions made for this business partner with the appropriate general ledger account according to the general posting setup.", 0),
             ("Gen. Prod. Posting Group", "Gen. Prod. Posting Group", "Specifies the item's product type to link transactions made for this item with the appropriate general ledger account according to the general posting setup.", 0),
+            ("Variant Code", "Variant Code", "Specifies the variant of the item on the line.", 0),
             ("Unit of Measure Code", "Unit of Measure Code", "Specifies how each unit of the item or resource is measured, such as in pieces or hours. By default, the value in the Base Unit of Measure field on the item or resource card is inserted.", 0),
         ],
     );
@@ -1993,6 +1994,7 @@ pub fn extend(m: &mut Metadata) {
             ("Source Type", "Source Type", "Specifies the source type that applies to the source number, shown in the Source No. field.", 0),
             ("Document Type", "Document Type", "Specifies what type of document was posted to create the item ledger entry.", 0),
             ("Dimension Set ID", "Dimension Set ID", "Specifies a reference to a combination of dimension values. The actual values are stored in the Dimension Set Entry table.", 0),
+            ("Variant Code", "Variant Code", "Specifies the variant of the item on the line.", 0),
             ("Unit of Measure Code", "Unit of Measure Code", "Specifies how each unit of the item or resource is measured, such as in pieces or hours. By default, the value in the Base Unit of Measure field on the item or resource card is inserted.", 0),
             ("Cost Amount (Actual)", "Cost Amount (Actual)", "", 1),
             ("Sales Amount (Actual)", "Sales Amount (Actual)", "", 1),
@@ -2050,6 +2052,50 @@ pub fn extend(m: &mut Metadata) {
             ("Interchangeable", "Interchangeable", "Specifies that the item and the substitute item are interchangeable.", 0),
             ("Condition", "Condition", "Specifies that a condition exists for this substitution.", 0),
             ("Substitute Type", "Substitute Type", "Specifies the type of the item that can be used as a substitute.", 0),
+        ],
+    );
+    relabel(
+        m,
+        "Item Templ.",
+        &[
+            ("Code", "Code", "Specifies the code of the template.", 0),
+            ("Description", "Description", "Specifies the description of the template.", 0),
+            ("Base Unit of Measure", "Base Unit of Measure", "Specifies the base unit used to measure the item, such as piece, box, or pallet. The base unit of measure also serves as the conversion basis for alternate units of measure.", 0),
+            ("Type", "Type", "Specifies whether the item card represents a physical inventory unit (Inventory), a labor time unit (Service), or a physical unit that is not tracked in inventory (Non-Inventory).", 0),
+            ("Inventory Posting Group", "Inventory Posting Group", "Specifies links between business transactions made for the item and an inventory account in the general ledger, to group amounts for that item type.", 0),
+            ("Costing Method", "Costing Method", "Specifies how the item's cost flow is recorded and whether an actual or budgeted value is capitalized and used in the cost calculation.", 0),
+            ("Gen. Prod. Posting Group", "Gen. Prod. Posting Group", "Specifies the item's product type to link transactions made for this item with the appropriate general ledger account according to the general posting setup.", 0),
+            ("VAT Prod. Posting Group", "VAT Prod. Posting Group", "Specifies the VAT specification of the involved item or resource to link transactions made for this record with the appropriate general ledger account according to the VAT posting setup.", 0),
+            ("Reserve", "Reserve", "Specifies if and how the item will be reserved. Never: It is not possible to reserve the item. Optional: You can reserve the item manually. Always: The item is automatically reserved from demand, such as sales orders, against inventory, purchase orders, assembly orders, and production orders.", 0),
+            ("Item Category Code", "Item Category Code", "Specifies the category that the item belongs to. Item categories also contain any assigned item attributes.", 0),
+            ("Item Tracking Code", "Item Tracking Code", "Specifies how serial, lot or package numbers assigned to the item are tracked in the supply chain.", 0),
+        ],
+    );
+    fields(
+        m,
+        "Item Templ.",
+        vec![
+            F::code("Shelf No.", 10).tooltip("Specifies where to find the item in the warehouse. This is informational only."),
+            F::code("Item Disc. Group", 20).tooltip("Specifies an item group code that can be used as a criterion to grant a discount when the item is sold to a certain customer."),
+            F::boolean("Allow Invoice Disc.").tooltip("Specifies whether to include the item when calculating an invoice discount on documents where the item is traded."),
+            F::option("Price/Profit Calculation", &["Profit=Price-Cost", "Price=Cost+Profit", "No Relationship"]).tooltip("Specifies the relationship between the Unit Cost, Unit Price, and Profit Percentage fields associated with this item."),
+            F::decimal("Profit %").tooltip("Specifies the profit margin that you want to sell the item at. You can enter a profit percentage manually or have it entered according to the Price/Profit Calculation field"),
+            F::decimal("Indirect Cost %").tooltip("Specifies the percentage of the item's last purchase cost that includes indirect costs, such as freight that is associated with the purchase of the item."),
+            F::code("Vendor No.", 20).relation("Vendor").tooltip("Specifies the vendor code of who supplies this item by default."),
+            F::code("Lead Time Calculation", 32).tooltip("Specifies a date formula for the amount of time it takes to replenish the item."),
+            F::code("Tariff No.", 20).tooltip("Specifies a code for the item's tariff number."),
+            F::boolean("Blocked").tooltip("Specifies that the related record is blocked from being posted in transactions, for example an item that is placed in quarantine."),
+            F::boolean("Price Includes VAT").tooltip("Specifies if the Unit Price and Line Amount fields on sales document lines for this item should be shown with or without VAT."),
+            F::boolean("Automatic Ext. Texts").tooltip("Specifies that an extended text that you have set up will be added automatically on sales or purchase documents for this item."),
+            F::code("No. Series", 20).tooltip("Specifies the number series that will be used to assign numbers to items."),
+            F::code("Tax Group Code", 20).tooltip("Specifies the tax group that is used to calculate and post sales tax."),
+            F::option("Variant Mandatory if Exists", &["Default", "No", "Yes"]).tooltip("Specifies whether a variant must be selected if variants exist for the item."),
+            F::option("Assembly Policy", &["Assemble-to-Stock", "Assemble-to-Order"]).tooltip("Specifies which default order flow is used to supply this assembly item."),
+            F::code("Serial Nos.", 20).tooltip("Specifies a number series code to assign consecutive serial numbers to items produced."),
+            F::option("Replenishment System", &["Purchase", "Prod. Order", "Transfer", ""]).tooltip("Specifies the type of supply order created by the planning system when the item needs to be replenished."),
+            F::code("Lot Nos.", 20).tooltip("Specifies the number series code that will be used when assigning lot numbers."),
+            F::boolean("Sales Blocked").tooltip("Specifies that the item cannot be entered on sales documents, except return orders and credit memos, and journals."),
+            F::boolean("Purchasing Blocked").tooltip("Specifies that the item cannot be entered on purchase documents, except return orders and credit memos, and journals."),
         ],
     );
     relabel(
@@ -2177,6 +2223,35 @@ pub fn extend(m: &mut Metadata) {
             ("Blocked", "Blocked", "Specifies that the related record is blocked from being posted in transactions, for example a customer that is declared insolvent or an item that is placed in quarantine.", 0),
             ("Inventory", "Inventory", "Specifies the inventory quantity of the specified lot number.", 0),
             ("Expired Inventory", "Expired Inventory", "Specifies the inventory of the lot number with an expiration date before the posting date on the associated document.", 0),
+        ],
+    );
+    relabel(
+        m,
+        "Nonstock Item",
+        &[
+            ("Entry No.", "Entry No.", "Specifies the number of the entry, as assigned from the specified number series when the entry was created.", 0),
+            ("Manufacturer Code", "Manufacturer Code", "Specifies a code for the manufacturer of the catalog item.", 0),
+            ("Vendor No.", "Vendor No.", "Specifies the number of the vendor from whom you can purchase the catalog item.", 0),
+            ("Vendor Item No.", "Vendor Item No.", "Specifies the number that the vendor uses for this item.", 0),
+            ("Description", "Description", "Specifies a description of the catalog item.", 0),
+            ("Unit of Measure", "Unit of Measure", "Specifies the name of the item or resource's unit of measure, such as piece or hour.", 0),
+            ("Published Cost", "Published Cost", "Specifies the published cost or vendor list price for the catalog item.", 2),
+            ("Negotiated Cost", "Negotiated Cost", "Specifies the price you negotiated to pay for the catalog item.", 2),
+            ("Unit Price", "Unit Price", "Specifies the price of one unit of the item or resource. You can enter a price manually or have it entered according to the Price/Profit Calculation field on the related card.", 2),
+            ("Gross Weight", "Gross Weight", "Specifies the gross weight, including the weight of any packaging, of the catalog item.", 0),
+            ("Net Weight", "Net Weight", "Specifies the net weight of the item. The weight of packaging materials is not included.", 0),
+            ("Last Date Modified", "Last Date Modified", "Specifies the date on which the catalog item card was last modified.", 0),
+            ("Bar Code", "Bar Code", "Specifies the bar code of the catalog item.", 0),
+            ("Item No.", "Item No.", "Specifies the item number that the program has generated for this catalog item.", 0),
+            ("Item Templ. Code", "Item Template Code", "Specifies the code for the item template used for this catalog item.", 0),
+        ],
+    );
+    relabel(
+        m,
+        "Nonstock Item Setup",
+        &[
+            ("No. Format", "No. Format", "Specifies the format of the catalog item number that appears on the item card.", 0),
+            ("No. Format Separator", "No. Format Separator", "Specifies the character that separates the elements of your catalog item number format, if the format uses both a code and a number.", 0),
         ],
     );
     relabel(
@@ -2499,6 +2574,7 @@ pub fn extend(m: &mut Metadata) {
             ("Gen. Prod. Posting Group", "Gen. Prod. Posting Group", "Specifies the item's product type to link transactions made for this item with the appropriate general ledger account according to the general posting setup.", 0),
             ("VAT Prod. Posting Group", "VAT Prod. Posting Group", "Specifies the VAT specification of the involved item or resource to link transactions made for this record with the appropriate general ledger account according to the VAT posting setup.", 0),
             ("Line Amount", "Line Amount", "Specifies the net amount, excluding any invoice discount amount, that must be paid for products on the line.", 1),
+            ("Variant Code", "Variant Code", "Specifies the variant of the item on the line.", 0),
             ("Unit of Measure Code", "Unit of Measure Code", "Specifies how each unit of the item or resource is measured, such as in pieces or hours. By default, the value in the Base Unit of Measure field on the item or resource card is inserted.", 0),
         ],
     );
@@ -2605,6 +2681,7 @@ pub fn extend(m: &mut Metadata) {
             ("Gen. Prod. Posting Group", "Gen. Prod. Posting Group", "Specifies the item's product type to link transactions made for this item with the appropriate general ledger account according to the general posting setup.", 0),
             ("VAT Prod. Posting Group", "VAT Prod. Posting Group", "Specifies the VAT specification of the involved item or resource to link transactions made for this record with the appropriate general ledger account according to the VAT posting setup.", 0),
             ("Line Amount", "Line Amount", "Specifies the net amount, excluding any invoice discount amount, that must be paid for products on the line.", 1),
+            ("Variant Code", "Variant Code", "Specifies the variant of the item on the line.", 0),
             ("Unit of Measure Code", "Unit of Measure Code", "Specifies how each unit of the item or resource is measured, such as in pieces or hours. By default, the value in the Base Unit of Measure field on the item or resource card is inserted.", 0),
         ],
     );
@@ -2694,6 +2771,7 @@ pub fn extend(m: &mut Metadata) {
             ("Quantity Invoiced", "Quantity Invoiced", "Specifies how many units of the item on the line have been posted as invoiced.", 0),
             ("Order No.", "Order No.", "Specifies the line number of the order that created the entry.", 0),
             ("Order Line No.", "Order Line No.", "Specifies the line number of the order that created the entry.", 0),
+            ("Variant Code", "Variant Code", "Specifies the variant of the item on the line.", 0),
             ("Unit of Measure Code", "Unit of Measure Code", "Specifies how each unit of the item or resource is measured, such as in pieces or hours. By default, the value in the Base Unit of Measure field on the item or resource card is inserted.", 0),
         ],
     );
@@ -2847,6 +2925,7 @@ pub fn extend(m: &mut Metadata) {
             ("VAT Prod. Posting Group", "VAT Prod. Posting Group", "Specifies the VAT product posting group. Links business transactions made for the item, resource, or G/L account with the general ledger, to account for VAT amounts resulting from trade with that record.", 0),
             ("Reserved Quantity", "Reserved Quantity", "Specifies how many item units on this line have been reserved.", 0),
             ("Line Amount", "Line Amount", "Specifies the net amount, excluding any invoice discount amount, that must be paid for products on the line.", 1),
+            ("Variant Code", "Variant Code", "Specifies the variant of the item on the line.", 0),
             ("Unit of Measure Code", "Unit of Measure Code", "Specifies how each unit of the item or resource is measured, such as in pieces or hours. By default, the value in the Base Unit of Measure field on the item or resource card is inserted.", 0),
             ("Reserved Qty. (Base)", "Reserved Qty. (Base)", "Specifies the value in the Reserved Quantity field, expressed in the base unit of measure.", 0),
         ],
@@ -3332,6 +3411,7 @@ pub fn extend(m: &mut Metadata) {
             ("Gen. Prod. Posting Group", "Gen. Prod. Posting Group", "Specifies the item's product type to link transactions made for this item with the appropriate general ledger account according to the general posting setup.", 0),
             ("VAT Prod. Posting Group", "VAT Prod. Posting Group", "Specifies the VAT specification of the involved item or resource to link transactions made for this record with the appropriate general ledger account according to the VAT posting setup.", 0),
             ("Line Amount", "Line Amount", "Specifies the net amount, excluding any invoice discount amount, that must be paid for products on the line.", 1),
+            ("Variant Code", "Variant Code", "Specifies the variant of the item on the line.", 0),
             ("Unit of Measure Code", "Unit of Measure Code", "Specifies how each unit of the item or resource is measured, such as in pieces or hours. By default, the value in the Base Unit of Measure field on the item or resource card is inserted.", 0),
         ],
     );
@@ -3558,6 +3638,7 @@ pub fn extend(m: &mut Metadata) {
             ("Gen. Prod. Posting Group", "Gen. Prod. Posting Group", "Specifies the item's product type to link transactions made for this item with the appropriate general ledger account according to the general posting setup.", 0),
             ("VAT Prod. Posting Group", "VAT Prod. Posting Group", "Specifies the VAT specification of the involved item or resource to link transactions made for this record with the appropriate general ledger account according to the VAT posting setup.", 0),
             ("Line Amount", "Line Amount", "Specifies the net amount, excluding any invoice discount amount, that must be paid for products on the line.", 1),
+            ("Variant Code", "Variant Code", "Specifies the variant of the item on the line.", 0),
             ("Unit of Measure Code", "Unit of Measure Code", "Specifies how each unit of the item or resource is measured, such as in pieces or hours. By default, the value in the Base Unit of Measure field on the item or resource card is inserted.", 0),
         ],
     );
@@ -3604,6 +3685,7 @@ pub fn extend(m: &mut Metadata) {
             ("VAT Prod. Posting Group", "VAT Prod. Posting Group", "Specifies the VAT product posting group. Links business transactions made for the item, resource, or G/L account with the general ledger, to account for VAT amounts resulting from trade with that record.", 0),
             ("Reserved Quantity", "Reserved Quantity", "Specifies how many units of the item on the line have been reserved.", 0),
             ("Line Amount", "Line Amount", "Specifies the net amount, excluding any invoice discount amount, that must be paid for products on the line.", 1),
+            ("Variant Code", "Variant Code", "Specifies the variant of the item on the line.", 0),
             ("Qty. per Unit of Measure", "Qty. per Unit of Measure", "Specifies an auto-filled number if you have included Sales Unit of Measure on the item card and a quantity in the Qty. per Unit of Measure field.", 0),
             ("Unit of Measure Code", "Unit of Measure Code", "Specifies how each unit of the item or resource is measured, such as in pieces or hours. By default, the value in the Base Unit of Measure field on the item or resource card is inserted.", 0),
             ("Reserved Qty. (Base)", "Reserved Qty. (Base)", "Specifies the value in the Reserved Quantity field, expressed in the base unit of measure.", 0),
@@ -3695,6 +3777,7 @@ pub fn extend(m: &mut Metadata) {
             ("Quantity", "Quantity", "Specifies the number of units of the item specified on the line.", 0),
             ("Qty. Shipped Not Invoiced", "Qty. Shipped Not Invoiced", "Specifies the quantity of the shipped item that has been posted as shipped but that has not yet been posted as invoiced.", 0),
             ("Quantity Invoiced", "Quantity Invoiced", "Specifies how many units of the item on the line have been posted as invoiced.", 0),
+            ("Variant Code", "Variant Code", "Specifies the variant of the item on the line.", 0),
             ("Unit of Measure Code", "Unit of Measure Code", "Specifies how each unit of the item or resource is measured, such as in pieces or hours. By default, the value in the Base Unit of Measure field on the item or resource card is inserted.", 0),
         ],
     );
@@ -4474,6 +4557,38 @@ pub fn extend(m: &mut Metadata) {
     columns(m, "bank-account-statement-list", &["Bank Account No.", "Bank Account Name", "Statement No.", "Statement Date", "Balance Last Statement", "Statement Ending Balance"]);
     columns(m, "bank-posting-groups", &["Code", "G/L Account No."]);
     columns(m, "cash-receipt-journal", &["Posting Date", "Document Type", "Document No.", "Account Type", "Account No.", "Description", "Posting Group", "Amount", "Amount (LCY)", "Debit Amount", "Credit Amount", "Bal. Account Type", "Bal. Account No.", "Selected Alloc. Account No.", "Applies-to Doc. Type", "Applies-to Doc. No.", "Correction", "Shortcut Dimension 1 Code", "Shortcut Dimension 2 Code"]);
+    layout(
+        m,
+        "catalog-item-card",
+        &[
+            Tab {
+                caption: "General",
+                fields: &["Entry No.", "Manufacturer Code", "Vendor No.", "Vendor Item No.", "Item No.", "Description", "Unit of Measure", "Last Date Modified"],
+                promoted: &["Vendor No.", "Vendor Item No.", "Unit of Measure"],
+                additional: &["Entry No.", "Item No."],
+                ..Tab::default()
+            },
+            Tab {
+                caption: "Invoicing",
+                fields: &["Published Cost", "Negotiated Cost", "Unit Price", "Gross Weight", "Net Weight", "Bar Code", "Item Templ. Code"],
+                promoted: &["Unit Price"],
+                additional: &["Published Cost", "Negotiated Cost"],
+                ..Tab::default()
+            },
+        ],
+    );
+    columns(m, "catalog-item-list", &["Vendor Item No.", "Manufacturer Code", "Vendor No.", "Description", "Unit of Measure", "Published Cost", "Negotiated Cost", "Unit Price", "Gross Weight", "Net Weight", "Item Templ. Code", "Last Date Modified", "Bar Code"]);
+    layout(
+        m,
+        "catalog-item-setup",
+        &[
+            Tab {
+                caption: "General",
+                fields: &["No. Format", "No. Format Separator"],
+                ..Tab::default()
+            },
+        ],
+    );
     columns(m, "chart-of-accounts", &["No.", "Name", "Net Change", "Balance", "Income/Balance", "Account Category", "Account Type", "Totaling", "Gen. Posting Type", "Gen. Bus. Posting Group", "Gen. Prod. Posting Group", "Source Currency Posting", "Source Currency Code", "Cost Type No.", "Default Deferral Template Code"]);
     columns(m, "column-layout", &["Column No.", "Column Header", "Include Date In Header", "Column Type", "Ledger Entry Type", "Amount Type", "Budget Name", "Formula", "Show Opposite Sign", "Comparison Date Formula", "Comparison Period Formula", "Show", "Rounding Factor", "G/L Account Totaling", "Show in ACY", "Internal Description"]);
     columns(m, "column-layout-names", &["Name", "Description", "Analysis View Name", "Status", "Internal Description"]);
@@ -4966,6 +5081,59 @@ pub fn extend(m: &mut Metadata) {
     columns(m, "item-reclass-journal", &["Posting Date", "Document No.", "Item No.", "Description", "Location Code", "New Location Code", "Quantity", "Unit of Measure Code", "Applies-to Entry", "Shortcut Dimension 1 Code", "New Shortcut Dimension 1 Code", "Shortcut Dimension 2 Code", "New Shortcut Dimension 2 Code"]);
     columns(m, "item-reference-entries", &["Reference Type", "Reference Type No.", "Reference No.", "Unit of Measure", "Description", "Starting Date", "Ending Date"]);
     columns(m, "item-substitution-entry", &["Substitute Type", "Substitute No.", "Description", "Interchangeable", "Condition"]);
+    layout(
+        m,
+        "item-templ-card",
+        &[
+            Tab {
+                caption: "General",
+                fields: &["Code", "Description", "No. Series"],
+                ..Tab::default()
+            },
+            Tab {
+                caption: "Item",
+                fields: &["Blocked", "Sales Blocked", "Purchasing Blocked", "Type", "Base Unit of Measure", "Item Category Code", "Automatic Ext. Texts", "Variant Mandatory if Exists"],
+                promoted: &["Base Unit of Measure"],
+                additional: &["Automatic Ext. Texts"],
+                ..Tab::default()
+            },
+            Tab {
+                caption: "Inventory",
+                fields: &["Shelf No."],
+                ..Tab::default()
+            },
+            Tab {
+                caption: "Costs & Posting",
+                fields: &["Costing Method", "Indirect Cost %", "Gen. Prod. Posting Group", "VAT Prod. Posting Group", "Tax Group Code", "Inventory Posting Group", "Tariff No."],
+                promoted: &["Gen. Prod. Posting Group", "Tax Group Code", "Inventory Posting Group"],
+                additional: &["VAT Prod. Posting Group"],
+                breaks: &["Costing Method", "Gen. Prod. Posting Group", "Tariff No."],
+                headings: &[("Costing Method", "Cost Details"), ("Gen. Prod. Posting Group", "Posting Details"), ("Tariff No.", "Foreign Trade")],
+                ..Tab::default()
+            },
+            Tab {
+                caption: "Prices & Sales",
+                fields: &["Price Includes VAT", "Price/Profit Calculation", "Profit %", "Allow Invoice Disc.", "Item Disc. Group"],
+                additional: &["Price Includes VAT", "Price/Profit Calculation", "Allow Invoice Disc.", "Item Disc. Group"],
+                ..Tab::default()
+            },
+            Tab {
+                caption: "Replenishment",
+                fields: &["Replenishment System", "Lead Time Calculation", "Vendor No.", "Assembly Policy"],
+                promoted: &["Replenishment System"],
+                breaks: &["Vendor No.", "Assembly Policy"],
+                headings: &[("Vendor No.", "Purchase"), ("Assembly Policy", "Assembly")],
+                ..Tab::default()
+            },
+            Tab {
+                caption: "Item Tracking",
+                fields: &["Item Tracking Code", "Serial Nos.", "Lot Nos."],
+                promoted: &["Item Tracking Code"],
+                ..Tab::default()
+            },
+        ],
+    );
+    columns(m, "item-templ-list", &["Code", "Description"]);
     layout(
         m,
         "item-tracking-code-card",
@@ -6031,6 +6199,22 @@ pub fn extend(m: &mut Metadata) {
     );
     actions(
         m,
+        "catalog-item-card",
+        &[
+            Nav { caption: "Substituti&ons", page: "item-substitution-entry", link: &[("No.", "Entry No.")], shortcut: "" },
+            Nav { caption: "Co&mments", page: "comment-sheet", link: &[("No.", "Entry No.")], shortcut: "" },
+        ],
+    );
+    actions(
+        m,
+        "catalog-item-list",
+        &[
+            Nav { caption: "Substituti&ons", page: "item-substitution-entry", link: &[("No.", "Entry No.")], shortcut: "" },
+            Nav { caption: "Co&mments", page: "comment-sheet", link: &[("No.", "Entry No.")], shortcut: "" },
+        ],
+    );
+    actions(
+        m,
         "chart-of-accounts",
         &[
             Nav { caption: "Ledger E&ntries", page: "general-ledger-entries", link: &[("G/L Account No.", "No.")], shortcut: "Ctrl+F7" },
@@ -6271,6 +6455,7 @@ pub fn extend(m: &mut Metadata) {
             Nav { caption: "Revaluation Journal", page: "revaluation-journal", link: &[], shortcut: "" },
             Nav { caption: "Dimensions-Single", page: "default-dimensions", link: &[("No.", "No.")], shortcut: "Alt+D" },
             Nav { caption: "Co&mments", page: "comment-sheet", link: &[("No.", "No.")], shortcut: "" },
+            Nav { caption: "Ca&talog Items", page: "catalog-item-list", link: &[], shortcut: "" },
         ],
     );
     actions(
@@ -6279,6 +6464,13 @@ pub fn extend(m: &mut Metadata) {
         &[
             Nav { caption: "Card", page: "item-card", link: &[("No.", "Item No.")], shortcut: "Shift+F7" },
             Nav { caption: "Ledger E&ntries", page: "item-ledger-entries", link: &[("Item No.", "Item No.")], shortcut: "Ctrl+F7" },
+        ],
+    );
+    actions(
+        m,
+        "item-templ-card",
+        &[
+            Nav { caption: "Dimensions", page: "default-dimensions", link: &[("No.", "Code")], shortcut: "" },
         ],
     );
     actions(
@@ -6502,6 +6694,8 @@ pub fn extend(m: &mut Metadata) {
         "stockkeeping-unit-card",
         &[
             Nav { caption: "Dimensions", page: "default-dimensions", link: &[("No.", "Item No.")], shortcut: "Alt+D" },
+            Nav { caption: "Ledger E&ntries", page: "item-ledger-entries", link: &[("Item No.", "Item No."), ("Location Code", "Location Code"), ("Variant Code", "Variant Code")], shortcut: "Ctrl+F7" },
+            Nav { caption: "&Value Entries", page: "value-entries", link: &[("Item No.", "Item No."), ("Location Code", "Location Code"), ("Variant Code", "Variant Code")], shortcut: "" },
         ],
     );
     actions(
@@ -6513,6 +6707,8 @@ pub fn extend(m: &mut Metadata) {
             Nav { caption: "Va&riants", page: "item-variants", link: &[("Item No.", "Item No.")], shortcut: "" },
             Nav { caption: "Co&mments", page: "comment-sheet", link: &[("No.", "Item No.")], shortcut: "" },
             Nav { caption: "E&xtended Texts", page: "extended-text-list", link: &[("No.", "Item No.")], shortcut: "" },
+            Nav { caption: "Ledger E&ntries", page: "item-ledger-entries", link: &[("Item No.", "Item No."), ("Location Code", "Location Code"), ("Variant Code", "Variant Code")], shortcut: "Ctrl+F7" },
+            Nav { caption: "&Value Entries", page: "value-entries", link: &[("Item No.", "Item No."), ("Location Code", "Location Code"), ("Variant Code", "Variant Code")], shortcut: "" },
             Nav { caption: "New Item", page: "item-card", link: &[], shortcut: "" },
         ],
     );
@@ -6647,6 +6843,13 @@ pub fn extend(m: &mut Metadata) {
             ("Process", &["P&ost", "Preview Posting", "Post and &Print", "Test Report", "Renumber Document Numbers"]),
             ("Approve", &["Comments"]),
             ("Line", &["Dimensions", "Approvals"]),
+        ],
+    );
+    categories(
+        m,
+        "catalog-item-card",
+        &[
+            ("Process", &["&Create Item"]),
         ],
     );
     categories(
@@ -6961,6 +7164,13 @@ pub fn extend(m: &mut Metadata) {
         &[
             ("Process", &["P&ost", "Preview Posting", "Post and &Print"]),
             ("Line", &["Item &Tracking Lines", "Dimensions"]),
+        ],
+    );
+    categories(
+        m,
+        "item-templ-card",
+        &[
+            ("Process", &["Dimensions"]),
         ],
     );
     categories(
@@ -7692,12 +7902,20 @@ pub fn extend(m: &mut Metadata) {
             ("Cost Amount (Non-Invtbl.)", "value-entries", &[("Item Ledger Entry No.", "Entry No.")], &[]),
         ],
     );
+    calcs(
+        m,
+        "Lot No. Information",
+        vec![
+            ("Inventory", CalcFormula::new(CalcFunc::Sum, "Item Ledger Entry", "Quantity", &[("Item No.", "Item No."), ("Variant Code", "Variant Code"), ("Lot No.", "Lot No.")], &[])),
+            ("Expired Inventory", CalcFormula::new(CalcFunc::Sum, "Item Ledger Entry", "Remaining Quantity", &[("Item No.", "Item No."), ("Variant Code", "Variant Code"), ("Lot No.", "Lot No.")], &[("Open", "true"), ("Positive", "true")])),
+        ],
+    );
     drilldowns(
         m,
         "Lot No. Information",
         &[
-            ("Inventory", "item-ledger-entries", &[("Item No.", "Item No."), ("Lot No.", "Lot No.")], &[]),
-            ("Expired Inventory", "item-ledger-entries", &[("Item No.", "Item No."), ("Lot No.", "Lot No.")], &[("Open", "true"), ("Positive", "true")]),
+            ("Inventory", "item-ledger-entries", &[("Item No.", "Item No."), ("Variant Code", "Variant Code"), ("Lot No.", "Lot No.")], &[]),
+            ("Expired Inventory", "item-ledger-entries", &[("Item No.", "Item No."), ("Variant Code", "Variant Code"), ("Lot No.", "Lot No.")], &[("Open", "true"), ("Positive", "true")]),
         ],
     );
     calcs(
@@ -7807,19 +8025,34 @@ pub fn extend(m: &mut Metadata) {
             ("Item Charge Qty. to Handle", "item-charge-assignment-sales", &[("Document Type", "Document Type"), ("Document No.", "Document No."), ("Document Line No.", "Line No.")], &[]),
         ],
     );
+    calcs(
+        m,
+        "Serial No. Information",
+        vec![
+            ("Inventory", CalcFormula::new(CalcFunc::Sum, "Item Ledger Entry", "Quantity", &[("Item No.", "Item No."), ("Variant Code", "Variant Code"), ("Serial No.", "Serial No.")], &[])),
+            ("Expired Inventory", CalcFormula::new(CalcFunc::Sum, "Item Ledger Entry", "Remaining Quantity", &[("Item No.", "Item No."), ("Variant Code", "Variant Code"), ("Serial No.", "Serial No.")], &[("Open", "true"), ("Positive", "true")])),
+        ],
+    );
     drilldowns(
         m,
         "Serial No. Information",
         &[
-            ("Inventory", "item-ledger-entries", &[("Item No.", "Item No."), ("Serial No.", "Serial No.")], &[]),
-            ("Expired Inventory", "item-ledger-entries", &[("Item No.", "Item No."), ("Serial No.", "Serial No.")], &[("Open", "true"), ("Positive", "true")]),
+            ("Inventory", "item-ledger-entries", &[("Item No.", "Item No."), ("Variant Code", "Variant Code"), ("Serial No.", "Serial No.")], &[]),
+            ("Expired Inventory", "item-ledger-entries", &[("Item No.", "Item No."), ("Variant Code", "Variant Code"), ("Serial No.", "Serial No.")], &[("Open", "true"), ("Positive", "true")]),
+        ],
+    );
+    calcs(
+        m,
+        "Stockkeeping Unit",
+        vec![
+            ("Inventory", CalcFormula::new(CalcFunc::Sum, "Item Ledger Entry", "Quantity", &[("Item No.", "Item No."), ("Location Code", "Location Code"), ("Variant Code", "Variant Code")], &[])),
         ],
     );
     drilldowns(
         m,
         "Stockkeeping Unit",
         &[
-            ("Inventory", "item-ledger-entries", &[("Item No.", "Item No."), ("Location Code", "Location Code")], &[]),
+            ("Inventory", "item-ledger-entries", &[("Item No.", "Item No."), ("Location Code", "Location Code"), ("Variant Code", "Variant Code")], &[]),
         ],
     );
     drilldowns(

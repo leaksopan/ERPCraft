@@ -43,6 +43,7 @@ pub mod reservation;
 pub mod physinvt;
 pub mod sku;
 pub mod std_cost;
+pub mod catalog;
 mod error;
 pub mod fa;
 pub mod item_journal;

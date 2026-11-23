@@ -6,7 +6,7 @@ use std::path::PathBuf;
 use erpcraft_mcp::control::{DEFAULT_ADDR, normalize_addr};
 
 /// Options that take a value (`--name value` or `--name=value`).
-const VALUE_OPTIONS: &[&str] = &["data", "db", "filter", "search", "fields", "limit", "offset", "type", "workdate"];
+const VALUE_OPTIONS: &[&str] = &["data", "db", "filter", "search", "fields", "limit", "offset", "type", "workdate", "automation-read-root", "automation-write-root"];
 /// Options that are on/off.
 const FLAG_OPTIONS: &[&str] = &["json", "demo", "empty", "force", "all", "help", "version"];
 
@@ -17,6 +17,10 @@ pub struct Args {
     pub db: Option<String>,
     /// `--connect [addr]`: drive the running desktop app (normalised `host:port`).
     pub connect: Option<String>,
+    /// RFC-0015 confined read roots (repeatable).
+    pub read_roots: Vec<PathBuf>,
+    /// RFC-0015 confined write roots (repeatable).
+    pub write_roots: Vec<PathBuf>,
     pub json: bool,
     pub all: bool,
     pub help: bool,
@@ -78,6 +82,8 @@ impl Args {
                     "data" => out.data = Some(PathBuf::from(value)),
                     "db" => out.db = Some(value),
                     "workdate" => out.workdate = Some(value),
+                    "automation-read-root" => out.read_roots.push(PathBuf::from(value)),
+                    "automation-write-root" => out.write_roots.push(PathBuf::from(value)),
                     _ => out.options.push((name, value)),
                 }
             } else if FLAG_OPTIONS.contains(&name.as_str()) {

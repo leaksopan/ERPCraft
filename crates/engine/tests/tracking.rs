@@ -150,7 +150,8 @@ fn lot_information_and_expiration_dates_rule_posting() {
     s.run("record.validate", &json!({"table": "Item", "key": "1000L", "field": "Expiration Calculation", "value": "30D"})).unwrap();
     buy_lot(&mut s, "L1", 5, None).unwrap();
     let e = &s.run("record.list", &json!({"table": "Item Ledger Entry", "filters": {"Item No.": "1000L", "Lot No.": "L1"}})).unwrap()["records"][0];
-    assert_eq!(e["Expiration Date"], "2026-12-21", "the work date plus 30 days: {e}");
+    let expected_exp = (s.work_date() + chrono::Duration::days(30)).to_string();
+    assert_eq!(e["Expiration Date"], expected_exp, "the work date plus 30 days: {e}");
     // The same lot keeps one expiration date.
     let err = buy_lot(&mut s, "L1", 1, Some("2027-03-01")).unwrap_err();
     assert!(err.contains("Only one expiration date is allowed per lot number"), "{err}");

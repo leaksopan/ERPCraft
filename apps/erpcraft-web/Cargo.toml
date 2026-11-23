@@ -18,6 +18,9 @@ erpcraft-ui-egui = { workspace = true }
 serde_json = { workspace = true }
 
 [target.'cfg(target_arch = "wasm32")'.dependencies]
+craft-platform = { workspace = true, features = ["browser"] }
+craft-web-api = { workspace = true }
+craft-web-host = { workspace = true }
 eframe = { workspace = true }
 egui = { workspace = true }
 # Local::now() through the browser's Date (chrono's wasm support).

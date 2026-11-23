@@ -28,6 +28,13 @@ fn line_fields() -> Vec<F> {
 }
 
 pub fn register(m: &mut Metadata) {
+    if let Some(t) = m.tables.get_mut(crate::schema::tables::BANK_ACCOUNT) {
+        for f in [F::code("Last Statement No.", 20), F::decimal("Balance Last Statement").auto_format(1)] {
+            if t.field(&f.name).is_none() {
+                t.fields.push(f);
+            }
+        }
+    }
     if let Some(t) = m.tables.get_mut(crate::schema::tables::BANK_LEDGER) {
         for f in [F::option("Statement Status", STATEMENT_STATUS), F::code("Statement No.", 20), F::integer("Statement Line No.")] {
             if t.field(&f.name).is_none() {

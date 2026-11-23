@@ -1,13 +1,11 @@
 #![allow(clippy::unwrap_used, clippy::expect_used, clippy::panic)]
-// `std::env::set_var` is unsafe in edition 2024; the secret is set once, before any request.
-#![allow(unsafe_code)]
 //! The Business Central connector against a tiny in-test HTTP server that plays the Microsoft
 //! token endpoint and the BC API v2.0 (OData JSON, paging with `@odata.nextLink`).
 
 use std::io::{BufRead, BufReader, Read, Write};
 use std::net::{TcpListener, TcpStream};
 use std::sync::atomic::{AtomicBool, Ordering};
-use std::sync::{Arc, Mutex, Once};
+use std::sync::{Arc, Mutex};
 use std::thread;
 
 use erpcraft_engine::Session;
@@ -106,8 +104,7 @@ fn auth(r: &Req) -> Option<(u16, String)> {
 }
 
 fn set_secret() {
-    static ONCE: Once = Once::new();
-    ONCE.call_once(|| unsafe { std::env::set_var("ERPCRAFT_BC_CLIENT_SECRET", SECRET) });
+    erpcraft_engine::bc::client::set_secret_override(SECRET);
 }
 
 fn demo(base: &str) -> Session {

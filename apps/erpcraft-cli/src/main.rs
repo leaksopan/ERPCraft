@@ -12,7 +12,7 @@ use std::io::{self, Read, Write};
 use std::process::ExitCode;
 
 use erpcraft_engine::meta::TableDef;
-use erpcraft_engine::{EngineError, Session, schema, store};
+use erpcraft_engine::{Confine, EngineError, Session, schema, store};
 use erpcraft_mcp::{Backend, Headless, Remote, Server};
 use serde_json::{Map, Value, json};
 
@@ -24,7 +24,7 @@ const MAX_INPUT_BYTES: u64 = 16 * 1024 * 1024;
 const DEFAULT_COLUMNS: usize = 8;
 
 const USAGE: &str = "\
-erpcraft-cli - ERPCraft (Business Central-style ERP) on the command line
+erpcraft-cli - ERPCraft ERP on the command line
 
 USAGE:
     erpcraft-cli [--db <url> | --data <file> | --connect [addr]] [--json] [--workdate <date>] <command> [args]
@@ -36,16 +36,16 @@ COMMANDS:
     pages                                  List pages
     describe <table-or-page>               Fields of a table, or layout of a page
     list <table|page> [--filter Field=expr ...] [--search text] [--fields a,b] [--limit n] [--offset n]
-                                           Records as a table (BC filter syntax, e.g. --filter \"No.=10000..20000\")
+                                           Records as a table (filter syntax, e.g. --filter \"No.=10000..20000\")
     get <table> <key> [--all]              One record; multi-field keys joined by '|' (Order|S-ORD1001)
     run <command.id> [json | @file.json | -]
                                            Run any command with JSON parameters (- reads stdin)
     post sales|purchase <no> [--type Order]
                                            Post a document (Order, Invoice, Credit Memo)
     workdate [date]                        Show (or set for this invocation) the work date
-    search <query>                         Find pages and commands (Tell Me)
-    mcp                                    Serve MCP (JSON-RPC over stdio) on the company, or on the
-                                           running app with --connect
+    search <query>                         Find pages and commands
+    mcp                                    Serve MCP (JSON-RPC over stdio; requires --automation-read-root
+                                           and --automation-write-root per RFC-0015)
     ui state|back|home|open <spec>|click <x> <y>|hover <x> <y>|screenshot <file.png>
                                            Drive the running app's window (needs --connect)
     help                                   This text
@@ -58,6 +58,8 @@ GLOBAL OPTIONS:
                          addr is host:port or a port (default 127.0.0.1:7979)
     --json               Print the raw JSON result instead of formatted text
     --workdate <date>    Work date (YYYY-MM-DD) for this invocation; posting uses it
+    --automation-read-root <dir>   Allowed directory for reading files (repeatable; required for mcp)
+    --automation-write-root <dir>  Allowed directory for writing files (repeatable; required for mcp)
     -h, --help           Help;  -V, --version  Version
 
 EXIT CODES:
@@ -150,9 +152,20 @@ impl Conn {
     }
 }
 
+fn confine_opt(args: &Args) -> Result<Option<Confine>, Failure> {
+    if args.read_roots.is_empty() && args.write_roots.is_empty() {
+        return Ok(None);
+    }
+    Ok(Some(Confine::new(&args.read_roots, &args.write_roots)?))
+}
+
 fn open(args: &Args) -> Result<Conn, Failure> {
+    let confine = confine_opt(args)?;
     let mut c = match &args.connect {
         Some(addr) => {
+            if confine.is_some() {
+                return usage("--connect is refused while --automation-read-root / --automation-write-root confinement is active (RFC-0015)");
+            }
             if args.db.is_some() || args.data.is_some() {
                 return usage("--connect runs in the app's company; it does not take --db or --data");
             }
@@ -161,7 +174,10 @@ fn open(args: &Args) -> Result<Conn, Failure> {
             }
             Conn::Remote(Remote::connect(addr)?)
         }
-        None => Conn::Local(Session::open_source(&source(args))?),
+        None => match confine {
+            Some(c) => Conn::Local(Session::open_source_confined(&source(args), c)?),
+            None => Conn::Local(Session::open_source(&source(args))?),
+        },
     };
     if let Some(d) = &args.workdate {
         c.run("session.workdate", &json!({"date": d}))?;
@@ -493,7 +509,11 @@ fn run(args: &Args, rest: &[&str]) -> Outcome {
         [c, "-"] => (*c, read_capped(io::stdin().lock(), "stdin")?),
         [c, p] => match p.strip_prefix('@') {
             Some(path) => {
-                let f = std::fs::File::open(path).map_err(|e| Failure::Usage(format!("cannot open {path}: {e}")))?;
+                let checked = match confine_opt(args)? {
+                    Some(confine) => confine.check_read(std::path::Path::new(path))?,
+                    None => std::path::PathBuf::from(path),
+                };
+                let f = std::fs::File::open(&checked).map_err(|e| Failure::Usage(format!("cannot open {path}: {e}")))?;
                 (*c, read_capped(f, path)?)
             }
             None => (*c, (*p).to_string()),
@@ -625,10 +645,16 @@ fn ui(args: &Args, rest: &[&str]) -> Outcome {
 
 fn mcp(args: &Args, rest: &[&str]) -> Outcome {
     no_more("mcp", args, rest)?;
-    let backend: Box<dyn Backend> = match open(args)? {
-        Conn::Local(session) => Box::new(Headless::new(session)),
-        Conn::Remote(remote) => Box::new(remote),
-    };
+    // RFC-0015: agent entry points are confined and refuse to start without both roots.
+    let confine = Confine::require_both(&args.read_roots, &args.write_roots).map_err(|e| Failure::Usage(e.message))?;
+    if args.connect.is_some() {
+        return usage("mcp --connect is refused in confined mode (RFC-0015: target desktop process must enforce matching confinement)");
+    }
+    let mut session = Session::open_source_confined(&source(args), confine)?;
+    if let Some(d) = &args.workdate {
+        session.run("session.workdate", &json!({"date": d}))?;
+    }
+    let backend: Box<dyn Backend> = Box::new(Headless::new(session));
     let mut server = Server::new(backend);
     let _ = writeln!(io::stderr(), "erpcraft-cli mcp: serving {} on stdio", server.backend().describe());
     let stdin = io::stdin();

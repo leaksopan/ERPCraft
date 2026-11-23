@@ -9,6 +9,7 @@ use erpcraft_meta::{Key, Metadata, PageDef, Record, TableDef, Value};
 use serde_json::{Value as Json, json};
 
 use crate::commands::{self, CommandDef};
+use crate::confine::Confine;
 use crate::ctx::Ctx;
 use crate::db::Database;
 use crate::error::{EngineError, ErrorKind, Result};
@@ -21,6 +22,7 @@ pub struct Session {
     store: Box<dyn Store>,
     work_date: NaiveDate,
     user: String,
+    confine: Option<Confine>,
     /// Bumped after every change (own commands and other sessions' work pulled in by refresh), so
     /// clients can refresh cached views.
     revision: u64,
@@ -29,7 +31,7 @@ pub struct Session {
 impl Session {
     /// An empty in-memory company (nothing persisted).
     pub fn in_memory() -> Self {
-        Self { db: Database::default(), store: Box::new(Memory), work_date: today(), user: default_user(), revision: 0 }
+        Self { db: Database::default(), store: Box::new(Memory), work_date: today(), user: default_user(), confine: None, revision: 0 }
     }
 
     /// Opens a company from a PostgreSQL URL (`postgres://user:pass@host/db?schema=acme`) or a
@@ -50,6 +52,25 @@ impl Session {
         }
     }
 
+    /// Opens a company under RFC-0015 filesystem confinement: a file-backed company must reside
+    /// inside an allowed write root (since mutating commands save to it), and every command's
+    /// file access is checked against `confine`.
+    pub fn open_source_confined(source: &str, confine: Confine) -> Result<Self> {
+        let mut s = if is_postgres_url(source) {
+            Self::open_source(source)?
+        } else {
+            let resolved = confine.check_write(Path::new(source))?;
+            Self::open(&resolved)?
+        };
+        s.confine = Some(confine);
+        Ok(s)
+    }
+
+    /// Applies RFC-0015 filesystem confinement to an already-open session.
+    pub fn set_confine(&mut self, confine: Confine) {
+        self.confine = Some(confine);
+    }
+
     /// Opens the company data file at `path`; a missing file starts an empty company that is saved
     /// there on the first change.
     pub fn open(path: &Path) -> Result<Self> {
@@ -58,7 +79,7 @@ impl Session {
 
     pub fn with_store(mut store: Box<dyn Store>) -> Result<Self> {
         let db = store.load(schema::base_app())?;
-        let mut s = Self { db, store, work_date: today(), user: default_user(), revision: 0 };
+        let mut s = Self { db, store, work_date: today(), user: default_user(), confine: None, revision: 0 };
         s.apply_personalization();
         Ok(s)
     }
@@ -139,9 +160,10 @@ impl Session {
         let mut db = if cmd.mutates { self.db.clone() } else { Database::default() };
         let mut work_date = self.work_date;
         let user = self.user.clone();
+        let confine = self.confine.as_ref();
         let outcome = catch_unwind(AssertUnwindSafe(|| {
             let target = if cmd.mutates { &mut db } else { &mut self.db };
-            let mut ctx = Ctx { meta: schema::base_app(), db: target, work_date, user: &user };
+            let mut ctx = Ctx { meta: schema::base_app(), db: target, work_date, user: &user, confine };
             let r = (cmd.run)(&mut ctx, &params);
             work_date = ctx.work_date;
             r

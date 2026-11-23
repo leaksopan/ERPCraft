@@ -32,7 +32,7 @@ const ENTRY_TABLES: &[&str] = &[
 /// Runs `post` on a copy of the company and returns the copy, so nothing is kept.
 fn run_on_copy(ctx: &Ctx, post: impl FnOnce(&mut Ctx) -> Result<Json>) -> Result<(crate::db::Database, Json)> {
     let mut copy = ctx.db.clone();
-    let mut scratch = Ctx { meta: ctx.meta, db: &mut copy, work_date: ctx.work_date, user: ctx.user };
+    let mut scratch = Ctx { meta: ctx.meta, db: &mut copy, work_date: ctx.work_date, user: ctx.user, confine: ctx.confine };
     let posted = post(&mut scratch)?;
     Ok((copy, posted))
 }
@@ -279,12 +279,8 @@ fn post_and_print(ctx: &mut Ctx, side: &Side, p: &Json) -> Result<Json> {
             if !path.to_ascii_lowercase().ends_with(".pdf") {
                 refuse!("The file name must end in .pdf.");
             }
-            let path = std::path::Path::new(path);
-            if let Some(dir) = path.parent().filter(|d| !d.as_os_str().is_empty()) {
-                std::fs::create_dir_all(dir).map_err(|e| EngineError::io(format!("{}: {e}", dir.display())))?;
-            }
-            std::fs::write(path, &bytes).map_err(|e| EngineError::io(format!("{}: {e}", path.display())))?;
-            out["path"] = json!(path.display().to_string());
+            let written = ctx.write_file(std::path::Path::new(path), &bytes)?;
+            out["path"] = json!(written.display().to_string());
         }
         None => out["pdf_base64"] = json!(crate::print::base64(&bytes)),
     }

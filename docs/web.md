@@ -1,6 +1,12 @@
 # ERPCraft on the web
 
-`apps/erpcraft-web` is the desktop egui client compiled to WebAssembly, the way VectorCraft does its web build. There is no handwritten JS: wasm-bindgen generates the small loader in `www/pkg`, and `www/index.html` is just a canvas.
+`apps/erpcraft-web` compiles the desktop egui client to WebAssembly with no handwritten JavaScript: `wasm-bindgen` generates the loader in `www/pkg`, and `www/index.html` hosts the canvas.
+
+## Craft web contracts
+
+- **`craft-web-api`**: exposes `window.erpcraft` (`request`, `execute`, `commands`) over `Session::run`.
+- **`craft-web-host`**: speaks the Craft host protocol (`?host=parent` or `data-host="page"`) for `ready`, `open`, `save`, `dirty`, and `failed` messages.
+- **`craft-platform::browser`**: downloads generated PDFs (`document.print`) directly in the browser with automatic object-URL cleanup.
 
 ## Build and run
 
@@ -18,17 +24,10 @@ Build and serve:
 python -m http.server 8765 --directory apps/erpcraft-web/www
 ```
 
-Then open http://localhost:8765. The build goes to `target-web/`, and `www/pkg` is generated (git-ignored).
+Then open http://localhost:8765.
 
 ## What runs in the browser
 
-- The engine runs inside the page on an in-memory store, starting with the Auto Craft demo company. Reloading the page starts over.
-- The UI, commands, posting and reports are the same code as the desktop app.
-- The engine is built without its `postgres` and `bc` features. Those are on by default only for the native apps (`apps/erpcraft`, `apps/erpcraft-cli`, `crates/mcp`). So the web build has no PostgreSQL, no Business Central connector and no file access.
-- **Printing:** `document.print` needs a file path, so it is not available on the web yet. Without a path the command returns the PDF as `pdf_base64`; a browser download is a later step.
-- **Fonts:** egui's built-in fonts are used, because Segoe UI is read from Windows at run time and never shipped.
-
-## Next steps
-
-- Keep the company in the browser (IndexedDB), or connect to a server that runs the engine on PostgreSQL.
-- Download printed PDFs in the browser.
+- The engine runs inside the page on an in-memory store, starting with the demo company.
+- The UI, commands, posting, reports, and PDF generation use the same Rust code as the desktop app.
+- The engine is built without its `postgres` and `bc` features (native sockets are not available in WASM).

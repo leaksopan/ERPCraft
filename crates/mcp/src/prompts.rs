@@ -39,8 +39,8 @@ static PROMPTS: &[Prompt] = &[
     Prompt {
         name: "explain_page",
         title: "Explain a page",
-        description: "Explain what a page shows and what its actions do, in Business Central terms.",
-        args: &[Arg { name: "page", description: "Page id (customer-card) or BC object id (21)", required: true }],
+        description: "Explain what a page shows and what its actions do.",
+        args: &[Arg { name: "page", description: "Page id (e.g. customer-card)", required: true }],
         render: explain_page,
     },
 ];
@@ -80,10 +80,10 @@ fn month_end_review(a: &Map<String, Value>) -> String {
 
 fn explain_page(a: &Map<String, Value>) -> String {
     format!(
-        "Explain the ERPCraft page \"{}\" to a Business Central user.\n\n\
+        "Explain the ERPCraft page \"{}\" to an ERP user.\n\n\
          Read it with page_describe (or the resource erpcraft://page/{{id}}), and its source table with table_describe. \
-         Describe what the page is for, its FastTabs or columns, its parts and FactBoxes, and what each action does \
-         (actions name the command they run). Mention the BC page and table it corresponds to.",
+         Describe what the page is for, its sections or columns, its subform parts and details pane, and what each action does \
+         (actions name the command they run).",
         arg(a, "page")
     )
 }

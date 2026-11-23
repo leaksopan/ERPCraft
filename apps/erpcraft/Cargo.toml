@@ -17,7 +17,11 @@ workspace = true
 erpcraft-engine = { workspace = true, features = ["postgres", "bc"] }
 erpcraft-mcp = { workspace = true }
 erpcraft-ui-egui = { workspace = true }
+craft-dialogs = { workspace = true }
+craft-settings = { workspace = true }
+craft-window = { workspace = true, features = ["egui"] }
 eframe = { workspace = true }
 egui = { workspace = true }
+serde = { workspace = true }
 serde_json = { workspace = true }
 png = "0.18"

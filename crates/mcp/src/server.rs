@@ -13,21 +13,21 @@ pub const PROTOCOL_VERSIONS: &[&str] = &["2025-06-18", "2025-03-26", "2024-11-05
 
 pub const SERVER_NAME: &str = "erpcraft";
 
-pub const INSTRUCTIONS: &str = "ERPCraft is a Business Central-style ERP (finance, sales, purchasing, inventory) running \
-headless on one company data file. Everything is a command: every tool here is one engine command (command_run runs any \
-command by id, command_list lists them with parameter schemas), and the desktop app and erpcraft-cli call the same commands.\n\
-- Tables, fields and pages use Business Central W1 names: Customer, Item, Sales Header, Sales Line, Cust. Ledger Entry, \
+pub const INSTRUCTIONS: &str = "ERPCraft is a pure-Rust ERP (finance, sales, purchasing, inventory, fixed assets) running \
+headless on one company data file or PostgreSQL database. Everything is a command: every tool here is one engine command (command_run runs any \
+command by id, command_list lists them with parameter schemas), and the desktop app, web app, and erpcraft-cli call the same commands.\n\
+- Standard ERP table and field names are used: Customer, Item, Sales Header, Sales Line, Cust. Ledger Entry, \
 G/L Entry; field names like \"No.\", \"Balance (LCY)\". Use table_describe / page_describe (or the erpcraft://table/{name} \
 and erpcraft://page/{id} resources) to see fields and options.\n\
-- Read data with record_list {table or page, filters, search, fields, limit}. Filters use BC filter syntax per field: \
+- Read data with record_list {table or page, filters, search, fields, limit}. Filters support expressions per field: \
 \"10000\", \"<>Open\", \"10000|20000\", \">100\", \"2026-01-01..2026-01-31\", \"*text*\". A list page id (sales-order-list) applies \
 its view. record_get takes the primary key (an array for multi-field keys, e.g. [\"Order\", \"S-ORD1001\"]).\n\
-- Change data with record_new / record_modify / record_validate (fields are validated with BC triggers). Each command is \
+- Change data with record_new / record_modify / record_validate (fields are validated by table triggers). Each command is \
 a transaction: on error nothing changes.\n\
 - Documents: sales_document_new (with lines), sales_line_add, sales_document_release, sales_document_post (ships and \
 invoices an order); purchase_* mirror them. Payments: payment_customer_register, payment_vendor_register. Reports: \
 customer_statistics, item_availability, report_trial_balance.\n\
-- If the company is empty, company_init {demo: true} creates the Auto Craft demo company. Posting uses the work date \
+- If the company is empty, company_init {demo: true} creates the demo company. Posting uses the work date \
 (session_workdate).";
 
 /// Added to the instructions when the server drives the running desktop app.

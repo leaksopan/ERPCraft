@@ -21,7 +21,6 @@ pub fn app_bar(app: &mut ErpApp, ui: &mut Ui) {
                 if brand.clicked() {
                     app.home();
                 }
-                ui.label(RichText::new("Business Central").color(white).size(15.0));
                 ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
                     let initials: String =
                         app.session.user().split(|c: char| !c.is_alphanumeric()).filter_map(|w| w.chars().next()).take(2).collect::<String>().to_uppercase();
@@ -44,7 +43,7 @@ pub fn app_bar(app: &mut ErpApp, ui: &mut Ui) {
                         ));
                     }
                     let _ = icon(ui, "🔔", "Notifications");
-                    if icon(ui, "🔍", "Tell me what you want to do (Alt+Q)").clicked() {
+                    if icon(ui, "🔍", "Search pages and commands (Alt+Q)").clicked() {
                         app.tell_me = Some(crate::dialogs::TellMe::default());
                     }
                 });

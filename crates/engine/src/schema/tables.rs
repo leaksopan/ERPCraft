@@ -417,6 +417,7 @@ pub fn register(m: &mut Metadata) {
                 F::text("Vendor Item No.", 50),
                 F::decimal("Reorder Point"),
                 F::decimal("Maximum Inventory"),
+                F::option("Reserve", &["Never", "Optional", "Always"]),
                 F::date("Last Date Modified").read_only(),
                 F::decimal("Inventory").flow(),
                 F::decimal("Qty. on Sales Order").flow(),

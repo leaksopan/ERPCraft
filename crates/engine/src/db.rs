@@ -206,8 +206,8 @@ impl Database {
         Database::from_json(meta, &j)
     }
 
-    /// Writes the data file atomically (temp file + rename), so a crash mid-write never leaves a
-    /// half-written company behind.
+    /// Writes the data file atomically (same-directory staging, fsync, rename with retry), so a
+    /// crash mid-write never leaves a half-written company behind.
     pub fn save(&self, meta: &Metadata, path: &Path) -> Result<()> {
         let text = serde_json::to_string_pretty(&self.to_json(meta)).map_err(|e| EngineError::internal(e.to_string()))?;
         if let Some(dir) = path.parent()
@@ -215,9 +215,15 @@ impl Database {
         {
             std::fs::create_dir_all(dir).map_err(|e| EngineError::io(format!("{}: {e}", dir.display())))?;
         }
-        let tmp = path.with_extension("tmp");
-        std::fs::write(&tmp, text).map_err(|e| EngineError::io(format!("{}: {e}", tmp.display())))?;
-        std::fs::rename(&tmp, path).map_err(|e| EngineError::io(format!("{}: {e}", path.display())))
+        #[cfg(not(target_arch = "wasm32"))]
+        {
+            craft_atomic::atomic_write(path, text.as_bytes()).map_err(|e| EngineError::io(format!("{}: {e}", path.display())))
+        }
+        #[cfg(target_arch = "wasm32")]
+        {
+            let _ = text;
+            Err(EngineError::io("writing local files is not available in the browser build"))
+        }
     }
 }
 

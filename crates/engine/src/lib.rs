@@ -12,6 +12,7 @@
 
 mod calc;
 pub mod commands;
+pub mod confine;
 mod ctx;
 pub mod dateformula;
 pub mod db;
@@ -64,6 +65,7 @@ pub mod store;
 mod triggers;
 
 pub use commands::CommandDef;
+pub use confine::Confine;
 pub use ctx::Ctx;
 pub use error::{EngineError, ErrorKind, Result};
 pub use session::Session;

@@ -270,6 +270,23 @@ pub fn base64(data: &[u8]) -> String {
     out
 }
 
+/// Decodes standard base64 (RFC 4648), ignoring ASCII whitespace.
+pub fn decode_base64(s: &str) -> Result<Vec<u8>> {
+    let mut out = Vec::with_capacity(s.len() * 3 / 4);
+    let (mut buf, mut bits) = (0u32, 0u32);
+    for c in s.bytes().filter(|c| !c.is_ascii_whitespace() && *c != b'=') {
+        let v = B64.iter().position(|a| *a == c).ok_or_else(|| EngineError::invalid("invalid base64 payload"))?;
+        buf = (buf << 6) | v as u32;
+        bits += 6;
+        if bits >= 8 {
+            bits -= 8;
+            out.push((buf >> bits) as u8);
+            buf &= (1 << bits) - 1;
+        }
+    }
+    Ok(out)
+}
+
 fn s_print() -> Json {
     json!({"type": "object", "properties": {
         "table": {"type": "string", "description": "Sales Header, Purchase Header, Sales Invoice Header, Sales Cr.Memo Header, Purch. Inv. Header, Sales Shipment Header, …"},
@@ -291,13 +308,9 @@ fn print_document(ctx: &mut Ctx, p: &Json) -> Result<Json> {
             if !path.to_ascii_lowercase().ends_with(".pdf") {
                 refuse!("The file name must end in .pdf.");
             }
-            let path = std::path::Path::new(path);
-            if let Some(dir) = path.parent().filter(|d| !d.as_os_str().is_empty()) {
-                std::fs::create_dir_all(dir).map_err(|e| EngineError::io(format!("{}: {e}", dir.display())))?;
-            }
-            std::fs::write(path, &bytes).map_err(|e| EngineError::io(format!("{}: {e}", path.display())))?;
-            out["path"] = json!(path.display().to_string());
-            out["message"] = json!(format!("{title} was saved as {}.", path.display()));
+            let written = ctx.write_file(std::path::Path::new(path), &bytes)?;
+            out["path"] = json!(written.display().to_string());
+            out["message"] = json!(format!("{title} was saved as {}.", written.display()));
         }
         None => out["pdf_base64"] = json!(base64(&bytes)),
     }

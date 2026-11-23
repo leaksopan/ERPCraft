@@ -82,11 +82,12 @@ fn store(ctx: &mut Ctx, t: &TableDef, owner: &Record, file_name: &str, bytes: &[
 fn attach_file(ctx: &mut Ctx, p: &Json) -> Result<Json> {
     let (t, r) = owner(ctx, p)?;
     let path = opt_str(p, "path").map(str::trim).filter(|s| !s.is_empty()).ok_or_else(|| EngineError::invalid("missing parameter 'path'"))?;
-    let meta = std::fs::metadata(path).map_err(|e| EngineError::io(format!("{path}: {e}")))?;
+    let resolved = ctx.check_read(std::path::Path::new(path))?;
+    let meta = std::fs::metadata(&resolved).map_err(|e| EngineError::io(format!("{path}: {e}")))?;
     if meta.len() > MAX_BYTES as u64 {
         refuse!("The file is {} MB. Files of up to {} MB can be attached.", meta.len() / (1024 * 1024), MAX_BYTES / (1024 * 1024));
     }
-    let bytes = std::fs::read(path).map_err(|e| EngineError::io(format!("{path}: {e}")))?;
+    let bytes = std::fs::read(&resolved).map_err(|e| EngineError::io(format!("{path}: {e}")))?;
     store(ctx, t, &r, path, &bytes)
 }
 
@@ -126,10 +127,11 @@ fn view(ctx: &mut Ctx, p: &Json) -> Result<Json> {
         .chars()
         .map(|c| if c.is_alphanumeric() || matches!(c, ' ' | '-' | '.' | '_') { c } else { '_' })
         .collect();
-    let dir = std::env::temp_dir().join("ERPCraft");
-    std::fs::create_dir_all(&dir).map_err(|e| EngineError::io(format!("{}: {e}", dir.display())))?;
-    let path = dir.join(name);
-    std::fs::write(&path, &bytes).map_err(|e| EngineError::io(format!("{}: {e}", path.display())))?;
+    let dir = match ctx.confine.and_then(|c| c.write_roots().first()) {
+        Some(root) => root.to_path_buf(),
+        None => std::env::temp_dir().join("ERPCraft"),
+    };
+    let path = ctx.write_file(&dir.join(name), &bytes)?;
     Ok(json!({"open_file": path.display().to_string(), "bytes": bytes.len()}))
 }
 

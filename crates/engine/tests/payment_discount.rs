@@ -20,7 +20,8 @@ fn paying_within_the_discount_period_grants_the_discount() {
     let doc = s.run("sales.document.new", &json!({"document_type": "Invoice", "customer_no": "30000", "lines": [{"no": "1000", "quantity": 2}]})).unwrap();
     let h = s.run("record.get", &json!({"table": "Sales Header", "key": ["Invoice", doc["no"]]})).unwrap();
     assert_eq!(d(&h["Payment Discount %"]), 2.0);
-    assert_eq!(h["Pmt. Discount Date"], "2026-11-29", "8 days after the document date");
+    let expected_disc_date = (s.work_date() + chrono::Duration::days(8)).to_string();
+    assert_eq!(h["Pmt. Discount Date"], expected_disc_date, "8 days after the document date");
     let posted = s.run("sales.document.post", &json!({"document_type": "Invoice", "no": doc["no"]})).unwrap();
     let inv = posted["posted_no"].as_str().unwrap().to_string();
     let e = &s.run("record.list", &json!({"table": "Cust. Ledger Entry", "filters": {"Document No.": inv}})).unwrap()["records"][0];

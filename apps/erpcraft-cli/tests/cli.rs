@@ -126,10 +126,24 @@ fn run_new_order_and_post() {
 }
 
 #[test]
+fn mcp_refuses_to_start_without_confinement_roots() {
+    let d = demo("mcp-no-roots");
+    let dir = d.path().parent().unwrap().to_str().unwrap();
+    let o = bin().args(["mcp", "--data", d.path().to_str().unwrap()]).output().unwrap();
+    assert!(!o.status.success());
+    assert!(String::from_utf8_lossy(&o.stderr).contains("--automation-read-root"));
+
+    let o = bin().args(["mcp", "--data", d.path().to_str().unwrap(), "--automation-read-root", dir]).output().unwrap();
+    assert!(!o.status.success());
+    assert!(String::from_utf8_lossy(&o.stderr).contains("--automation-write-root"));
+}
+
+#[test]
 fn mcp_over_stdio() {
     let d = demo("mcp");
+    let dir = d.path().parent().unwrap().to_str().unwrap();
     let mut child = bin()
-        .args(["mcp", "--data", d.path().to_str().unwrap()])
+        .args(["mcp", "--data", d.path().to_str().unwrap(), "--automation-read-root", dir, "--automation-write-root", dir])
         .stdin(Stdio::piped())
         .stdout(Stdio::piped())
         .stderr(Stdio::piped())

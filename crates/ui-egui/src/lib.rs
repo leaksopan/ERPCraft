@@ -29,6 +29,23 @@ pub use nav::View;
 /// the same PostgreSQL company.
 const REFRESH_EVERY: Duration = Duration::from_secs(2);
 
+/// A file picker request queued for the desktop shell (`craft-dialogs`).
+#[derive(Clone, Debug)]
+pub struct FilePick {
+    pub title: String,
+    pub command: String,
+    pub params: Map<String, Json>,
+    pub field: String,
+}
+
+/// A file ready for browser download (`craft-platform::browser`).
+#[derive(Clone, Debug)]
+pub struct PendingDownload {
+    pub name: String,
+    pub mime: String,
+    pub bytes: Vec<u8>,
+}
+
 /// The application state behind one window.
 pub struct ErpApp {
     pub session: Session,
@@ -36,24 +53,30 @@ pub struct ErpApp {
     pub dialog: Option<Dialog>,
     /// Edit buffers of text fields being typed in, by widget id.
     pub bufs: HashMap<String, String>,
-    /// Informational message bar (BC's blue notification).
+    /// Informational message bar.
     pub notice: Option<String>,
     pub tell_me: Option<dialogs::TellMe>,
     pub nav_menu_open: bool,
     pub role_center: String,
-    /// FastTabs the user toggled away from their default (page id + caption).
+    /// Sections the user toggled away from their default (page id + caption).
     pub toggled_tabs: HashSet<String>,
     /// Screen pixels per egui point, kept so control requests can speak in screenshot pixels.
     pub pixels_per_point: f32,
     /// Input events the control channel feeds in, one batch per frame (`ui.click`).
     pub synthetic_input: std::collections::VecDeque<Vec<egui::Event>>,
-    /// FastTabs showing their "Show more" fields.
+    /// Sections showing their "Show more" fields.
     pub show_more: HashSet<String>,
     pub show_factbox: bool,
     /// Columns the user chose per list page (Personalize › columns); the page's own otherwise.
     pub columns: HashMap<String, Vec<String>>,
     /// The list rows an action runs on when several are marked (sent as `keys`).
     pub selection: Vec<Key>,
+    /// Desktop shell sets this true when a native file picker (`craft-dialogs`) is wired.
+    pub native_file_picker: bool,
+    /// Queued native file picker request for the desktop shell to show at end-of-frame.
+    pub pending_file_pick: Option<FilePick>,
+    /// Queued browser downloads for the web shell (`craft-platform::browser`).
+    pub pending_downloads: Vec<PendingDownload>,
     /// `egui` time (seconds) of the next [`Session::refresh`].
     next_refresh: f64,
     /// A failed refresh was shown in the notice bar; don't repeat it every 2 seconds.
@@ -78,6 +101,9 @@ impl ErpApp {
             show_factbox: true,
             columns: HashMap::new(),
             selection: Vec::new(),
+            native_file_picker: false,
+            pending_file_pick: None,
+            pending_downloads: Vec::new(),
             next_refresh: 0.0,
             refresh_failed: false,
         }
@@ -361,9 +387,17 @@ impl ErpApp {
         if let Some(path) = r.get("open_file").and_then(Json::as_str) {
             open_file(path);
         }
-        // A printed document opens in the system's PDF viewer.
+        // A printed document opens in the system's PDF viewer (desktop) or downloads (web).
         if let (Some(path), Some(_)) = (r.get("path").and_then(Json::as_str), r.get("pages")) {
             open_file(path);
+        } else if let Some(b64) = r.get("pdf_base64").and_then(Json::as_str)
+            && let Ok(bytes) = erpcraft_engine::print::decode_base64(b64)
+        {
+            let title = r.get("title").and_then(Json::as_str).unwrap_or("document");
+            let safe: String = title.chars().map(|c| if c.is_alphanumeric() || matches!(c, ' ' | '-' | '.') { c } else { '_' }).collect();
+            let name = format!("{}.pdf", safe.trim());
+            self.pending_downloads.push(PendingDownload { name: name.clone(), mime: "application/pdf".to_string(), bytes });
+            self.notice = Some(format!("Downloading {name}."));
         }
         if let Some(rep) = r.get("report") {
             self.dialog = Some(Dialog::report(rep));
@@ -465,9 +499,19 @@ impl ErpApp {
             }
         }
         if !missing.is_empty() {
+            if self.native_file_picker && command == "attachment.attach_file" && missing.len() == 1 && missing[0] == "path" {
+                self.pending_file_pick = Some(FilePick {
+                    title: a.caption.replace('&', ""),
+                    command: command.clone(),
+                    params,
+                    field: "path".to_string(),
+                });
+                return;
+            }
             self.dialog = Some(Dialog::params(a.caption.replace('&', ""), command, Json::Object(params), missing));
             return;
         }
+        #[cfg(not(target_arch = "wasm32"))]
         if (command == "document.print" || command.ends_with(".post_and_print")) && !params.contains_key("path") {
             params.insert("path".into(), json!(print_path(context)));
         }
@@ -481,6 +525,7 @@ impl ErpApp {
 
 /// Where a printed document goes: Documents\ERPCraft\<table> <key>.pdf (the temp folder when
 /// there is no Documents folder).
+#[cfg(not(target_arch = "wasm32"))]
 fn print_path(context: Option<(&str, &Key)>) -> String {
     let base = std::env::var("USERPROFILE")
         .or_else(|_| std::env::var("HOME"))

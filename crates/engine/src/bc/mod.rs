@@ -304,7 +304,7 @@ fn setup(ctx: &mut Ctx, p: &Json) -> Result<Json> {
         }
     }
     ctx.put(SETUP, r.clone())?;
-    Ok(json!({"setup": r.to_json(t), "secret_set": std::env::var_os(SECRET_ENV).is_some_and(|v| !v.is_empty())}))
+    Ok(json!({"setup": r.to_json(t), "secret_set": client::client_secret().is_some()}))
 }
 
 fn test_connection(ctx: &mut Ctx, _: &Json) -> Result<Json> {

@@ -142,7 +142,7 @@ fn action_bar(app: &mut ErpApp, ui: &mut Ui, page: &PageDef, table: &TableDef, s
         }
         ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
             if !page.factboxes.is_empty() {
-                let tip = if app.show_factbox { "Hide FactBox pane" } else { "Show FactBox pane" };
+                let tip = if app.show_factbox { "Hide Details pane" } else { "Show Details pane" };
                 if ui.add(egui::Button::new(RichText::new("ⓘ").size(16.0)).frame(false)).on_hover_text(tip).clicked() {
                     app.show_factbox = !app.show_factbox;
                 }
@@ -778,7 +778,7 @@ fn filter_pane(app: &mut ErpApp, ui: &mut Ui, table: &TableDef, state: &mut List
         });
     });
     ui.add_space(12.0);
-    ui.label(RichText::new("Filters use Business Central syntax: = value, <>, >, <, a..b, a|b, *text*, '' for blank.").size(theme::SMALL).color(TOKENS.text_dim));
+    ui.label(RichText::new("Filter syntax: = value, <>, >, <, a..b, a|b, *text*, '' for blank.").size(theme::SMALL).color(TOKENS.text_dim));
 }
 
 /// Personalize › columns: show or hide any field of the table as a column.

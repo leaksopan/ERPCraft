@@ -125,7 +125,7 @@ pub fn show(app: &mut ErpApp, ui: &mut Ui, idx: usize, mut state: CardState, lay
                                 go_to = prev.clone();
                             }
                         }
-                        if !page.factboxes.is_empty() && round_icon(ui, "ⓘ", "Show or hide the FactBox pane", true).clicked() {
+                        if !page.factboxes.is_empty() && round_icon(ui, "ⓘ", "Show or hide the Details pane", true).clicked() {
                             app.show_factbox = !app.show_factbox;
                         }
                         if layer.count > 1 {

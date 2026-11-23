@@ -129,10 +129,21 @@ pub fn register(m: &mut Metadata) {
         }
     }
     for table in WITH_DIM_SET {
-        if let Some(t) = m.tables.get_mut(*table)
-            && t.field("Dimension Set ID").is_none()
-        {
-            t.fields.push(F::integer("Dimension Set ID").read_only());
+        if let Some(t) = m.tables.get_mut(*table) {
+            if t.field("Dimension Set ID").is_none() {
+                t.fields.push(F::integer("Dimension Set ID").read_only());
+            }
+            let is_ledger = matches!(
+                *table,
+                "G/L Entry" | "Cust. Ledger Entry" | "Vendor Ledger Entry" | "Item Ledger Entry" | "Bank Account Ledger Entry" | "FA Ledger Entry"
+            );
+            for n in 1..=2 {
+                let f = if is_ledger { format!("Global Dimension {n} Code") } else { format!("Shortcut Dimension {n} Code") };
+                if t.field(&f).is_none() {
+                    let def = F::code(&f, 20);
+                    t.fields.push(if is_ledger { def.read_only() } else { def });
+                }
+            }
         }
     }
     // Every master has its two global dimensions (shown on BC's cards under Show more or not at all).

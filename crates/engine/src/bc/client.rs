@@ -11,6 +11,23 @@ use crate::error::{EngineError, ErrorKind, Result};
 /// Environment variable holding the Microsoft Entra app's client secret.
 pub const SECRET_ENV: &str = "ERPCRAFT_BC_CLIENT_SECRET";
 
+static SECRET_OVERRIDE: std::sync::OnceLock<String> = std::sync::OnceLock::new();
+
+/// Sets an in-process client secret override (used by tests to avoid unsafe `std::env::set_var`).
+#[doc(hidden)]
+pub fn set_secret_override(secret: &str) {
+    let _ = SECRET_OVERRIDE.set(secret.to_string());
+}
+
+pub(crate) fn client_secret() -> Option<String> {
+    SECRET_OVERRIDE
+        .get()
+        .cloned()
+        .or_else(|| std::env::var(SECRET_ENV).ok())
+        .map(|v| v.trim().to_string())
+        .filter(|v| !v.is_empty())
+}
+
 #[cfg(feature = "bc")]
 pub use http::Client;
 
@@ -54,7 +71,7 @@ mod http {
     impl Client {
         /// Gets a token with the client-credentials grant.
         pub fn connect(s: &Settings) -> Result<Client> {
-            let secret = std::env::var(SECRET_ENV).ok().map(|v| v.trim().to_string()).filter(|v| !v.is_empty()).ok_or_else(|| {
+            let secret = super::client_secret().ok_or_else(|| {
                 EngineError::invalid(format!(
                     "The client secret is not set. Set the environment variable {SECRET_ENV} to the secret of the Microsoft Entra app (it is never stored in the company)."
                 ))

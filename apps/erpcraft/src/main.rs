@@ -12,12 +12,41 @@ mod control;
 
 use std::process::ExitCode;
 use std::sync::Arc;
+use std::time::Instant;
 
+use craft_dialogs::{Answer, Dialogs, FileDialog, Kind};
+use craft_settings::{Location, Settings, SettingsStore};
 use erpcraft_engine::{Session, store};
 use erpcraft_mcp::control::DEFAULT_PORT;
-use erpcraft_ui_egui::{ErpApp, theme};
+use erpcraft_ui_egui::{ErpApp, FilePick, theme};
+use serde::{Deserialize, Serialize};
+use serde_json::{Value as Json, json};
 
 use control::Control;
+
+/// Desktop preferences persisted atomically in `config.toml` via `craft-settings`.
+#[derive(Serialize, Deserialize, Default, Clone, PartialEq)]
+#[serde(default)]
+struct DesktopPrefs {
+    general: GeneralPrefs,
+}
+
+#[derive(Serialize, Deserialize, Clone, PartialEq)]
+#[serde(default)]
+struct GeneralPrefs {
+    show_side_pane: bool,
+}
+
+impl Default for GeneralPrefs {
+    fn default() -> Self {
+        Self { show_side_pane: true }
+    }
+}
+
+impl Settings for DesktopPrefs {
+    const APP_ID: &'static str = "erpcraft";
+    const SCHEMA_VERSION: u32 = 1;
+}
 
 const USAGE: &str = "\
 erpcraft - ERPCraft desktop app
@@ -92,19 +121,55 @@ impl Options {
 struct App {
     inner: ErpApp,
     control: Option<Control>,
+    dialogs: Dialogs<FilePick>,
+    settings: SettingsStore<DesktopPrefs>,
 }
 
 impl eframe::App for App {
     fn logic(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
+        // Deliver native file-dialog answers before running control requests.
+        for (mut pick, answer) in self.dialogs.take_answers() {
+            match answer {
+                Answer::Paths(paths) => {
+                    if let Some(path) = paths.into_iter().next() {
+                        pick.params.insert(pick.field, json!(path.display().to_string()));
+                        self.inner.run(&pick.command, Json::Object(pick.params));
+                    }
+                }
+                Answer::Unavailable(why) => self.inner.error(why),
+                Answer::Cancelled | Answer::Message(_) => {}
+            }
+        }
         // Control requests run here, before the frame is drawn; eframe calls `logic` even while
         // the window is hidden, so a minimised app still answers.
         if let Some(c) = &self.control {
             c.poll(&mut self.inner, ctx);
         }
+        let now = Instant::now();
+        if let Some(due) = self.settings.tick(now).next_deadline {
+            ctx.request_repaint_after(due.saturating_duration_since(now));
+        }
     }
 
-    fn ui(&mut self, ui: &mut egui::Ui, _frame: &mut eframe::Frame) {
+    fn ui(&mut self, ui: &mut egui::Ui, frame: &mut eframe::Frame) {
         self.inner.ui(ui);
+        if self.settings.get().general.show_side_pane != self.inner.show_factbox {
+            let show = self.inner.show_factbox;
+            self.settings.update(|p| p.general.show_side_pane = show);
+        }
+        if let Some(pick) = self.inner.pending_file_pick.take() {
+            self.dialogs.ask(
+                FileDialog {
+                    kind: Kind::Open { multiple: false },
+                    title: Some(pick.title.clone()),
+                    filters: Vec::new(),
+                    directory: None,
+                    file_name: None,
+                },
+                pick,
+            );
+        }
+        self.dialogs.show_pending(Some(frame));
     }
 
     fn raw_input_hook(&mut self, ctx: &egui::Context, raw_input: &mut egui::RawInput) {
@@ -144,10 +209,13 @@ fn main() -> ExitCode {
         }
     };
     let size = opts.size.unwrap_or([1400.0, 860.0]);
-    let options = eframe::NativeOptions {
-        viewport: egui::ViewportBuilder::default().with_title("ERPCraft").with_inner_size(size).with_min_inner_size([900.0, 600.0]),
-        ..Default::default()
-    };
+    let choice = craft_window::Choice::probe(craft_window::Prefix::new("ERPCRAFT"));
+    let viewport = craft_window::decorate(
+        egui::ViewportBuilder::default().with_title("ERPCraft").with_inner_size(size).with_min_inner_size([900.0, 600.0]),
+        choice.frame(),
+    );
+    let options = eframe::NativeOptions { viewport, ..Default::default() };
+    let (settings, _report) = SettingsStore::<DesktopPrefs>::open(Location::Auto);
     let result = eframe::run_native(
         "ERPCraft",
         options,
@@ -156,9 +224,13 @@ fn main() -> ExitCode {
             cc.egui_ctx.set_theme(egui::ThemePreference::Light);
             theme::apply(&cc.egui_ctx);
             let mut inner = ErpApp::new(session);
+            inner.native_file_picker = true;
+            inner.show_factbox = settings.get().general.show_side_pane;
             if let Some(spec) = &opts.open {
                 inner.open_spec(spec);
             }
+            let ctx_wake = cc.egui_ctx.clone();
+            let dialogs = Dialogs::new(Arc::new(move || ctx_wake.request_repaint()));
             let control = match listener {
                 Some(listener) => {
                     let addr = listener.local_addr()?;
@@ -169,7 +241,7 @@ fn main() -> ExitCode {
                 }
                 None => None,
             };
-            Ok(Box::new(App { inner, control }))
+            Ok(Box::new(App { inner, control, dialogs, settings }))
         }),
     );
     match result {

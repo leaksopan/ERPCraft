@@ -1,7 +1,7 @@
 //! Currencies: 330 Currency Exchange Rate (page 483), the Currency Card (495) with its gain and
 //! loss accounts, the currency factor on documents and journal lines, and Adjust Exchange Rates.
 
-use erpcraft_meta::{ActionArea as A, ActionDef as Act, FieldDef as F, GroupDef as G, Metadata, PageDef, PageKind, TableDef};
+use erpcraft_meta::{ActionArea as A, ActionDef as Act, CalcFormula, CalcFunc, FieldDef as F, GroupDef as G, Metadata, PageDef, PageKind, TableDef};
 
 pub const EXCH_RATE: &str = "Currency Exchange Rate";
 
@@ -24,6 +24,25 @@ pub fn register(m: &mut Metadata) {
             F::code("Realized Gains Acc.", 20).relation("G/L Account"),
             F::code("Unrealized Losses Acc.", 20).relation("G/L Account"),
             F::code("Realized Losses Acc.", 20).relation("G/L Account"),
+            F::date("Last Date Adjusted").read_only(),
+        ],
+    );
+    ensure(
+        m,
+        crate::schema::tables::CUST_LEDGER,
+        vec![
+            F::decimal("Remaining Amt. (LCY)")
+                .calc(CalcFormula::new(CalcFunc::Sum, crate::schema::finance::DTLD_CUST_LEDGER, "Amount (LCY)", &[("Cust. Ledger Entry No.", "Entry No.")], &[]))
+                .auto_format(1),
+        ],
+    );
+    ensure(
+        m,
+        crate::schema::tables::VEND_LEDGER,
+        vec![
+            F::decimal("Remaining Amt. (LCY)")
+                .calc(CalcFormula::new(CalcFunc::Sum, crate::schema::finance::DTLD_VEND_LEDGER, "Amount (LCY)", &[("Vendor Ledger Entry No.", "Entry No.")], &[]))
+                .auto_format(1),
         ],
     );
     if let Some(t) = m.tables.get_mut("Currency") {

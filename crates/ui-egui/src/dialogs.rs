@@ -428,7 +428,7 @@ fn tell_me(app: &mut ErpApp, ctx: &egui::Context) {
     }
     let modal = egui::Modal::new(Id::unique("tell_me")).show(ctx, |ui| {
         ui.set_width(560.0);
-        ui.label(RichText::new("Tell me what you want to do").font(theme::bold(theme::SUBTITLE)));
+        ui.label(RichText::new("Search pages and commands").font(theme::bold(theme::SUBTITLE)));
         ui.add_space(6.0);
         let r = ui.add(egui::TextEdit::singleline(&mut tm.query).hint_text("e.g. sales orders, customers, chart of accounts").desired_width(f32::INFINITY));
         r.request_focus();

@@ -39,7 +39,7 @@ fn initialize_handshake_negotiates_the_version() {
     assert!(res["capabilities"]["tools"].is_object());
     assert!(res["capabilities"]["resources"].is_object());
     assert!(res["capabilities"]["prompts"].is_object());
-    assert!(res["instructions"].as_str().unwrap().contains("Business Central"));
+    assert!(res["instructions"].as_str().unwrap().contains("ERPCraft"));
 
     // An unknown version gets the newest one the server speaks.
     let r = send(&mut s, json!({"jsonrpc": "2.0", "id": "x", "method": "initialize", "params": {"protocolVersion": "1999-01-01"}}));

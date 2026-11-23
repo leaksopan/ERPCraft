@@ -28,6 +28,19 @@ The desktop app's **Print...** action (Ctrl+P) on documents saves to `Documents/
 
 The PDF writer (`crates/engine/src/print/pdf.rs`) has no dependencies. It uses the standard Helvetica fonts with WinAnsi encoding, so characters outside Latin-1 print as `?`.
 
+On native desktop/CLI builds, `print.printers` lists system printer queues via `craft-print`, and `document.print_system {table, key, printer?, copies?, duplex?, grayscale?, scaling?, dry_run?}` renders the PDF and submits it directly to the OS print spooler (Windows XPS / CUPS).
+
+## Data export and import (CSV & Excel)
+
+All tables and list pages support structured export and transactional import via `craft-csv` and `craft-xlsx`:
+
+- `data.export_csv {table|page, filters?, search?, fields?, delimiter?, path?}` — writes an RFC-4180 CSV file (or returns inline `csv` text).
+- `data.export_xlsx {table|page, filters?, search?, fields?, sheet_name?, path?}` — writes an `.xlsx` workbook (or returns `xlsx_base64`).
+- `data.import_csv {table, path|csv, delimiter?, dry_run?}` — auto-detects encoding and delimiter, validates every row through `records::create`, and rolls back completely if any row fails.
+- `data.import_xlsx {table, path|xlsx_base64, sheet?, dry_run?}` — reads a worksheet and inserts rows transactionally.
+
+When running confined (RFC-0015), `path` is checked against `--automation-read-root` (imports) and `--automation-write-root` (exports).
+
 ## List pages
 
 - **Filter pane** (⏷, or a list opened with filters): "Filter list by" holds one expression per field, and **+ Filter...** adds a field. Expressions support ranges and operators: `10000..20000`, `<>0`, `>100`, `A|B`, `*oil*`, and `''` for blank.

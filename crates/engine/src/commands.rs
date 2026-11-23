@@ -51,9 +51,10 @@ impl CommandDef {
 }
 
 /// Modules that add commands of their own (each a `static` slice of [`CommandDef`]).
-fn module_commands() -> [&'static [CommandDef]; 26] {
+fn module_commands() -> [&'static [CommandDef]; 27] {
     [
         crate::print::COMMANDS,
+        crate::export::COMMANDS,
         crate::bc::COMMANDS,
         crate::doc_tools::COMMANDS,
         crate::item_tools::COMMANDS,
@@ -132,7 +133,7 @@ fn opt_date(params: &Json, name: &str) -> Result<Option<NaiveDate>> {
     }
 }
 
-fn table_param(ctx: &Ctx, params: &Json) -> Result<(&'static TableDef, Option<&'static PageDef>)> {
+pub(crate) fn table_param(ctx: &Ctx, params: &Json) -> Result<(&'static TableDef, Option<&'static PageDef>)> {
     if let Some(p) = opt_str(params, "page") {
         let page = ctx.meta.page(p).ok_or_else(|| EngineError::not_found(format!("Page '{p}' does not exist.")))?;
         let t = page.source_table.as_deref().ok_or_else(|| EngineError::invalid(format!("Page '{p}' has no source table.")))?;
@@ -213,7 +214,7 @@ pub fn list_records(
         .collect()
 }
 
-fn filters_param(params: &Json) -> Vec<(String, String)> {
+pub(crate) fn filters_param(params: &Json) -> Vec<(String, String)> {
     params
         .get("filters")
         .and_then(Json::as_object)

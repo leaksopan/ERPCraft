@@ -35,6 +35,24 @@ impl Ctx<'_> {
         }
     }
 
+    /// Reads up to `max_bytes` from `path` after checking RFC-0015 read confinement.
+    pub fn read_file(&self, path: &Path, max_bytes: usize) -> Result<Vec<u8>> {
+        let target = self.check_read(path)?;
+        #[cfg(not(target_arch = "wasm32"))]
+        {
+            let meta = std::fs::metadata(&target).map_err(|e| EngineError::io(format!("{}: {e}", target.display())))?;
+            if meta.len() > max_bytes as u64 {
+                return Err(EngineError::refused(format!("File '{}' exceeds the {} byte limit.", target.display(), max_bytes)));
+            }
+            std::fs::read(&target).map_err(|e| EngineError::io(format!("{}: {e}", target.display())))
+        }
+        #[cfg(target_arch = "wasm32")]
+        {
+            let _ = (target, max_bytes);
+            Err(EngineError::io("reading local files is not available in the browser build"))
+        }
+    }
+
     /// Writes `bytes` to `path` atomically after checking RFC-0015 write confinement.
     pub fn write_file(&self, path: &Path, bytes: &[u8]) -> Result<PathBuf> {
         let target = self.check_write(path)?;

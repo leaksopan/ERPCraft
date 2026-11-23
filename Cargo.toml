@@ -18,12 +18,15 @@ erpcraft-ui-egui = { path = "crates/ui-egui" }
 
 # Shared Craft suite libraries, pinned to one revision on storytold/craft-libs `main`.
 craft-atomic = { git = "https://github.com/storytold/craft-libs", rev = "eeb5b26198865182463ceba31c8b64394793d22b", version = "=0.1.0" }
+craft-csv = { git = "https://github.com/storytold/craft-libs", rev = "eeb5b26198865182463ceba31c8b64394793d22b", version = "=0.1.0" }
 craft-dialogs = { git = "https://github.com/storytold/craft-libs", rev = "eeb5b26198865182463ceba31c8b64394793d22b", version = "=0.1.0" }
 craft-platform = { git = "https://github.com/storytold/craft-libs", rev = "eeb5b26198865182463ceba31c8b64394793d22b", version = "=0.1.0" }
+craft-print = { git = "https://github.com/storytold/craft-libs", rev = "eeb5b26198865182463ceba31c8b64394793d22b", version = "=0.1.0" }
 craft-settings = { git = "https://github.com/storytold/craft-libs", rev = "eeb5b26198865182463ceba31c8b64394793d22b", version = "=0.1.0" }
 craft-window = { git = "https://github.com/storytold/craft-libs", rev = "eeb5b26198865182463ceba31c8b64394793d22b", version = "=0.1.0" }
 craft-web-api = { git = "https://github.com/storytold/craft-libs", rev = "eeb5b26198865182463ceba31c8b64394793d22b", version = "=0.1.0" }
 craft-web-host = { git = "https://github.com/storytold/craft-libs", rev = "eeb5b26198865182463ceba31c8b64394793d22b", version = "=0.1.0" }
+craft-xlsx = { git = "https://github.com/storytold/craft-libs", rev = "eeb5b26198865182463ceba31c8b64394793d22b", version = "=0.1.0" }
 
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"

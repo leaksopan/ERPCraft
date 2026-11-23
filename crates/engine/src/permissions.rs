@@ -80,8 +80,8 @@ pub fn check(db: &Database, meta: &Metadata, user: &str, command: &str, params: 
         )));
     }
     let access = match command {
-        "record.list" | "record.get" | "record.lookup" => Some(Access::Read),
-        "record.new" => Some(Access::Insert),
+        "record.list" | "record.get" | "record.lookup" | "data.export_csv" | "data.export_xlsx" => Some(Access::Read),
+        "record.new" | "data.import_csv" | "data.import_xlsx" => Some(Access::Insert),
         "record.validate" | "record.modify" => Some(Access::Modify),
         "record.delete" => Some(Access::Delete),
         _ => None,

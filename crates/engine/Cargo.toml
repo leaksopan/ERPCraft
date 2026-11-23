@@ -13,6 +13,8 @@ erpcraft-meta = { workspace = true }
 serde_json = { workspace = true }
 chrono = { workspace = true }
 rust_decimal = { workspace = true }
+craft-csv = { workspace = true }
+craft-xlsx = { workspace = true }
 # Synchronous PostgreSQL client (MIT OR Apache-2.0); no async runtime in the engine.
 postgres = { version = "0.19", optional = true }
 # Synchronous HTTP client (MIT OR Apache-2.0) for the Business Central API connector.
@@ -20,6 +22,7 @@ ureq = { version = "3", optional = true, features = ["json"] }
 
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies]
 craft-atomic = { workspace = true }
+craft-print = { workspace = true }
 
 [features]
 # Native builds keep everything; the web (wasm) build turns these off: no sockets there.

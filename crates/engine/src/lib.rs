@@ -19,6 +19,7 @@ pub mod db;
 mod demo;
 mod documents;
 pub mod bc;
+pub mod export;
 pub mod approvals;
 pub mod attachments;
 pub mod dimensions;

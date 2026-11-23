@@ -317,15 +317,121 @@ fn print_document(ctx: &mut Ctx, p: &Json) -> Result<Json> {
     Ok(out)
 }
 
-pub static COMMANDS: &[CommandDef] = &[CommandDef {
-    id: "document.print",
-    label: "Print",
-    group: "Documents",
-    summary: "Print a sales or purchase document, posted invoice, credit memo, shipment or receipt to PDF.",
-    mutates: false,
-    params: s_print,
-    run: print_document,
-}];
+fn s_printers() -> Json {
+    json!({"type": "object", "properties": {}})
+}
+
+fn list_printers(_ctx: &mut Ctx, _p: &Json) -> Result<Json> {
+    #[cfg(not(target_arch = "wasm32"))]
+    {
+        let printers: Vec<Json> = craft_print::printer_queues()
+            .into_iter()
+            .map(|p| {
+                json!({
+                    "name": p.name,
+                    "description": p.description,
+                    "default": p.default,
+                    "two_sided": p.two_sided,
+                })
+            })
+            .collect();
+        Ok(json!({"printers": printers, "supported": true}))
+    }
+    #[cfg(target_arch = "wasm32")]
+    {
+        Ok(json!({"printers": [], "supported": false, "message": "System printer spooling is unavailable in the browser; use document.print to download PDF."}))
+    }
+}
+
+fn s_print_system() -> Json {
+    json!({"type": "object", "properties": {
+        "table": {"type": "string", "description": "Printable document table name"},
+        "key": {"description": "Document primary key"},
+        "report": {"type": "string", "enum": ["default", "pro_forma", "work_order"], "default": "default"},
+        "printer": {"type": "string", "description": "System printer queue name (omitted = system default)"},
+        "copies": {"type": "integer", "minimum": 1, "default": 1},
+        "duplex": {"type": "string", "enum": ["off", "long_edge", "short_edge"], "description": "Two-sided printing mode (omitted = queue default)"},
+        "grayscale": {"type": "boolean", "default": false},
+        "scaling": {"type": "string", "enum": ["exact", "shrink_to_fit"], "default": "shrink_to_fit"},
+        "dry_run": {"type": "boolean", "default": false, "description": "Preview the print job diagnostics without sending to the spooler"}},
+        "required": ["table", "key"]})
+}
+
+fn print_system(ctx: &mut Ctx, p: &Json) -> Result<Json> {
+    let table = p.get("table").and_then(Json::as_str).ok_or_else(|| EngineError::invalid("missing parameter 'table'"))?;
+    let t = ctx.table(table)?;
+    let key = Key::from_json(t, p.get("key").unwrap_or(&Json::Null)).map_err(EngineError::invalid)?;
+    let (bytes, title, pages) = render(ctx, &t.name, &key, p.get("report").and_then(Json::as_str))?;
+
+    #[cfg(not(target_arch = "wasm32"))]
+    {
+        let copies = p.get("copies").and_then(Json::as_u64).unwrap_or(1);
+        let copies = u32::try_from(copies.max(1)).map_err(|_| EngineError::invalid("copies is too large"))?;
+        let duplex = match p.get("duplex").and_then(Json::as_str) {
+            None | Some("") => None,
+            Some("off") => Some(craft_print::Duplex::Off),
+            Some("long_edge") => Some(craft_print::Duplex::LongEdge),
+            Some("short_edge") => Some(craft_print::Duplex::ShortEdge),
+            Some(other) => refuse!("Unknown duplex mode '{other}'. Use off, long_edge, or short_edge."),
+        };
+        let scaling = match p.get("scaling").and_then(Json::as_str) {
+            None | Some("") | Some("shrink_to_fit") => craft_print::Scaling::ShrinkToFit,
+            Some("exact") => craft_print::Scaling::Exact,
+            Some(other) => refuse!("Unknown scaling mode '{other}'. Use exact or shrink_to_fit."),
+        };
+        let job = craft_print::Job {
+            printer: p.get("printer").and_then(Json::as_str).map(str::trim).filter(|s| !s.is_empty()).map(str::to_string),
+            copies,
+            collate: true,
+            duplex,
+            scaling,
+            grayscale: p.get("grayscale").and_then(Json::as_bool).unwrap_or(false),
+            title: title.clone(),
+            ..Default::default()
+        };
+        let preview = craft_print::command_preview(&job).map_err(|e| EngineError::invalid(format!("invalid print job: {e}")))?;
+        if p.get("dry_run").and_then(Json::as_bool).unwrap_or(false) {
+            return Ok(json!({"title": title, "pages": pages, "bytes": bytes.len(), "dry_run": true, "preview": preview}));
+        }
+        let receipt = craft_print::submit(&bytes, &job).map_err(|e| EngineError::io(format!("print spooler failed: {e}")))?;
+        Ok(json!({"title": title, "pages": pages, "bytes": bytes.len(), "receipt": receipt, "preview": preview, "message": format!("{title} was sent to the printer.")}))
+    }
+    #[cfg(target_arch = "wasm32")]
+    {
+        let _ = (bytes, title, pages);
+        refuse!("Direct OS printing is not available in the browser build. Use document.print to download the PDF instead.")
+    }
+}
+
+pub static COMMANDS: &[CommandDef] = &[
+    CommandDef {
+        id: "document.print",
+        label: "Print",
+        group: "Documents",
+        summary: "Print a sales or purchase document, posted invoice, credit memo, shipment or receipt to PDF.",
+        mutates: false,
+        params: s_print,
+        run: print_document,
+    },
+    CommandDef {
+        id: "print.printers",
+        label: "List Printers",
+        group: "Documents",
+        summary: "List system printer queues discovered via craft-print.",
+        mutates: false,
+        params: s_printers,
+        run: list_printers,
+    },
+    CommandDef {
+        id: "document.print_system",
+        label: "Print to System Printer",
+        group: "Documents",
+        summary: "Render a document to PDF and submit it to a system printer spooler via craft-print.",
+        mutates: false,
+        params: s_print_system,
+        run: print_system,
+    },
+];
 
 #[cfg(test)]
 mod tests {

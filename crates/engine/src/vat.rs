@@ -195,7 +195,8 @@ fn settlement(ctx: &mut Ctx, p: &Json) -> Result<Json> {
         .cloned()
         .collect();
     // (vat bus, vat prod, type) → (base, amount, entry nos.)
-    let mut groups: Vec<((String, String, String), Decimal, Decimal, Vec<i64>)> = Vec::new();
+    type VatGroup = ((String, String, String), Decimal, Decimal, Vec<i64>);
+    let mut groups: Vec<VatGroup> = Vec::new();
     for e in &open {
         let k = (e.str("VAT Bus. Posting Group").to_string(), e.str("VAT Prod. Posting Group").to_string(), e.str("Type").to_string());
         let no = e.get("Entry No.").as_int();

@@ -117,7 +117,7 @@ pub fn register(m: &mut Metadata) {
         Act::command("Calc. and Post VAT Settlement", A::Process, "vat.settlement")
             .icon("post")
             .ask(&["from", "to", "posting_date", "document_no", "settlement_account"])
-            .tooltip("Close open VAT entries and transfers purchase and sales VAT amounts to the VAT settlement account. For every VAT posting group, the batch job finds all the VAT entries in the VAT Entry table that are included in the filters in the definition window."),
+            .tooltip("Close open VAT entries in the date range and post the net balance to the VAT settlement account."),
     ];
     m.add_page(stmt);
 }

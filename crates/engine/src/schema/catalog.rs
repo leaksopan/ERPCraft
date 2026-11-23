@@ -66,7 +66,7 @@ pub fn register(m: &mut Metadata) {
             .group(G::new("General", &["Code", "Description", "Type", "Base Unit of Measure", "Item Category Code"]))
             .group(G::new("Posting Details", &["Gen. Prod. Posting Group", "VAT Prod. Posting Group", "Inventory Posting Group", "Costing Method"]))
             .group(G::new("Item Tracking", &["Item Tracking Code", "Reserve"]))
-            .action(Act::command("Copy Template", A::Process, "item_templ.copy").icon("copy").ask(&["from_code"]).tooltip("Copies all information to the current template from the selected one.")),
+            .action(Act::command("Copy Template", A::Process, "item_templ.copy").icon("copy").ask(&["from_code"]).tooltip("Copy default field values from another item template.")),
     );
 
     m.add_table(
@@ -107,11 +107,11 @@ pub fn register(m: &mut Metadata) {
         .collect();
     list.card_page = Some("catalog-item-card".to_string());
     list.keywords = "catalog nonstock item vendor".to_string();
-    let create = Act::command("&Create Item", A::Process, "catalog.create_item").icon("new").tooltip("Convert the catalog item card to a normal item card, according to an item template that you choose.");
+    let create = Act::command("&Create Item", A::Process, "catalog.create_item").icon("new").tooltip("Create an inventory item from this catalog entry using an item template.");
     list.actions = vec![
         create.clone(),
         Act::command("Catalog Item Sales", A::Report, "catalog.sales").icon("report").tooltip("View a list of item sales for each catalog item."),
-        Act::command("Item Substitutions", A::Report, "catalog.substitutions").icon("report").tooltip("View or edit any substitute items that are set up to be traded instead of the item in case it is not available."),
+        Act::command("Item Substitutions", A::Report, "catalog.substitutions").icon("report").tooltip("List substitute items configured for this item."),
     ];
     m.add_page(list);
     m.add_page(

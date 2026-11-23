@@ -276,7 +276,7 @@ pub fn apply(ctx: &mut Ctx, side: &Side, applying: i64, targets: &[i64], posting
                 detailed(ctx, side, txn.no, tno, "Payment Discount", posting_date, &doc_type, &doc_no, &party, (-disc, -disc), applying, application_no)?;
                 let party_acc = crate::currency::party_account(ctx, side, &t)?;
                 let acc = discount_account(ctx, side, &t, disc)?;
-                crate::currency::post_gain_loss(ctx, &txn, posting_date, &doc_no, &party_acc, &acc, -disc, "Payment Discount")?;
+                crate::currency::post_gain_loss(ctx, &crate::currency::GainLossEntry { txn: &txn, date: posting_date, doc_no: &doc_no, party_account: &party_acc, other: &acc, amount: -disc, description: "Payment Discount" })?;
             }
         } else {
             // Reverse the applied share of each side's unrealized adjustment.
@@ -290,7 +290,8 @@ pub fn apply(ctx: &mut Ctx, side: &Side, applying: i64, targets: &[i64], posting
                     detailed(ctx, side, txn.no, no, ty, posting_date, &doc_type, &doc_no, &party, (Decimal::ZERO, -share), 0, application_no)?;
                     let party_acc = crate::currency::party_account(ctx, side, entry)?;
                     let acc = crate::currency::gain_loss_account(ctx, &currency, false, gain)?;
-                    crate::currency::post_gain_loss(ctx, &txn, posting_date, &doc_no, &party_acc, &acc, -share, &format!("Reversal of {ty}"))?;
+                    let desc = format!("Reversal of {ty}");
+                    crate::currency::post_gain_loss(ctx, &crate::currency::GainLossEntry { txn: &txn, date: posting_date, doc_no: &doc_no, party_account: &party_acc, other: &acc, amount: -share, description: &desc })?;
                 }
             }
             // The applying side at its own rate (all that is left when it closes).
@@ -306,7 +307,7 @@ pub fn apply(ctx: &mut Ctx, side: &Side, applying: i64, targets: &[i64], posting
                 detailed(ctx, side, txn.no, tno, ty, posting_date, &doc_type, &doc_no, &party, (Decimal::ZERO, realized), 0, application_no)?;
                 let party_acc = crate::currency::party_account(ctx, side, &t)?;
                 let acc = crate::currency::gain_loss_account(ctx, &currency, true, gain)?;
-                crate::currency::post_gain_loss(ctx, &txn, posting_date, &doc_no, &party_acc, &acc, realized, ty)?;
+                crate::currency::post_gain_loss(ctx, &crate::currency::GainLossEntry { txn: &txn, date: posting_date, doc_no: &doc_no, party_account: &party_acc, other: &acc, amount: realized, description: ty })?;
             }
         }
         t.set("Remaining Amount", dec(rem + on_target - disc));
@@ -377,7 +378,8 @@ pub fn unapply(ctx: &mut Ctx, side: &Side, entry_no: i64) -> Result<Json> {
             } else {
                 crate::currency::gain_loss_account(ctx, entry.str("Currency Code"), ty.starts_with("Realized"), ty.ends_with("Gain"))?
             };
-            crate::currency::post_gain_loss(ctx, &txn, ctx.work_date, o.str("Document No."), &party_acc, &acc, -amount_lcy, &format!("Unapply {ty}"))?;
+            let desc = format!("Unapply {ty}");
+            crate::currency::post_gain_loss(ctx, &crate::currency::GainLossEntry { txn: &txn, date: ctx.work_date, doc_no: o.str("Document No."), party_account: &party_acc, other: &acc, amount: -amount_lcy, description: &desc })?;
         }
         let mut undo = ctx.get(&dt.name, &erpcraft_meta::Key(vec![Value::Int(new_no)]))?;
         undo.set("Unapplied", Value::Bool(true));

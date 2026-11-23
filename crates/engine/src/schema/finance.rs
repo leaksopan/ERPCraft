@@ -257,20 +257,20 @@ fn pages(m: &mut Metadata) {
                         .param("batch", "DEFAULT")
                         .shortcut("F9")
                         .icon("post")
-                        .tooltip("Finalize the journal by posting the amounts to the accounts.")
+                        .tooltip("Post all lines in this journal batch to the ledger.")
                         .confirm("Do you want to post the journal lines?"),
                 )
                 .action(
                     Act::command("Card", A::Navigate, "journal.line.card")
                         .icon("card")
                         .shortcut("Shift+F7")
-                        .tooltip("View or change detailed information about the record on the document or journal line."),
+                        .tooltip("Open the card for the account referenced on the selected line."),
                 )
                 .action(
                     Act::command("Ledger E&ntries", A::Navigate, "journal.line.ledger_entries")
                         .icon("ledger")
                         .shortcut("Ctrl+F7")
-                        .tooltip("View the history of transactions that have been posted for the selected record."),
+                        .tooltip("Open posted ledger entries for the selected account."),
                 )
                 .action(
                     Act::command("Post and &Print", A::Home, "journal.post_and_print")
@@ -279,28 +279,28 @@ fn pages(m: &mut Metadata) {
                         .icon("print")
                         .shortcut("Shift+F9")
                         .confirm("Do you want to post the journal lines and print the report?")
-                        .tooltip("Finalize and prepare to print the document or journal. The values and quantities are posted to the related accounts."),
+                        .tooltip("Post this journal batch and print the posting summary."),
                 )
                 .action(
                     Act::command("Preview Posting", A::Process, "journal.preview_post")
                         .param("template", template)
                         .param("batch", "DEFAULT")
                         .icon("preview")
-                        .tooltip("Review the different types of entries that will be created when you post the document or journal."),
+                        .tooltip("Simulate posting and preview the ledger entries that will be created."),
                 )
                 .action(
                     Act::command("Test Report", A::Report, "journal.test_report")
                         .param("template", template)
                         .param("batch", "DEFAULT")
                         .icon("report")
-                        .tooltip("View a test report so that you can find and correct any errors before you perform the actual posting of the journal or document."),
+                        .tooltip("Validate the journal batch and show any posting issues before posting."),
                 )
                 .action(
                     Act::command("Renumber Document Numbers", A::Process, "journal.renumber")
                         .param("template", template)
                         .param("batch", "DEFAULT")
                         .icon("adjust")
-                        .tooltip("Resort the numbers in the Document No. column to avoid posting errors because the document numbers are not in sequence."),
+                        .tooltip("Renumber journal lines sequentially by document number."),
                 )
                 .action(
                     Act::command("Preview Balance", A::Process, "journal.check")

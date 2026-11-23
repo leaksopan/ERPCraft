@@ -386,10 +386,8 @@ pub fn on_validate(ctx: &Ctx, t: &TableDef, r: &mut Record, field: &str) -> Resu
                 refuse!("Serial No. {serial} is already on this line.");
             }
         }
-        "Qty. to Handle (Base)" => {
-            if r.get("Qty. to Handle (Base)").as_dec() > r.get("Quantity (Base)").as_dec() {
-                refuse!("Qty. to Handle (Base) cannot be more than {}.", r.get("Quantity (Base)").as_dec());
-            }
+        "Qty. to Handle (Base)" if r.get("Qty. to Handle (Base)").as_dec() > r.get("Quantity (Base)").as_dec() => {
+            refuse!("Qty. to Handle (Base) cannot be more than {}.", r.get("Quantity (Base)").as_dec());
         }
         _ => {}
     }

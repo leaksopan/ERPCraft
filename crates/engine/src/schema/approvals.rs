@@ -152,13 +152,13 @@ pub fn register(m: &mut Metadata) {
             with(Act::command("Send Approval Request: Journal Batch", A::Process, &format!("{prefix}.send_approval_request")))
                 .param("scope", "batch")
                 .icon("approve")
-                .tooltip("Send all journal lines for approval, also those that you may not see because of filters."),
+                .tooltip("Submit every line in this journal batch for approval, including filtered-out lines."),
         );
         p.actions.push(
             with(Act::command("Cancel Approval Request: Journal Batch", A::Process, &format!("{prefix}.cancel_approval_request")))
                 .param("scope", "batch")
                 .icon("reject")
-                .tooltip("Cancel sending all journal lines for approval, also those that you may not see because of filters."),
+                .tooltip("Withdraw approval requests for every line in this journal batch."),
         );
         if !item {
             p.actions.push(
@@ -177,7 +177,7 @@ pub fn register(m: &mut Metadata) {
         p.actions.push(
             with(Act::command("Approvals", A::Navigate, &format!("{prefix}.approvals")))
                 .icon("approve")
-                .tooltip("View a list of the records that are waiting to be approved. For example, you can see who requested the record to be approved, when it was sent, and when it is due to be approved."),
+                .tooltip("List pending approval requests for this batch with requester and status."),
         );
         p.actions.push(
             with(Act::command("Comments", A::Navigate, &format!("{prefix}.approval_comments")))

@@ -6,10 +6,15 @@ request through the same engine entry point as the desktop app and the CLI (`Ses
 agent can do anything a user can.
 
 ```
-erpcraft-cli mcp --data <company file>
-erpcraft-cli mcp --db postgres://user:password@host/db
-erpcraft-cli mcp --connect [addr]          # drive the running desktop app
+erpcraft-cli mcp --automation-read-root <dir> --automation-write-root <dir> --data <company file>
+erpcraft-cli mcp --automation-read-root <dir> --automation-write-root <dir> --db postgres://user:password@host/db
+erpcraft-cli mcp --automation-read-root <dir> --automation-write-root <dir> --connect [addr]   # drive the running desktop app
 ```
+
+Per Craft RFC-0015, `erpcraft-cli mcp` refuses to start unless at least one
+`--automation-read-root` and one `--automation-write-root` are provided (both flags are repeatable).
+All file reads and writes performed by MCP tools (such as attachments and printed PDFs) are
+canonicalized and confined to those directories.
 
 Only protocol messages are written to stdout; the startup line and any diagnostics go to stderr.
 The company is resolved like every CLI command: `--db`, else `$ERPCRAFT_DATABASE_URL`, else
@@ -17,27 +22,31 @@ The company is resolved like every CLI command: `--db`, else `$ERPCRAFT_DATABASE
 company; call `company_init` to create the demo company. Every mutating command is a transaction
 (nothing changes on error) and is saved immediately.
 
-## Registering with Claude Code
+## Registering with an MCP client
 
-```powershell
+```sh
 cargo build --release -p erpcraft-cli
-claude mcp add erpcraft -- D:\Kerja\ERPCraft\target\release\erpcraft-cli.exe mcp --data D:\Kerja\ERPCraft\company.erpcraft.json
 ```
 
-Or in a project `.mcp.json`:
+In a project `.mcp.json` (adjust paths to your local build and allowed automation directories):
 
 ```json
 {
   "mcpServers": {
     "erpcraft": {
-      "command": "D:\\Kerja\\ERPCraft\\target\\release\\erpcraft-cli.exe",
-      "args": ["mcp", "--data", "D:\\Kerja\\ERPCraft\\company.erpcraft.json"]
+      "command": "/path/to/erpcraft-cli",
+      "args": [
+        "mcp",
+        "--automation-read-root", "/path/to/workspace/in",
+        "--automation-write-root", "/path/to/workspace/out",
+        "--data", "/path/to/company.erpcraft.json"
+      ]
     }
   }
 }
 ```
 
-Any other MCP client (Claude Desktop, Cursor, …) uses the same command and arguments.
+Any MCP client (Claude Code, Claude Desktop, Cursor, …) uses the same command and arguments.
 
 Note: with a data file, the desktop app and a headless MCP server each hold the company in memory
 and save the whole file after every change. Don't let both write the same data file at the same
@@ -48,9 +57,9 @@ agent's changes), or let the MCP server drive the running app (below).
 
 Start the app with `--control` and point the MCP server at it with `--connect`:
 
-```powershell
+```sh
 erpcraft --control                      # 127.0.0.1:7979
-claude mcp add erpcraft-app -- D:\Kerja\ERPCraft\target\release\erpcraft-cli.exe mcp --connect
+erpcraft-cli mcp --automation-read-root ./in --automation-write-root ./out --connect
 ```
 
 The server then uses the `Remote` backend: every tool call is a control request (`engine.run`) to
@@ -78,8 +87,8 @@ the app closes later, tool calls return `io` errors; the next call reconnects. T
 - Errors: invalid JSON → `-32700` (id `null`); invalid request / batch / message over 16 MiB →
   `-32600`; unknown method → `-32601`; bad parameters or unknown tool/prompt → `-32602`; unknown
   resource → `-32002`. Notifications never get a response.
-- `initialize` returns `instructions` that explain the model to the agent: BC W1 names, "everything
-  is a command", BC filter syntax, how to post documents (plus the `ui_*` tools with `--connect`).
+- `initialize` returns `instructions` that explain the model to the agent: ERPCraft schema names, "everything
+  is a command", filter syntax, how to post documents (plus the `ui_*` tools with `--connect`).
 
 ## Tools
 
@@ -95,10 +104,10 @@ schema is the command's parameter schema; the description is its summary. Read-o
 | `table_list`, `table_describe` | `table.*` | Tables with record counts; fields, options, relations |
 | `page_list`, `page_describe` | `page.*` | Pages; layout, columns, parts, actions |
 | `rolecenter_get` | `rolecenter.get` | Role center navigation and cue values |
-| `search` | `search` | Tell Me: find pages and commands |
-| `record_list` | `record.list` | Records of a table or list page with BC filters, search, fields, limit/offset |
+| `search` | `search` | Quick search: find pages and commands |
+| `record_list` | `record.list` | Records of a table or list page with filters, search, fields, limit/offset |
 | `record_get` | `record.get` | One record by primary key, FlowFields calculated |
-| `record_new`, `record_validate`, `record_modify`, `record_delete` | `record.*` | Create / change / delete with BC triggers |
+| `record_new`, `record_validate`, `record_modify`, `record_delete` | `record.*` | Create / change / delete with field validation triggers |
 | `record_lookup` | `record.lookup` | Allowed values of a field |
 | `company_init`, `company_info` | `company.*` | Create the (demo) company; company info + work date |
 | `session_workdate` | `session.workdate` | Read or set the work date for this server session |
@@ -138,12 +147,13 @@ All resources are `application/json`.
 | --- | --- | --- |
 | `create_sales_order` | `customer`, `items` | Resolve customer and items, check availability, create the order, show statistics, post only after confirmation |
 | `month_end_review` | `as_of` (optional) | Trial balance, overdue receivables / payables, unposted documents; read-only |
-| `explain_page` | `page` | Explain a page and its actions in BC terms |
+| `explain_page` | `page` | Explain a page and its actions in accounting and ERP terms |
 
 ## Trying it by hand
 
-```powershell
-'{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2025-06-18"}}',
-'{"jsonrpc":"2.0","id":2,"method":"tools/call","params":{"name":"company_info"}}' |
-  erpcraft-cli mcp --data company.erpcraft.json
+```sh
+printf '%s\n%s\n' \
+  '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2025-06-18"}}' \
+  '{"jsonrpc":"2.0","id":2,"method":"tools/call","params":{"name":"company_info"}}' | \
+  erpcraft-cli mcp --automation-read-root . --automation-write-root . --data company.erpcraft.json
 ```

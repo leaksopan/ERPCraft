@@ -78,7 +78,7 @@ pub fn on_validate_fa(ctx: &mut Ctx, r: &mut Record, field: &str) -> Result<()> 
                 set_book_posting_group(ctx, r.str("No."), sub.str("Default FA Posting Group"))?;
             }
         }
-        "FA Posting Group" => set_book_posting_group(ctx, r.str("No."), &r.str("FA Posting Group").to_string())?,
+        "FA Posting Group" => set_book_posting_group(ctx, r.str("No."), r.str("FA Posting Group"))?,
         _ => {}
     }
     Ok(())

@@ -140,7 +140,7 @@ fn mini_list(app: &mut ErpApp, ui: &mut Ui, caption: &str, page_id: &str, cols: 
     let Some(table) = page.source_table.as_deref().and_then(|t| app.session.table(t)) else { return };
     let mut rows = app.session.page_records(page, &[], "");
     if page_id == "customer-list" {
-        rows.sort_by(|a, b| b.get("Balance (LCY)").as_dec().cmp(&a.get("Balance (LCY)").as_dec()));
+        rows.sort_by_key(|a| std::cmp::Reverse(a.get("Balance (LCY)").as_dec()));
     }
     rows.truncate(6);
     let mut open = None;

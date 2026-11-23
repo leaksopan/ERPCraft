@@ -354,6 +354,14 @@ fn base64(data: &[u8]) -> String {
     out
 }
 
+fn to_line(v: &Value) -> String {
+    serde_json::to_string(v).unwrap_or_else(|_| String::from(r#"{"jsonrpc":"2.0","id":null,"error":{"code":-32603,"message":"Internal error"}}"#))
+}
+
+fn error_line(e: &RpcError) -> String {
+    to_line(&jsonrpc::failure(&Value::Null, e))
+}
+
 #[cfg(test)]
 mod tests {
     #![allow(clippy::unwrap_used)]
@@ -374,12 +382,4 @@ mod tests {
             assert!(tools.iter().any(|t| t.name == name), "{name}");
         }
     }
-}
-
-fn to_line(v: &Value) -> String {
-    serde_json::to_string(v).unwrap_or_else(|_| String::from(r#"{"jsonrpc":"2.0","id":null,"error":{"code":-32603,"message":"Internal error"}}"#))
-}
-
-fn error_line(e: &RpcError) -> String {
-    to_line(&jsonrpc::failure(&Value::Null, e))
 }

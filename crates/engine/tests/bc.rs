@@ -131,15 +131,15 @@ fn test_connection_lists_companies() {
             return a;
         }
         if r.path == format!("{ROOT}/companies") {
-            return (200, json!({"value": [{"id": COMPANY, "name": "CRONUS", "displayName": "CRONUS USA, Inc.", "systemVersion": "25.0"}]}).to_string());
+            return (200, json!({"value": [{"id": COMPANY, "name": "ACME", "displayName": "Acme Trading Ltd.", "systemVersion": "25.0"}]}).to_string());
         }
         (404, "{}".into())
     }));
     let mut s = demo(&srv.base);
     let r = s.run("bc.test_connection", &json!({})).unwrap();
     assert_eq!(r["companies"][0]["id"], COMPANY, "{r:#}");
-    assert_eq!(r["companies"][0]["displayName"], "CRONUS USA, Inc.");
-    assert_eq!(r["selected"]["name"], "CRONUS");
+    assert_eq!(r["companies"][0]["displayName"], "Acme Trading Ltd.");
+    assert_eq!(r["selected"]["name"], "ACME");
     let log = srv.log.lock().unwrap();
     assert_eq!(log[0].path, "/token");
     assert!(log[1].header("Authorization").unwrap().starts_with("Bearer "));

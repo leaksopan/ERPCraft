@@ -51,12 +51,12 @@ pub fn register(m: &mut Metadata) {
         Act::command("Suggest I&tem Standard Cost...", A::Process, "standard_cost.suggest_item")
             .icon("new")
             .ask(&["item_no", "standard_cost_factor", "rounding_precision"])
-            .tooltip("Create suggestions for changing the cost shares of standard costs on items. Note that the suggested changes are not implemented until you choose the Implement Standard Cost Changes action."),
-        Act::command("Copy Standard Cost Worksheet...", A::Process, "standard_cost.copy").icon("copy").ask(&["from_worksheet"]).tooltip("Copy standard cost worksheets from several sources into the Standard Cost Worksheet window."),
+            .tooltip("Populate suggested standard cost adjustments for review before applying."),
+        Act::command("Copy Standard Cost Worksheet...", A::Process, "standard_cost.copy").icon("copy").ask(&["from_worksheet"]).tooltip("Copy cost proposals from another standard cost worksheet."),
         Act::command("&Implement Standard Cost Changes...", A::Process, "standard_cost.implement")
             .icon("post")
             .ask(&["posting_date", "document_no"])
-            .tooltip("Update the changes in the standard cost values on the item card. The suggested costs are not active until you implement them. When you implement the standard cost changes, you also create revaluation journal lines that you can post to revalue inventory."),
+            .tooltip("Apply suggested standard costs to items and create revaluation journal lines for on-hand stock."),
     ];
     // The Manufacturing app's page extension promotes Suggest (and Roll Up) onto the bar.
     ws.categories = vec![("Process".to_string(), vec!["Suggest I&tem Standard Cost...".to_string()])];

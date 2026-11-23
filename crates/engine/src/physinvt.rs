@@ -13,7 +13,7 @@ use crate::commands::{CommandDef, opt_str};
 use crate::ctx::{Ctx, dec};
 use crate::error::{EngineError, Result};
 use crate::refuse;
-use crate::schema::physinvt::*;
+use crate::schema::physinvt::{COUNTING_PERIOD, ORDER_HEADER, ORDER_LINE, PSTD_ORDER_HEADER, PSTD_ORDER_LINE, PSTD_RECORD_HEADER, PSTD_RECORD_LINE, RECORD_HEADER, RECORD_LINE};
 use crate::schema::tables::{INVENTORY_SETUP, ITEM, ITEM_LEDGER};
 
 /// The phys. inventory journal template and the batch an order posts through.

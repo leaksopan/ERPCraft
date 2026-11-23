@@ -254,7 +254,7 @@ pub fn format_decimal(d: Decimal, min_scale: u32) -> String {
     let mut grouped = String::new();
     let digits: Vec<char> = int.chars().collect();
     for (i, c) in digits.iter().enumerate() {
-        if i > 0 && (digits.len() - i) % 3 == 0 {
+        if i > 0 && (digits.len() - i).is_multiple_of(3) {
             grouped.push(',');
         }
         grouped.push(*c);

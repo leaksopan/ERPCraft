@@ -1,6 +1,4 @@
-//! The base application's pages. Layouts (FastTabs, columns, actions) follow the matching Business
-//! Central pages (Customer Card = page 21, Sales Order = page 42, …); object ids are kept for
-//! mapping to BC later.
+//! Core ERP page definitions (lists, cards, documents, and sub-parts) built from metadata.
 
 use erpcraft_meta::{ActionArea as A, ActionDef as Act, FactBoxDef, GroupDef as G, Metadata, PageDef, PageKind as K};
 
@@ -80,7 +78,7 @@ fn post_batch_actions(m: &mut Metadata) {
                     .param("document_type", doc_type)
                     .ask(&ask)
                     .icon("post")
-                    .tooltip("Post several documents at once. A report request window opens where you can specify which documents to post."),
+                    .tooltip("Post multiple documents in a single batch."),
             );
         }
     }
@@ -348,7 +346,7 @@ fn customer_actions() -> Vec<Act> {
             .tooltip("View entry statistics for the record."),
         Act::command("Statistics by C&urrencies", A::Navigate, "customer.statistics_by_currencies")
             .icon("currency")
-            .tooltip("View the statistics on customer ledger entries that have been posted for the customer in different currencies."),
+            .tooltip("Summarize posted customer ledger totals grouped by currency."),
     ]
 }
 
@@ -370,7 +368,7 @@ fn vendor_actions() -> Vec<Act> {
             .tooltip("View entry statistics for the record."),
         Act::command("Statistics by C&urrencies", A::Navigate, "vendor.statistics_by_currencies")
             .icon("currency")
-            .tooltip("View the statistics on vendor ledger entries that have been posted for the vendor in different currencies."),
+            .tooltip("Summarize posted vendor ledger totals grouped by currency."),
     ]
 }
 
@@ -383,22 +381,22 @@ fn item_actions() -> Vec<Act> {
         Act::command("Adjust Inventory", A::Home, "item.adjust_inventory")
             .icon("adjust")
             .ask(&["location_code", "new_inventory"])
-            .tooltip("Increase or decrease the item's inventory quantity manually by entering a new quantity. Adjusting the inventory quantity manually might be relevant after a physical count or if you do not record purchased quantities."),
+            .tooltip("Post a positive or negative adjustment to bring on-hand stock to a target quantity."),
         Act::page("Ledger E&ntries", A::Navigate, "item-ledger-entries").link("Item No.", "No.").shortcut("Ctrl+F7").icon("ledger"),
         Act::command("Item Availability", A::Report, "item.availability").icon("stats"),
         Act::command("Item Statistics", A::Navigate, "item.statistics")
             .icon("stats")
-            .tooltip("View statistical information, such as the value of posted entries, for the record."),
+            .tooltip("Summarize sales, purchases, and inventory value statistics for this item."),
         Act::command("Entry Statistics", A::Navigate, "item.entry_statistics")
             .icon("stats")
             .tooltip("View statistics for item ledger entries."),
         Act::command("T&urnover", A::Navigate, "item.turnover")
             .icon("stats")
-            .tooltip("View a detailed account of item turnover by periods after you have set the relevant filters for location and variant."),
-        Act::command("Event", A::Navigate, "item.availability_by_event").icon("stats").tooltip("View how the actual and the projected available balance of an item will develop over time according to supply and demand events."),
-        Act::command("Period", A::Navigate, "item.availability_by_period").icon("stats").tooltip("Show the projected quantity of the item over time according to time periods, such as day, week, or month."),
-        Act::command("Variant", A::Navigate, "item.availability_by_variant").icon("stats").tooltip("View how the inventory level of an item will develop over time according to the variant that you select."),
-        Act::command("Location", A::Navigate, "item.availability_by_location").icon("stats").tooltip("View the actual and projected quantity of the item per location."),
+            .tooltip("Show monthly item movement quantities and values over the past 12 periods."),
+        Act::command("Event", A::Navigate, "item.availability_by_event").icon("stats").tooltip("Project available balance over chronological supply and demand events."),
+        Act::command("Period", A::Navigate, "item.availability_by_period").icon("stats").tooltip("Project inventory quantities grouped by calendar period."),
+        Act::command("Variant", A::Navigate, "item.availability_by_variant").icon("stats").tooltip("Show on-hand and projected inventory quantities broken down by item variant."),
+        Act::command("Location", A::Navigate, "item.availability_by_location").icon("stats").tooltip("Show on-hand and projected inventory quantities per location."),
         Act::command("Items b&y Location", A::Navigate, "item.by_location")
             .icon("list")
             .tooltip("Show a list of items grouped by location."),
@@ -421,7 +419,7 @@ fn doc_actions(sales: bool, doc_type: &str) -> Vec<Act> {
                 let a = Act::command("Post...", A::Home, &format!("{p}.document.post"))
                     .shortcut("F9")
                     .icon("post")
-                    .tooltip("Finalize the document by posting the amounts and quantities to the related accounts.");
+                    .tooltip("Post this document to the ledger and inventory.");
                 if doc_type == "Order" { a.ask(&["mode"]) } else { a.confirm("Do you want to post the document?") }
             },
         );
@@ -438,17 +436,17 @@ fn doc_actions(sales: bool, doc_type: &str) -> Vec<Act> {
         let post_print = Act::command("Post and &Print", A::Process, &format!("{p}.document.post_and_print"))
             .shortcut("Shift+F9")
             .icon("print")
-            .tooltip("Finalize and prepare to print the document or journal. The values and quantities are posted to the related accounts.");
+            .tooltip("Post this document and print the resulting PDF.");
         v.push(if doc_type == "Order" { post_print.ask(&["mode"]) } else { post_print.confirm("Do you want to post and print the document?") });
         v.push(
             Act::command("Preview Posting", A::Process, &format!("{p}.document.preview_post"))
                 .icon("preview")
-                .tooltip("Review the different types of entries that will be created when you post the document or journal."),
+                .tooltip("Simulate posting and preview the ledger entries that will be created."),
         );
         v.push(
             Act::command("Test Report", A::Report, &format!("{p}.document.test_report"))
                 .icon("report")
-                .tooltip("View a test report so that you can find and correct any errors before you perform the actual posting."),
+                .tooltip("Validate this document and list any posting issues before posting."),
         );
     }
     v.push(
@@ -461,11 +459,11 @@ fn doc_actions(sales: bool, doc_type: &str) -> Vec<Act> {
     v.push(if sales {
         Act::command("Customer Statistics", A::Navigate, "sales.document.customer_statistics")
             .icon("stats")
-            .tooltip("View statistical information about the customer, such as the value of posted entries.")
+            .tooltip("Summarize balance, open orders, and credit status for this customer.")
     } else {
         Act::command("Vendor Statistics", A::Navigate, "purchase.document.vendor_statistics")
             .icon("stats")
-            .tooltip("View statistical information about the vendor, such as the value of posted entries.")
+            .tooltip("Summarize balance, open orders, and posted totals for this vendor.")
     });
     v.push(Act::command("Print...", A::Report, "document.print").shortcut("Ctrl+P").icon("print").tooltip("Print the document to PDF."));
     if sales && doc_type == "Order" {
@@ -474,7 +472,7 @@ fn doc_actions(sales: bool, doc_type: &str) -> Vec<Act> {
             Act::command("Work Order", A::Report, "document.print")
                 .param("report", "work_order")
                 .icon("print")
-                .tooltip("Prepare to registers actual item quantities or time used in connection with the sales order."),
+                .tooltip("Print a picking list of item quantities to fulfill this sales order."),
         );
     }
     if sales && matches!(doc_type, "Order" | "Invoice" | "Quote") {
@@ -900,7 +898,8 @@ fn setup(m: &mut Metadata) {
     for (id, obj, caption, table, cols) in simple {
         m.add_page(list(id, *obj, caption, table, None, cols).keywords("setup"));
     }
-    let cards: &[(&str, u32, &str, &str, &[(&str, &[&str])])] = &[
+    type CardSpec<'a> = (&'a str, u32, &'a str, &'a str, &'a [(&'a str, &'a [&'a str])]);
+    let cards: &[CardSpec<'_>] = &[
         (
             "company-information",
             1,

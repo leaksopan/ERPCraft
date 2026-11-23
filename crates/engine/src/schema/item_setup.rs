@@ -205,14 +205,14 @@ pub fn register(m: &mut Metadata) {
     m.add_page(list("item-attribute-values", 7501, "Item Attribute Values", ITEM_ATTRIBUTE_VALUE, &["ID", "Value", "Blocked"]));
     m.add_page(list("item-attribute-mapping", 0, "Item Attributes", ITEM_ATTRIBUTE_MAPPING, &["Item Attribute ID", "Attribute", "Item Attribute Value ID", "Value"]));
 
-    let links = vec![
-        Act::page("&Units of Measure", A::Navigate, "item-units-of-measure").link("Item No.", "No.").icon("list").tooltip("Set up the different units that the item can be traded in, such as piece, box, or hour."),
-        Act::page("Va&riants", A::Navigate, "item-variants").link("Item No.", "No.").icon("list").tooltip("View or edit the item's variants. Instead of setting up each color of an item as a separate item, you can set up the various colors as variants of the item."),
-        Act::page("Item Re&ferences", A::Navigate, "item-reference-entries").link("Item No.", "No.").icon("list").tooltip("Set up a customer's or vendor's own identification of the item. Item references to the customer's item number means that the item number is automatically shown on sales documents instead of the number that you use."),
-        Act::page("Substituti&ons", A::Navigate, "item-substitution-entry").link("Type", "=Item").link("No.", "No.").icon("list").tooltip("View or edit substitute items that are set up to be traded instead of the item in case it is not available."),
-        Act::page("E&xtended Texts", A::Navigate, "extended-text-list").link("Table Name", "=Item").link("No.", "No.").icon("list").tooltip("Select or set up additional text for the description of the item. Extended text can be inserted under the Description field on document lines for the item."),
-        Act::page("Translations", A::Navigate, "item-translations").link("Item No.", "No.").icon("list").tooltip("Set up translated item descriptions for the selected item. Translated item descriptions are automatically inserted on documents according to the language code."),
-        Act::page("Attributes", A::Navigate, "item-attribute-mapping").link("Table ID", "=27").link("No.", "No.").icon("list").tooltip("View or edit the item's attributes, such as color, size, or other characteristics that help to describe the item."),
+    let links = [
+        Act::page("&Units of Measure", A::Navigate, "item-units-of-measure").link("Item No.", "No.").icon("list").tooltip("Configure alternative units of measure and conversion factors for this item."),
+        Act::page("Va&riants", A::Navigate, "item-variants").link("Item No.", "No.").icon("list").tooltip("Manage item variants such as size or color under a single item number."),
+        Act::page("Item Re&ferences", A::Navigate, "item-reference-entries").link("Item No.", "No.").icon("list").tooltip("Map external customer, vendor, or barcode numbers to this item."),
+        Act::page("Substituti&ons", A::Navigate, "item-substitution-entry").link("Type", "=Item").link("No.", "No.").icon("list").tooltip("Define replacement items that can be offered when this item is out of stock."),
+        Act::page("E&xtended Texts", A::Navigate, "extended-text-list").link("Table Name", "=Item").link("No.", "No.").icon("list").tooltip("Configure supplemental text lines that can be inserted on document lines."),
+        Act::page("Translations", A::Navigate, "item-translations").link("Item No.", "No.").icon("list").tooltip("Maintain language-specific descriptions for this item."),
+        Act::page("Attributes", A::Navigate, "item-attribute-mapping").link("Table ID", "=27").link("No.", "No.").icon("list").tooltip("Assign descriptive attributes to categorize and filter this item."),
     ];
     for page in ["item-card", "item-list"] {
         if let Some(p) = m.pages.get_mut(page) {

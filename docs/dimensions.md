@@ -1,6 +1,6 @@
 # Dimensions
 
-ERPCraft keeps dimensions the way Business Central does:
+ERPCraft stores analytical dimensions by immutable set ID:
 
 - one combination of values per Dimension Set ID;
 - documents, journals and entries store only that ID;
@@ -8,12 +8,12 @@ ERPCraft keeps dimensions the way Business Central does:
 
 ## Tables and pages
 
-| BC object | ERPCraft | Page |
-| --- | --- | --- |
-| 348 Dimension | `Dimension` | Dimensions (536) |
-| 349 Dimension Value | `Dimension Value` | Dimension Values (537) |
-| 352 Default Dimension | `Default Dimension` | Default Dimensions (540) |
-| 480 Dimension Set Entry | `Dimension Set Entry` | Dimension Set Entries (479) |
+| Table | Page |
+| --- | --- |
+| `Dimension` | Dimensions |
+| `Dimension Value` | Dimension Values |
+| `Default Dimension` | Default Dimensions |
+| `Dimension Set Entry` | Dimension Set Entries |
 
 General Ledger Setup names the dimensions in each slot:
 
@@ -28,12 +28,12 @@ General Ledger Setup names the dimensions in each slot:
   - A line starts from the header's set, and the item's, G/L account's or fixed asset's defaults override it.
   - Typing a value in a Shortcut Dimension field changes the record's set.
   - Identical combinations share one set.
-- **Posting.** G/L, customer, vendor and bank entries carry the document's or journal line's Dimension Set ID and Global Dimension 1/2 Code. The ledger entries' Shortcut Dimension 3–8 Code fields are FlowFields over the set, as in BC.
+- **Posting.** G/L, customer, vendor and bank entries carry the document's or journal line's Dimension Set ID and Global Dimension 1/2 Code.
 - **Viewing.** "Dimensions" (Alt+D) on documents, posted documents and entries shows their set.
 
 ## In the UI
 
-- A dimension field is captioned with its dimension's Code Caption, as BC's CaptionClass does: "Department Code", not "Shortcut Dimension 1 Code".
+- A dimension field is captioned with its dimension's Code Caption (for example "Department Code" instead of "Shortcut Dimension 1 Code").
 - Its lookup lists that dimension's values.
 
 The demo company has three dimensions:

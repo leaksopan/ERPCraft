@@ -551,7 +551,7 @@ fn validate_line(ctx: &mut Ctx, side: &Side, r: &mut Record, field: &str, old: &
                 "" => {}
                 other => refuse!("Lines of type {other} are not supported yet. Use Item, G/L Account or (on purchases) Fixed Asset."),
             }
-            if r.get("Quantity").as_dec().is_zero() && r.str("Type") != "" {
+            if r.get("Quantity").as_dec().is_zero() && !r.str("Type").is_empty() {
                 r.set("Quantity", dec(Decimal::ONE));
                 set_outstanding(side, &doc_type, r);
             }

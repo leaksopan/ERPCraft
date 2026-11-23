@@ -51,15 +51,15 @@ pub fn register(m: &mut Metadata) {
         Act::command("&Create Year", A::Process, "accounting_period.create_year")
             .icon("new")
             .ask(&["starting_date", "no_of_periods", "period_length"])
-            .tooltip("Open a new fiscal year and define its accounting periods so you can start posting documents."),
+            .tooltip("Generate accounting periods for a new fiscal year."),
         Act::command("C&lose Year", A::Process, "accounting_period.close_year")
             .icon("close")
             .confirm("This function closes the fiscal year. Once the fiscal year is closed it cannot be opened again, and the periods in the fiscal year cannot be changed. Do you want to close the fiscal year?")
-            .tooltip("Close the current fiscal year. A confirmation message will display that tells you which year will be closed. You cannot reopen the year after it has been closed."),
+            .tooltip("Close the earliest open fiscal year permanently."),
         Act::command("Close Income Statement", A::Process, "accounting_period.close_income_statement")
             .icon("post")
             .ask(&["fiscal_year_ending_date", "document_no", "retained_earnings_account", "post_to_retained_earnings"])
-            .tooltip("Start the transfer of the year's results to an account in the balance sheet and close the income statement accounts."),
+            .tooltip("Generate closing journal entries to transfer income statement balances to retained earnings."),
         Act::page("Trial Balance by &Period", A::Report, "chart-of-accounts").icon("report"),
     ];
     m.add_page(periods);

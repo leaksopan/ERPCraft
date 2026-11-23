@@ -1,10 +1,10 @@
 # Approvals
 
-ERPCraft follows Business Central's document approvals: Approvals Mgmt. with the "Approver" chain type and approval limits.
+ERPCraft provides document approval workflows with an approver chain and configurable approval limits.
 
 ## Setup
 
-- **Workflows** (page 1500) holds BC's approval workflow templates for each sales and purchase document type, for example MS-SOAPW (Sales Order Approval Workflow) and MS-PIAPW (Purchase Invoice Approval Workflow). A new company has them all disabled, as BC does. Enabling one puts that document type under approval.
+- **Workflows** holds the approval workflow templates for each sales and purchase document type (for example sales order and purchase invoice approval workflows). A new company starts with them disabled; enabling one puts that document type under approval.
 - **User Setup** (page 119) gives each user:
   - an Approver ID;
   - sales and purchase approval limits, or an Unlimited flag;

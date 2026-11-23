@@ -339,13 +339,13 @@ fn describe(args: &Args, rest: &[&str]) -> Outcome {
             let _ = writeln!(out, "Columns: {cols}");
         }
         for g in rows_of(&r, "groups") {
-            let _ = writeln!(out, "FastTab {}: {}", str_of(g, "caption"), joined(&g["fields"]));
+            let _ = writeln!(out, "Section {}: {}", str_of(g, "caption"), joined(&g["fields"]));
         }
         for p in rows_of(&r, "parts") {
             let _ = writeln!(out, "Part {}: page {}", str_of(p, "caption"), str_of(p, "page"));
         }
         for f in rows_of(&r, "factboxes") {
-            let _ = writeln!(out, "FactBox {}: {}", str_of(f, "caption"), joined(&f["fields"]));
+            let _ = writeln!(out, "Detail {}: {}", str_of(f, "caption"), joined(&f["fields"]));
         }
         let actions: Vec<Vec<String>> = rows_of(&r, "actions")
             .iter()

@@ -12,7 +12,10 @@ use crate::ctx::{Ctx, dec, round_amount};
 use crate::error::{EngineError, Result};
 use crate::ledger::{PartyEntry, Txn, post_party_entry};
 use crate::refuse;
-use crate::schema::reminders::*;
+use crate::schema::reminders::{
+    FIN_CHARGE_HEADER, FIN_CHARGE_LINE, FIN_CHARGE_TERMS, ISSUED_FIN_CHARGE_HEADER, ISSUED_FIN_CHARGE_LINE, ISSUED_REMINDER_HEADER, ISSUED_REMINDER_LINE, REMINDER_ENTRY, REMINDER_HEADER,
+    REMINDER_LEVEL, REMINDER_LINE, REMINDER_TERMS,
+};
 use crate::schema::tables::{CUST_LEDGER, CUSTOMER};
 use crate::side::SALES;
 
@@ -284,23 +287,33 @@ fn file_issued(ctx: &mut Ctx, h: &Record, from: (&str, &str), to: (&str, &str), 
     Ok(lines)
 }
 
-fn reminder_entry(ctx: &mut Ctx, ty: &str, no: &str, h: &Record, l: &Record, level: i64, interest: Decimal, posted: bool) -> Result<()> {
+struct ReminderEntryArgs<'a> {
+    ty: &'a str,
+    no: &'a str,
+    header: &'a Record,
+    line: &'a Record,
+    level: i64,
+    interest: Decimal,
+    posted: bool,
+}
+
+fn reminder_entry(ctx: &mut Ctx, args: &ReminderEntryArgs<'_>) -> Result<()> {
     let t = ctx.table(REMINDER_ENTRY)?;
     let mut e = t.init_record();
     e.set("Entry No.", Value::Int(ctx.db.next_entry_no(REMINDER_ENTRY)));
-    e.set("No.", Value::text(no));
-    e.set("Type", Value::text(ty));
-    e.set("Posting Date", h.get("Posting Date").clone());
-    e.set("Document Date", h.get("Document Date").clone());
-    e.set("Customer Entry No.", l.get("Entry No.").clone());
-    e.set("Reminder Level", Value::Int(level));
-    e.set("Interest Posted", Value::Bool(posted));
-    e.set("Interest Amount", dec(interest));
-    e.set("Customer Entry Document Type", l.get("Document Type").clone());
-    e.set("Customer Entry Document No.", l.get("Document No.").clone());
-    e.set("Remaining Amount", l.get("Remaining Amount").clone());
-    e.set("Customer No.", h.get("Customer No.").clone());
-    e.set("Due Date", h.get("Due Date").clone());
+    e.set("No.", Value::text(args.no));
+    e.set("Type", Value::text(args.ty));
+    e.set("Posting Date", args.header.get("Posting Date").clone());
+    e.set("Document Date", args.header.get("Document Date").clone());
+    e.set("Customer Entry No.", args.line.get("Entry No.").clone());
+    e.set("Reminder Level", Value::Int(args.level));
+    e.set("Interest Posted", Value::Bool(args.posted));
+    e.set("Interest Amount", dec(args.interest));
+    e.set("Customer Entry Document Type", args.line.get("Document Type").clone());
+    e.set("Customer Entry Document No.", args.line.get("Document No.").clone());
+    e.set("Remaining Amount", args.line.get("Remaining Amount").clone());
+    e.set("Customer No.", args.header.get("Customer No.").clone());
+    e.set("Due Date", args.header.get("Due Date").clone());
     e.set("User ID", Value::text(ctx.user.to_uppercase()));
     ctx.db.insert(t, e)?;
     Ok(())
@@ -323,7 +336,7 @@ fn issue_reminder_rec(ctx: &mut Ctx, h: Record) -> Result<String> {
     let level = h.get("Reminder Level").as_int();
     let ct = ctx.table(CUST_LEDGER)?;
     for l in lines.iter().filter(|l| l.str("Type") == "Customer Ledger Entry") {
-        reminder_entry(ctx, "Reminder", &issued_no, &h, l, level, Decimal::ZERO, false)?;
+        reminder_entry(ctx, &ReminderEntryArgs { ty: "Reminder", no: &issued_no, header: &h, line: l, level, interest: Decimal::ZERO, posted: false })?;
         let mut e = ctx.get(CUST_LEDGER, &Key(vec![l.get("Entry No.").clone()]))?;
         e.set("Last Issued Reminder Level", Value::Int(l.get("No. of Reminders").as_int()));
         ctx.db.modify(ct, e)?;
@@ -349,9 +362,11 @@ fn issue_all(ctx: &mut Ctx, _p: &Json) -> Result<Json> {
 
 // ---- Finance charge memos -------------------------------------------------------------------------
 
-/// BC's FinChrgMemoMake: interest on each overdue entry for the days it is late (Average Daily
+type FinChargePlan = (Vec<(Record, Decimal)>, Decimal, Record);
+
+/// Interest on each overdue entry for the days it is late (Average Daily
 /// Balance) or once (Balance Due), and the terms' additional fee.
-fn fin_charge_lines(ctx: &Ctx, customer: &Record, date: NaiveDate) -> Result<(Vec<(Record, Decimal)>, Decimal, Record)> {
+fn fin_charge_lines(ctx: &Ctx, customer: &Record, date: NaiveDate) -> Result<FinChargePlan> {
     let terms = ctx.get_code(FIN_CHARGE_TERMS, customer.str("Fin. Charge Terms Code"))?;
     let rate = terms.get("Interest Rate").as_dec();
     let period = Decimal::from(terms.get("Interest Period (Days)").as_int().max(1));
@@ -454,7 +469,7 @@ fn issue_fin_charge(ctx: &mut Ctx, p: &Json) -> Result<Json> {
     post_charge(ctx, "FINCHRG", h.str("Customer No."), &group, date, "Finance Charge Memo", &issued_no, h.str("Posting Description"), &gl)?;
     let posted = terms.get("Post Interest").as_bool();
     for l in lines.iter().filter(|l| l.str("Type") == "Customer Ledger Entry") {
-        reminder_entry(ctx, "Finance Charge Memo", &issued_no, &h, l, 0, l.get("Amount").as_dec(), posted)?;
+        reminder_entry(ctx, &ReminderEntryArgs { ty: "Finance Charge Memo", no: &issued_no, header: &h, line: l, level: 0, interest: l.get("Amount").as_dec(), posted })?;
     }
     file_issued(ctx, &h, (FIN_CHARGE_HEADER, FIN_CHARGE_LINE), (ISSUED_FIN_CHARGE_HEADER, ISSUED_FIN_CHARGE_LINE), "Finance Charge Memo No.", &issued_no)?;
     Ok(json!({"issued_no": issued_no, "open": {"page": "issued-finance-charge-memo", "key": issued_no}, "message": format!("Finance charge memo {issued_no} was issued.")}))

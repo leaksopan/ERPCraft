@@ -8,6 +8,8 @@ use serde_json::{Map, Value as Json, json};
 use crate::theme::{self, TOKENS};
 use crate::ErpApp;
 
+pub type ReportLink = (String, Vec<(String, String)>);
+
 pub enum Dialog {
     Error(String),
     Confirm { text: String, command: String, params: Json },
@@ -17,7 +19,7 @@ pub enum Dialog {
         title: String,
         columns: Vec<String>,
         rows: Vec<Vec<String>>,
-        links: Vec<Option<(String, Vec<(String, String)>)>>,
+        links: Vec<Option<ReportLink>>,
         /// Further tables under their own captions (BC statistics pages' groups).
         sections: Vec<(String, Vec<String>, Vec<Vec<String>>)>,
     },

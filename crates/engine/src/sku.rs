@@ -134,7 +134,7 @@ fn inventory_report(ctx: &mut Ctx, p: &Json, availability: bool) -> Result<Json>
     skus.sort_by(|a, b| (a.str("Item No."), a.str("Location Code")).cmp(&(b.str("Item No."), b.str("Location Code"))));
     let mut rows = Vec::new();
     for mut s in skus {
-        calc_fields(&ctx.db, &mut s);
+        calc_fields(ctx.db, &mut s);
         let n = |f: &str| s.get(f).as_dec().normalize().to_string();
         if availability {
             let projected = s.get("Inventory").as_dec() + s.get("Qty. on Purch. Order").as_dec() - s.get("Qty. on Sales Order").as_dec();

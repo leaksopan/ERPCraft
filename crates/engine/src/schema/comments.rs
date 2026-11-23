@@ -79,7 +79,7 @@ fn find_entries(m: &mut Metadata) {
                 Act::command("Find entries...", A::Navigate, "navigate")
                     .shortcut("Ctrl+Shift+I")
                     .icon("navigate")
-                    .tooltip("Find entries and documents that exist for the document number and posting date on the selected document."),
+                    .tooltip("List all posted entries and documents sharing this document number and posting date."),
             );
         }
     }

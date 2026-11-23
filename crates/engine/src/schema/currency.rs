@@ -94,7 +94,7 @@ pub fn register(m: &mut Metadata) {
                 .link("Journal Line No.", "Line No.")
                 .icon("list")
                 .shortcut("Shift+Ctrl+A")
-                .tooltip("Allocate the amount on the selected journal line to the accounts that you specify."),
+                .tooltip("Split the selected journal line amount across configured allocation accounts."),
         );
         p.keywords = "recurring journal allocations accruals".to_string();
     }
@@ -137,11 +137,11 @@ pub fn register(m: &mut Metadata) {
     let adjust = Act::command("Adjust Exchange Rates", A::Process, "currency.adjust_exchange_rates")
         .icon("adjust")
         .ask(&["ending_date", "document_no"])
-        .tooltip("Adjust general ledger, customer, vendor, and bank account entries to reflect a more updated balance if the exchange rate has changed since the entries were posted.");
+        .tooltip("Revalue open foreign-currency customer and vendor entries using the latest exchange rates.");
     let rates_link = Act::page("Exch. &Rates", A::Navigate, "currency-exchange-rates")
         .link("Currency Code", "Code")
         .icon("currency")
-        .tooltip("View updated exchange rates for the currencies that you use.");
+        .tooltip("Open the exchange rate table for configured currencies.");
     if let Some(p) = m.pages.get_mut("currencies") {
         p.card_page = Some("currency-card".to_string());
         p.actions.push(rates_link.clone());

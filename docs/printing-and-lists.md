@@ -2,7 +2,7 @@
 
 ## Printing documents
 
-`document.print {table, key, path?}` renders a document as an A4 PDF, laid out like BC's standard reports:
+`document.print {table, key, path?}` renders a document as an A4 PDF with standard business document sections:
 
 - company block and the document title
 - document details and the bill-to / pay-to address
@@ -18,19 +18,19 @@
 | Purch. Inv. Header, Purch. Cr. Memo Hdr. | Posted purchase invoice / credit memo |
 | Purch. Rcpt. Header | Posted receipt |
 
-With `path` (must end in `.pdf`), the file is written and the result gives `path` and `pages`. Without a path, the PDF comes back as `pdf_base64`, which is how MCP clients get it.
+With `path` (must end in `.pdf`), the file is written (subject to `--automation-write-root` when confined) and the result gives `path` and `pages`. Without a path, the PDF comes back as `pdf_base64`, which is how MCP clients get it.
 
 ```sh
 erpcraft-cli run document.print '{"table":"Sales Invoice Header","key":"PS-INV103001","path":"invoice.pdf"}'
 ```
 
-The desktop app's **Print...** action (Ctrl+P) on documents saves to `Documents\ERPCraft\<table> <key>.pdf` and opens it in the system PDF viewer.
+The desktop app's **Print...** action (Ctrl+P) on documents saves to `Documents/ERPCraft/<table> <key>.pdf` and opens it in the system PDF viewer; the web build triggers a browser download via `craft-platform::browser`.
 
 The PDF writer (`crates/engine/src/print/pdf.rs`) has no dependencies. It uses the standard Helvetica fonts with WinAnsi encoding, so characters outside Latin-1 print as `?`.
 
 ## List pages
 
-- **Filter pane** (⏷, or a list opened with filters): "Filter list by" holds one expression per field, and **+ Filter...** adds a field. Expressions use BC syntax: `10000..20000`, `<>0`, `>100`, `A|B`, `*oil*`, and `''` for blank.
+- **Filter pane** (⏷, or a list opened with filters): "Filter list by" holds one expression per field, and **+ Filter...** adds a field. Expressions support ranges and operators: `10000..20000`, `<>0`, `>100`, `A|B`, `*oil*`, and `''` for blank.
 - **Sorting:** click a column header for ascending ▲, again for descending ▼, and a third time for the page's own order.
 - **Columns** (⚙): show or hide any field of the table, or reset to the page's columns. The choice lasts for the session.
 - **Date picker:** date fields have a 📅 calendar with month navigation (weeks start Monday) and a Today link.

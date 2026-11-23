@@ -1,5 +1,5 @@
-//! Colours and text styles, modelled on the Business Central web client (Fluent): dark app bar,
-//! white pages on a light grey canvas, teal accent for links, actions and cues.
+//! Colour and text style tokens for the ERPCraft UI: dark app bar, white pages on a light grey
+//! canvas, and teal accent for links, actions, and cues.
 
 use egui::{Color32, CornerRadius, FontFamily, FontId, Stroke, TextStyle, Visuals};
 

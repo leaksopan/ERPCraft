@@ -31,11 +31,11 @@ pub const FROM_ITEM: &[&str] = &[
 ];
 
 fn sku_reservations() -> Act {
-    Act::page("&Reservation Entries", A::Navigate, "reservation-entries").link("Item No.", "Item No.").link("Location Code", "Location Code").icon("list").tooltip("View all reservations that are made for the item, either manually or automatically.")
+    Act::page("&Reservation Entries", A::Navigate, "reservation-entries").link("Item No.", "Item No.").link("Location Code", "Location Code").icon("list").tooltip("List inventory reservations for this stockkeeping unit.")
 }
 
 fn sku_tracking() -> Act {
-    Act::page("Item &Tracking Entries", A::Navigate, "item-tracking-entries").link("Item No.", "Item No.").link("Location Code", "Location Code").icon("list").tooltip("View serial, lot or package numbers that are assigned to items.")
+    Act::page("Item &Tracking Entries", A::Navigate, "item-tracking-entries").link("Item No.", "Item No.").link("Location Code", "Location Code").icon("list").tooltip("List lot and serial tracking entries for this stockkeeping unit.")
 }
 
 pub fn register(m: &mut Metadata) {
@@ -102,12 +102,12 @@ pub fn register(m: &mut Metadata) {
     list.card_page = Some("stockkeeping-unit-card".to_string());
     list.keywords = "sku stockkeeping location planning".to_string();
     list.actions = vec![
-        Act::command("Event", A::Navigate, "item.availability_by_event").icon("stats").tooltip("View how the actual and the projected available balance of an item will develop over time according to supply and demand events."),
-        Act::command("Period", A::Navigate, "item.availability_by_period").icon("stats").tooltip("Show the projected quantity of the item over time according to time periods, such as day, week, or month."),
+        Act::command("Event", A::Navigate, "item.availability_by_event").icon("stats").tooltip("Project available balance over chronological supply and demand events."),
+        Act::command("Period", A::Navigate, "item.availability_by_period").icon("stats").tooltip("Project inventory quantities grouped by calendar period."),
         sku_reservations(),
         sku_tracking(),
-        Act::command("Inventory - List", A::Report, "sku.inventory_list").icon("report").tooltip("View various information about the item, such as name, unit of measure, posting group, shelf number, vendor's item number, lead time calculation, minimum inventory, and alternate item number. You can also see if the item is blocked."),
-        Act::command("Inventory Availability", A::Report, "sku.inventory_availability").icon("report").tooltip("View, print, or save a summary of historical inventory transactions with selected items, for example, to decide when to purchase the items. The report specifies quantity on sales order, quantity on purchase order, back orders from vendors, minimum inventory, and whether there are reorders."),
+        Act::command("Inventory - List", A::Report, "sku.inventory_list").icon("report").tooltip("Report on-hand quantities, shelf numbers, and unit costs per stockkeeping unit."),
+        Act::command("Inventory Availability", A::Report, "sku.inventory_availability").icon("report").tooltip("Summarize on-hand stock, open sales and purchase orders, and reorder status per SKU."),
     ];
     m.add_page(list);
     m.add_page(
@@ -118,13 +118,13 @@ pub fn register(m: &mut Metadata) {
             .group(G::new("Replenishment", &["Replenishment System", "Lead Time Calculation", "Vendor No.", "Vendor Item No.", "Transfer-from Code"]))
             .group(G::new("Planning", &["Reordering Policy", "Safety Stock Quantity", "Reorder Point", "Reorder Quantity", "Maximum Inventory", "Minimum Order Quantity", "Order Multiple"]))
             .group(G::new("Warehouse", &["Phys Invt Counting Period Code", "Last Counting Period Update", "Next Counting Start Date", "Next Counting End Date"]).collapsed())
-            .action(Act::page("Item Ledger E&ntries", A::Navigate, "item-ledger-entries").link("Item No.", "Item No.").link("Location Code", "Location Code").icon("list").shortcut("Ctrl+F7").tooltip("View the history of transactions that have been posted for the selected record."))
+            .action(Act::page("Item Ledger E&ntries", A::Navigate, "item-ledger-entries").link("Item No.", "Item No.").link("Location Code", "Location Code").icon("list").shortcut("Ctrl+F7").tooltip("Open posted item ledger entries for this item and location."))
             .action(sku_reservations())
             .action(sku_tracking()),
     );
     for page in ["item-card", "item-list"] {
         if let Some(p) = m.pages.get_mut(page) {
-            p.actions.push(Act::page("Stockkeepin&g Units", A::Navigate, "stockkeeping-unit-list").link("Item No.", "No.").icon("list").tooltip("Open the item's SKUs to view or edit instances of the item at different locations or with different variants."));
+            p.actions.push(Act::page("Stockkeepin&g Units", A::Navigate, "stockkeeping-unit-list").link("Item No.", "No.").icon("list").tooltip("Manage location- and variant-specific replenishment settings for this item."));
             p.actions.push(
                 Act::command("&Create Stockkeeping Unit", A::Process, "item.create_sku")
                     .icon("new")

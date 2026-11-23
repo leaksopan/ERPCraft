@@ -149,18 +149,19 @@ pub fn is_numeric(ty: &FieldType) -> bool {
 /// Lookup values for a relation field: (code, description).
 pub type Lookup = Vec<(String, String)>;
 
+pub struct FieldWidget<'a> {
+    pub id: &'a str,
+    pub field: &'a FieldDef,
+    pub value: &'a Value,
+    pub editable: bool,
+    pub lookup: Option<&'a Lookup>,
+    pub width: f32,
+}
+
 /// Edits one field. Returns the new value (as JSON) when the user commits a change: Enter / focus
 /// out for text, selection for options and lookups, click for booleans.
-pub fn field_editor(
-    bufs: &mut HashMap<String, String>,
-    ui: &mut Ui,
-    id: &str,
-    f: &FieldDef,
-    v: &Value,
-    editable: bool,
-    lookup: Option<&Lookup>,
-    width: f32,
-) -> Option<Json> {
+pub fn field_editor(bufs: &mut HashMap<String, String>, ui: &mut Ui, spec: FieldWidget<'_>) -> Option<Json> {
+    let FieldWidget { id, field: f, value: v, editable, lookup, width } = spec;
     // Narrow grid cells can report no room at all; egui panics on negative widths.
     let width = if width.is_finite() { width.max(24.0) } else { 120.0 };
     let shown = display_field(v, f);
@@ -367,9 +368,9 @@ pub fn shortcut_pressed(ctx: &egui::Context, shortcut: &str) -> bool {
     let mut key = None;
     for part in shortcut.split('+') {
         match part.trim() {
-            "Ctrl" => mods = mods | egui::Modifiers::COMMAND,
-            "Shift" => mods = mods | egui::Modifiers::SHIFT,
-            "Alt" => mods = mods | egui::Modifiers::ALT,
+            "Ctrl" => mods |= egui::Modifiers::COMMAND,
+            "Shift" => mods |= egui::Modifiers::SHIFT,
+            "Alt" => mods |= egui::Modifiers::ALT,
             k => key = egui::Key::from_name(k),
         }
     }

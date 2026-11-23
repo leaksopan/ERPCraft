@@ -14,7 +14,7 @@ use crate::posting::ItemEntry;
 use crate::refuse;
 use crate::schema::inventory::LOCATION;
 use crate::schema::tables::{INVENTORY_SETUP, ITEM};
-use crate::schema::transfer::*;
+use crate::schema::transfer::{TRANSFER_HEADER, TRANSFER_LINE, TRANSFER_RCPT_HEADER, TRANSFER_RCPT_LINE, TRANSFER_SHPT_HEADER, TRANSFER_SHPT_LINE};
 
 fn header_of(ctx: &Ctx, p: &Json) -> Result<Record> {
     let no = match (opt_str(p, "table"), p.get("key")) {
@@ -225,25 +225,36 @@ fn file_posted(ctx: &mut Ctx, tables: (&str, &str), series_field: &str, h: &Reco
     Ok(no)
 }
 
-fn move_stock(ctx: &mut Ctx, h: &Record, l: &Record, from: &str, to: &str, qty: Decimal, doc_type: &str, doc_no: &str, shipping: bool) -> Result<()> {
-    let item = ctx.get_code(ITEM, l.str("Item No."))?;
-    let base = qty * per(l);
-    crate::item_journal::check_negative(ctx, item.str("No."), from, base)?;
+struct StockMove<'a> {
+    header: &'a Record,
+    line: &'a Record,
+    from: &'a str,
+    to: &'a str,
+    qty: Decimal,
+    doc_type: &'a str,
+    doc_no: &'a str,
+    shipping: bool,
+}
+
+fn move_stock(ctx: &mut Ctx, mv: &StockMove<'_>) -> Result<()> {
+    let item = ctx.get_code(ITEM, mv.line.str("Item No."))?;
+    let base = mv.qty * per(mv.line);
+    crate::item_journal::check_negative(ctx, item.str("No."), mv.from, base)?;
     let cost = round_amount(base * item.get("Unit Cost").as_dec());
-    let date = h.get("Posting Date").as_date().unwrap_or(ctx.work_date);
+    let date = mv.header.get("Posting Date").as_date().unwrap_or(ctx.work_date);
     let uom = item.get("Base Unit of Measure").clone();
     // Lots / serials: the line's tracking when shipping, what is in transit when receiving.
-    let source = crate::tracking::source_of(TRANSFER_LINE, l);
-    let out = if shipping { crate::tracking::parts_for(ctx, &item, source.as_ref(), from, -base)? } else { crate::tracking::parts_from_stock(ctx, &item, from, -base) };
+    let source = crate::tracking::source_of(TRANSFER_LINE, mv.line);
+    let out = if mv.shipping { crate::tracking::parts_for(ctx, &item, source.as_ref(), mv.from, -base)? } else { crate::tracking::parts_from_stock(ctx, &item, mv.from, -base) };
     let inbound: Vec<crate::tracking::Part> = out.iter().map(|p| crate::tracking::Part { qty: -p.qty, ..p.clone() }).collect();
-    for (loc, q, c, parts) in [(from, -base, -cost, &out), (to, base, cost, &inbound)] {
+    for (loc, q, c, parts) in [(mv.from, -base, -cost, &out), (mv.to, base, cost, &inbound)] {
         crate::tracking::post_parts(
             ctx,
-            &ItemEntry { item: &item, posting_date: date, entry_type: "Transfer", doc_type, doc_no, description: l.str("Description"), location: loc, qty: q, cost: c, sales_amount: Decimal::ZERO, uom: &uom, source_type: "", source_no: "" , variant: l.str("Variant Code") },
+            &ItemEntry { item: &item, posting_date: date, entry_type: "Transfer", doc_type: mv.doc_type, doc_no: mv.doc_no, description: mv.line.str("Description"), location: loc, qty: q, cost: c, sales_amount: Decimal::ZERO, uom: &uom, source_type: "", source_no: "", variant: mv.line.str("Variant Code") },
             parts,
         )?;
     }
-    if shipping && let Some(s) = &source {
+    if mv.shipping && let Some(s) = &source {
         crate::tracking::consume(ctx, s)?;
     }
     Ok(())
@@ -277,7 +288,7 @@ fn post(ctx: &mut Ctx, p: &Json) -> Result<Json> {
         }
         let shpt = file_posted(ctx, (TRANSFER_SHPT_HEADER, TRANSFER_SHPT_LINE), "Posted Transfer Shpt. Nos.", &h, &to_ship)?;
         for (l, q) in &to_ship {
-            move_stock(ctx, &h, l, &from, &transit, *q, "Transfer Shipment", &shpt, true)?;
+            move_stock(ctx, &StockMove { header: &h, line: l, from: &from, to: &transit, qty: *q, doc_type: "Transfer Shipment", doc_no: &shpt, shipping: true })?;
             let mut nl = ctx.get(TRANSFER_LINE, &l.key(lt))?;
             nl.set("Quantity Shipped", dec(nl.get("Quantity Shipped").as_dec() + *q));
             if direct {
@@ -307,7 +318,7 @@ fn post(ctx: &mut Ctx, p: &Json) -> Result<Json> {
         }
         let rcpt = file_posted(ctx, (TRANSFER_RCPT_HEADER, TRANSFER_RCPT_LINE), "Posted Transfer Rcpt. Nos.", &h, &rcv)?;
         for (l, q) in &rcv {
-            move_stock(ctx, &h, l, &transit, &to, *q, "Transfer Receipt", &rcpt, false)?;
+            move_stock(ctx, &StockMove { header: &h, line: l, from: &transit, to: &to, qty: *q, doc_type: "Transfer Receipt", doc_no: &rcpt, shipping: false })?;
             let mut nl = ctx.get(TRANSFER_LINE, &l.key(lt))?;
             nl.set("Quantity Received", dec(nl.get("Quantity Received").as_dec() + *q));
             update_quantities(&mut nl);

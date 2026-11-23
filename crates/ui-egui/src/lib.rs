@@ -1,6 +1,6 @@
-//! ERPCraft's egui client, laid out like the Business Central web client: app bar, role center
-//! (navigation, action bar, cues), list pages (action bar, grid, FactBox pane), card and document
-//! pages (FastTabs, lines part, totals), Tell Me search.
+//! ERPCraft's metadata-driven egui client: app bar, role center (navigation, action bar, cues),
+//! list pages (action bar, grid, detail pane), card and document pages (collapsible sections,
+//! lines part, totals), and quick search.
 //!
 //! The UI is thin: it renders engine metadata and changes data only through
 //! [`erpcraft_engine::Session::run`], like the CLI and the MCP server.

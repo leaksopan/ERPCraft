@@ -37,7 +37,7 @@ fn item_statistics_follow_the_posted_sale() {
     assert!(rows[11][4].as_str().unwrap().parse::<i64>().unwrap() >= 2, "this month holds the sale");
 
     let l = s.run("item.by_location", &json!({"no": "1000"})).unwrap();
-    assert!(l["report"]["rows"].as_array().unwrap().len() >= 1);
+    assert!(!l["report"]["rows"].as_array().unwrap().is_empty());
     assert!(s.run("item.turnover", &json!({"no": "NOPE"})).is_err());
 }
 

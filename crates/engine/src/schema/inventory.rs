@@ -171,28 +171,28 @@ fn pages(m: &mut Metadata) {
                         .icon("print")
                         .shortcut("Shift+F9")
                         .confirm("Do you want to post the journal lines and print the report?")
-                        .tooltip("Finalize and prepare to print the document or journal. The values and quantities are posted to the related accounts."),
+                        .tooltip("Post this item journal batch and print the posting summary."),
                 )
                 .action(
                     Act::command("Preview Posting", A::Process, "item_journal.preview_post")
                         .param("template", template)
                         .param("batch", "DEFAULT")
                         .icon("preview")
-                        .tooltip("Review the different types of entries that will be created when you post the document or journal."),
+                        .tooltip("Simulate posting and preview the item and G/L entries that will be created."),
                 )
                 .action(
                     Act::command("Test Report", A::Report, "item_journal.test_report")
                         .param("template", template)
                         .param("batch", "DEFAULT")
                         .icon("report")
-                        .tooltip("View a test report so that you can find and correct any errors before you perform the actual posting of the journal or document."),
+                        .tooltip("Validate the journal batch and report any posting issues before posting."),
                 )
                 .action(
                     Act::command("Renumber Document Numbers", A::Process, "item_journal.renumber")
                         .param("template", template)
                         .param("batch", "DEFAULT")
                         .icon("adjust")
-                        .tooltip("Resort the numbers in the Document No. column to avoid posting errors because the document numbers are not in sequence."),
+                        .tooltip("Renumber journal lines sequentially by document number."),
                 )
                 .action(
                     Act::command("Post", A::Home, "item_journal.post")
@@ -233,12 +233,10 @@ fn pages(m: &mut Metadata) {
     }
     // Location on documents and lines.
     for (doc, lines) in [("sales-order", "sales-lines"), ("purchase-order", "purchase-lines")] {
-        for id in [doc] {
-            if let Some(p) = m.pages.get_mut(id)
-                && let Some(g) = p.groups.iter_mut().find(|g| g.caption == "General")
-            {
-                g.fields.push("Location Code".to_string());
-            }
+        if let Some(p) = m.pages.get_mut(doc)
+            && let Some(g) = p.groups.iter_mut().find(|g| g.caption == "General")
+        {
+            g.fields.push("Location Code".to_string());
         }
         if let Some(p) = m.pages.get_mut(lines) {
             let at = p.columns.iter().position(|c| c == "Quantity").unwrap_or(p.columns.len());

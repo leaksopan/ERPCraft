@@ -96,24 +96,24 @@ pub fn register(m: &mut Metadata) {
             .action(
                 Act::command("&Suggest Lines", A::Process, "bank_rec.suggest_lines")
                     .icon("new")
-                    .tooltip("Create bank account ledger entries suggestions and enter them automatically."),
+                    .tooltip("Populate bank statement lines from open bank ledger entries."),
             )
             .action(
                 Act::command("Match Automatically", A::Process, "bank_rec.match")
                     .icon("apply")
-                    .tooltip("Automatically search for and match bank statement lines."),
+                    .tooltip("Match bank statement lines to open bank ledger entries by date and amount."),
             )
             .action(
                 Act::command("Remove Match", A::Process, "bank_rec.remove_match")
                     .icon("reopen")
-                    .tooltip("Remove selection of matched bank statement lines."),
+                    .tooltip("Clear existing matches between statement lines and ledger entries."),
             )
             .action(
                 Act::command("P&ost", A::Home, "bank_rec.post")
                     .icon("post")
                     .shortcut("F9")
                     .confirm("Do you want to post the bank account reconciliation?")
-                    .tooltip("Finalize the document or journal by posting the amounts and quantities to the related accounts in your company books."),
+                    .tooltip("Post the reconciled bank statement and mark matched ledger entries as closed."),
             ),
     );
 

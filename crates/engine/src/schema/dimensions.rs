@@ -173,7 +173,7 @@ pub fn register(m: &mut Metadata) {
                     .link("Dimension Set ID", "Dimension Set ID")
                     .shortcut("Alt+D")
                     .icon("dimensions")
-                    .tooltip("View or edit dimensions, such as area, project, or department, that you can assign to sales and purchase documents to distribute costs and analyze transaction history."),
+                    .tooltip("Manage dimension codes and values assigned to this record for reporting."),
             );
         }
     }
@@ -192,7 +192,7 @@ pub fn register(m: &mut Metadata) {
                 Act::command("Set Dimension Filter", A::Navigate, "dimension.set_filter")
                     .ask(&["dimension_code", "value_filter"])
                     .icon("filter")
-                    .tooltip("Limit the entries according to the dimension filters that you specify."),
+                    .tooltip("Filter entries by matching dimension codes and values."),
             );
         }
     }
@@ -209,7 +209,7 @@ pub fn register(m: &mut Metadata) {
                 Act::command("Dimensions-&Multiple", A::Navigate, "dimension.multiple")
                     .ask(&["dimension_code", "dimension_value_code"])
                     .icon("dimensions")
-                    .tooltip("View or edit dimensions for a group of records. You can assign dimension codes to transactions to distribute costs and analyze historical information."),
+                    .tooltip("Update default dimensions across multiple selected records at once."),
             );
         }
     }
@@ -221,7 +221,7 @@ pub fn register(m: &mut Metadata) {
                     .link("No.", "No.")
                     .shortcut("Alt+D")
                     .icon("dimensions")
-                    .tooltip("View or edit the single set of dimensions that are set up for the selected record."),
+                    .tooltip("Inspect or edit the dimension set attached to the selected record."),
             );
         }
     }

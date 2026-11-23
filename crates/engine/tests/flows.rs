@@ -41,7 +41,7 @@ fn sales_order_posts_to_all_ledgers() {
     // 2 × 650,000 + 100,000 = 1,400,000; PPN 11% = 154,000.
     assert_eq!(dec(&h["Amount"]), 1_400_000.0);
     assert_eq!(dec(&h["Amount Including VAT"]), 1_554_000.0);
-    assert_eq!(h["Due Date"].as_str().is_some(), true);
+    assert!(h["Due Date"].as_str().is_some());
 
     let gl_before = s.run("record.list", &json!({"table": "G/L Entry", "limit": 0})).unwrap()["total"].as_u64().unwrap();
     let posted = s.run("sales.document.post", &json!({"document_type": "Order", "no": no})).unwrap();

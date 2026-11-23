@@ -1,6 +1,6 @@
 # Finance: journals, applications, reversal, shipping and invoicing, reports
 
-These follow Business Central's W1 behaviour. Table names, fields and messages come from BCApps.
+Core double-entry general ledger, sub-ledgers, document posting, and financial statements.
 
 ## General journals
 
@@ -24,7 +24,7 @@ What validating each field does:
 - **Applies-to Doc. No.:** finds the open customer or vendor entry and, when Amount is empty, fills it with the remaining amount.
 
 Posting is `journal.post {template, batch}`, or **Post** (F9) on the page:
-1. **Balance.** Lines are grouped into documents by Document No. and Posting Date. A document must balance unless its lines carry a balancing account. The message is BC's: *"Document No. X is out of balance by Y…"*. Use `journal.check` to see the problems without posting.
+1. **Balance.** Lines are grouped into documents by Document No. and Posting Date. A document must balance unless its lines carry a balancing account. Use `journal.check` to see any problems without posting.
 2. **Transactions.** Each document becomes one transaction (Transaction No.) with a G/L Register. Customer and vendor lines go to the receivables or payables account and their ledger. Bank lines go to the bank's G/L account and the bank ledger. A line with Applies-to Doc. No. is applied to that document.
 3. **Clean-up.** Posted lines are deleted, and the series moves past the numbers used.
 
@@ -44,7 +44,7 @@ Every customer and vendor ledger entry gets an *Initial Entry* detailed entry
 opposite of every G/L, customer, vendor and bank entry of a journal transaction. It writes a
 G/L Register with source code `REVERSAL` and marks both the original and the new entries Reversed.
 
-As in BC, these are refused:
+These reversals are refused:
 - a transaction that is already reversed;
 - a reversal itself;
 - an entry that is still applied (unapply it first);
@@ -60,7 +60,7 @@ Orders post in two independent steps. Pick one with `mode` (in the UI, the dialo
 | Ship / Receive | Posted Sales Shipment, item ledger entries | Posted Purchase Receipt, item ledger entries, unit cost |
 | Invoice | Posted invoice, G/L (revenue, VAT, COGS), customer ledger | Posted invoice, G/L (inventory, VAT), vendor ledger |
 
-Line quantities follow BC's InitOutstanding and InitQtyToInvoice:
+Line quantity invariants:
 - Outstanding Quantity = Quantity − Quantity Shipped.
 - Qty. to Ship defaults to the outstanding quantity.
 - Qty. to Invoice = Quantity Shipped + Qty. to Ship − Quantity Invoiced.

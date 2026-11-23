@@ -164,7 +164,7 @@ pub fn reserve_line_from(ctx: &mut Ctx, l: &Record, only: Option<i64>) -> Result
         refuse!("Reserve must not be Never in Item No.={item_no}.");
     }
     let Some(demand) = source_of(SALES_LINE, l) else { return Ok(Decimal::ZERO) };
-    let need = l.get("Outstanding Quantity").as_dec() * per(l) - reserved_base(&ctx.db, SALES_LINE, l);
+    let need = l.get("Outstanding Quantity").as_dec() * per(l) - reserved_base(ctx.db, SALES_LINE, l);
     if need <= Decimal::ZERO {
         refuse!("The line is fully reserved.");
     }
@@ -198,7 +198,7 @@ pub fn reserve_line_from(ctx: &mut Ctx, l: &Record, only: Option<i64>) -> Result
         if left <= Decimal::ZERO || only.is_some_and(|o| o != 39) {
             break;
         }
-        let free = p.get("Outstanding Quantity").as_dec() * per(&p) - reserved_base(&ctx.db, PURCH_LINE, &p);
+        let free = p.get("Outstanding Quantity").as_dec() * per(&p) - reserved_base(ctx.db, PURCH_LINE, &p);
         let take = free.min(left);
         if take <= Decimal::ZERO {
             continue;
@@ -244,7 +244,7 @@ fn refresh_request(ctx: &mut Ctx, l: &Record, s: &Source) -> Result<()> {
     let item = l.str("No.").to_string();
     let location = l.str("Location Code").to_string();
     let need = l.get("Outstanding Quantity").as_dec() * per(l);
-    let reserved = reserved_base(&ctx.db, SALES_LINE, l);
+    let reserved = reserved_base(ctx.db, SALES_LINE, l);
     let rt = ctx.table(REQUEST)?;
     let mut h = rt.init_record();
     for (f, v) in [("Source Type", Value::Int(s.table)), ("Source Subtype", Value::Int(s.subtype)), ("Source ID", Value::text(&s.id)), ("Source Ref. No.", Value::Int(s.line))] {
@@ -277,7 +277,7 @@ fn refresh_request(ctx: &mut Ctx, l: &Record, s: &Source) -> Result<()> {
     let inv_reserved = inv_total - available_inventory(ctx, &item, &location);
     let purchases: Vec<Record> = ctx.db.rows(PURCH_LINE).filter(|p| p.str("Document Type") == "Order" && p.str("Type") == "Item" && p.str("No.") == item && p.str("Location Code") == location).cloned().collect();
     let po_total: Decimal = purchases.iter().map(|p| p.get("Outstanding Quantity").as_dec() * per(p)).sum();
-    let po_reserved: Decimal = purchases.iter().map(|p| reserved_base(&ctx.db, PURCH_LINE, p)).sum();
+    let po_reserved: Decimal = purchases.iter().map(|p| reserved_base(ctx.db, PURCH_LINE, p)).sum();
     let rows = [(1, ILE, "Item Ledger Entry", inv_total, inv_reserved), (2, 39, "Purchase Order", po_total, po_reserved)];
     for (n, table, caption, total, res) in rows {
         if total.is_zero() && res.is_zero() {
@@ -362,7 +362,7 @@ fn available(ctx: &mut Ctx, p: &Json) -> Result<Json> {
     match summary.map(|e| e.get("Table ID").as_int()) {
         Some(39) => Ok(json!({"report": {"title": format!("Available - Purchase Lines - {}", l.str("No.")), "columns": ["Document No.", "Line No.", "Expected Receipt Date", "Outstanding Qty. (Base)", "Reserved Qty. (Base)"], "rows":
             ctx.db.rows(PURCH_LINE).filter(|x| x.str("Document Type") == "Order" && x.str("Type") == "Item" && x.str("No.") == l.str("No.") && x.str("Location Code") == l.str("Location Code"))
-                .map(|x| json!([x.str("Document No."), x.get("Line No.").as_int(), x.get("Expected Receipt Date").as_date().map(|d| d.to_string()).unwrap_or_default(), (x.get("Outstanding Quantity").as_dec() * per(x)).normalize().to_string(), reserved_base(&ctx.db, PURCH_LINE, x).normalize().to_string()]))
+                .map(|x| json!([x.str("Document No."), x.get("Line No.").as_int(), x.get("Expected Receipt Date").as_date().map(|d| d.to_string()).unwrap_or_default(), (x.get("Outstanding Quantity").as_dec() * per(x)).normalize().to_string(), reserved_base(ctx.db, PURCH_LINE, x).normalize().to_string()]))
                 .collect::<Vec<Json>>()}})),
         _ => Ok(json!({"open": {"page": "item-ledger-entries", "filters": [["Item No.", l.str("No.")], ["Location Code", l.str("Location Code")], ["Open", "Yes"]]}})),
     }

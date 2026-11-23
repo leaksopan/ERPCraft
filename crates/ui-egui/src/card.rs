@@ -638,7 +638,7 @@ fn fasttab(app: &mut ErpApp, ui: &mut Ui, page: &PageDef, table: &TableDef, rec:
                             activate = true;
                         }
                     } else if let Some(v) =
-                        widgets::field_editor(&mut app.bufs, ui, &wid, f, rec.get(&f.name), can_change, lookups.get(&f.name), width)
+                        widgets::field_editor(&mut app.bufs, ui, widgets::FieldWidget { id: &wid, field: f, value: rec.get(&f.name), editable: can_change, lookup: lookups.get(&f.name), width })
                     {
                         commit = Some((f.name.clone(), v));
                     }
@@ -883,7 +883,7 @@ fn lines_part(app: &mut ErpApp, ui: &mut Ui, host: &PageDef, header: &Record, pa
                                 let wid = format!("newline|{}|{}", lt.name, f.name);
                                 let lookup = if f.name == "No." { Some(&items) } else { None };
                                 let w = ui.available_width() - 4.0;
-                                if let Some(v) = widgets::field_editor(&mut app.bufs, ui, &wid, f, blank.get(&f.name), true, lookup, w) {
+                                if let Some(v) = widgets::field_editor(&mut app.bufs, ui, widgets::FieldWidget { id: &wid, field: f, value: blank.get(&f.name), editable: true, lookup, width: w }) {
                                     new_value = Some((f.name.clone(), v));
                                 }
                             }
@@ -903,7 +903,7 @@ fn lines_part(app: &mut ErpApp, ui: &mut Ui, host: &PageDef, header: &Record, pa
                                 None
                             };
                             let w = ui.available_width() - 4.0;
-                            if let Some(v) = widgets::field_editor(&mut app.bufs, ui, &wid, f, l.get(&f.name), true, lookup, w)
+                            if let Some(v) = widgets::field_editor(&mut app.bufs, ui, widgets::FieldWidget { id: &wid, field: f, value: l.get(&f.name), editable: true, lookup, width: w })
                                 && let Some(k) = &key
                             {
                                 commit = Some((k.clone(), f.name.clone(), v));

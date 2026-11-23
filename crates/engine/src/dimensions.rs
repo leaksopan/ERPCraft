@@ -212,20 +212,8 @@ pub fn after_line_validate(ctx: &mut Ctx, side: &Side, r: &mut Record, field: &s
     apply(ctx, lt, r, &dims)
 }
 
-#[cfg(test)]
-mod tests {
-    #[test]
-    fn slots() {
-        assert_eq!(super::slot("Shortcut Dimension 2 Code"), Some(2));
-        assert_eq!(super::slot("Global Dimension 1 Code"), Some(1));
-        assert_eq!(super::slot("Shortcut Dimension 9 Code"), None);
-        assert_eq!(super::slot("Name"), None);
-    }
-}
-
-/// Dimension Set IDs whose `dimension` value matches `value_filter` (BC's
-/// DimensionManagement.GetDimSetIDsForFilter). A filter that takes blank also takes the sets
-/// without the dimension, including set 0.
+/// Dimension Set IDs whose `dimension` value matches `value_filter`. A filter that takes blank
+/// also takes the sets without the dimension, including set 0.
 pub fn set_ids_for_filter(ctx: &Ctx, dimension: &str, value_filter: &str) -> std::collections::BTreeSet<i64> {
     let ty = erpcraft_meta::FieldType::Code(20);
     let all: std::collections::BTreeSet<i64> = std::iter::once(0).chain(ctx.db.rows(DIM_SET_ENTRY).map(|e| e.get("Dimension Set ID").as_int())).collect();
@@ -381,3 +369,14 @@ pub static COMMANDS: &[CommandDef] = &[CommandDef {
     params: s_multiple,
     run: dimensions_multiple,
 }];
+
+#[cfg(test)]
+mod tests {
+    #[test]
+    fn slots() {
+        assert_eq!(super::slot("Shortcut Dimension 2 Code"), Some(2));
+        assert_eq!(super::slot("Global Dimension 1 Code"), Some(1));
+        assert_eq!(super::slot("Shortcut Dimension 9 Code"), None);
+        assert_eq!(super::slot("Name"), None);
+    }
+}

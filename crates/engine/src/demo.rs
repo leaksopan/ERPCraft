@@ -360,7 +360,8 @@ pub fn master_data(ctx: &mut Ctx) -> Result<()> {
                    "Payment Terms Code": terms, "Location Code": "MAIN"}),
         )?;
     }
-    let items: &[(&str, &str, &str, &str, &str, i64, i64, &str)] = &[
+    type DemoItem<'a> = (&'a str, &'a str, &'a str, &'a str, &'a str, i64, i64, &'a str);
+    let items: &[DemoItem<'_>] = &[
         ("1000", "Engine Oil 5W-30 (4L)", "Inventory", "PCS", "OIL", 450_000, 330_000, "10000"),
         ("1001", "Oil Filter", "Inventory", "PCS", "OIL", 85_000, 52_000, "10000"),
         ("1100", "Brake Pad Set - Front", "Inventory", "SET", "BRAKE", 650_000, 410_000, "20000"),
@@ -562,7 +563,8 @@ fn demo_financial_reports(ctx: &mut Ctx) -> Result<()> {
     raw(ctx, "VAT Statement Template", json!({"Name": "VAT", "Description": "VAT Statement"}))?;
     raw(ctx, "VAT Statement Name", json!({"Statement Template Name": "VAT", "Name": "DEFAULT", "Description": "Monthly VAT return (PPN)"}))?;
     // (row, description, type, posting type, amount type, row totaling, calculate opposite, print opposite, box)
-    let vat_rows: [(&str, &str, &str, &str, &str, &str, bool, bool, &str); 6] = [
+    type VatRow<'a> = (&'a str, &'a str, &'a str, &'a str, &'a str, &'a str, bool, bool, &'a str);
+    let vat_rows: [VatRow<'_>; 6] = [
         ("10", "Output VAT (PPN Keluaran)", "VAT Entry Totaling", "Sale", "Amount", "", true, false, "1"),
         ("20", "Input VAT (PPN Masukan)", "VAT Entry Totaling", "Purchase", "Amount", "", true, true, "2"),
         ("30", "VAT to Pay", "Row Totaling", "", "", "10..20", false, false, "3"),
@@ -588,7 +590,8 @@ fn demo_financial_reports(ctx: &mut Ctx) -> Result<()> {
 fn demo_dimensions(ctx: &mut Ctx) -> Result<()> {
     demo_workflows(ctx)?;
     demo_financial_reports(ctx)?;
-    let dims: &[(&str, &str, &str, &[(&str, &str)])] = &[
+    type DemoDim<'a> = (&'a str, &'a str, &'a str, &'a [(&'a str, &'a str)]);
+    let dims: &[DemoDim<'_>] = &[
         ("DEPARTMENT", "Department", "Department Code", &[("ADM", "Administration"), ("SALES", "Sales"), ("SERVICE", "Workshop Service")]),
         ("AREA", "Area", "Area Code", &[("JKT", "Jakarta"), ("BDG", "Bandung"), ("SBY", "Surabaya"), ("YOG", "Yogyakarta")]),
         ("PROJECT", "Project", "Project Code", &[("FLEET", "Fleet Contracts"), ("RETAIL", "Retail Workshops")]),

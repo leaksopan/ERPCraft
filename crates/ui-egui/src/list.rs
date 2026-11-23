@@ -279,7 +279,7 @@ pub(crate) fn action_menu(ui: &mut Ui, caption: &str, actions: &[&ActionDef], ru
 
 /// What a row's ⋮ menu asked for.
 enum RowAct {
-    Action(ActionDef),
+    Action(Box<ActionDef>),
     SelectMore,
     Toggle,
     View,
@@ -394,7 +394,7 @@ fn grid(app: &mut ErpApp, ui: &mut Ui, page: &PageDef, table: &TableDef, rows: &
                         let editable = inline_edit && f.editable && !f.is_flow() && !table.primary_key.contains(&f.name);
                         if editable {
                             let id = format!("cell|{}|{}|{}", table.name, key.display(), f.name);
-                            if let Some(val) = widgets::field_editor(&mut app.bufs, ui, &id, f, v, true, lookups.get(&f.name), ui.available_width() - 4.0) {
+                            if let Some(val) = widgets::field_editor(&mut app.bufs, ui, widgets::FieldWidget { id: &id, field: f, value: v, editable: true, lookup: lookups.get(&f.name), width: ui.available_width() - 4.0 }) {
                                 commit = Some((key.clone(), f.name.clone(), val));
                             }
                             return;
@@ -706,7 +706,7 @@ fn row_menu(ui: &mut Ui, page: &PageDef, show: bool, several: bool) -> Option<Ro
                 ui.label(RichText::new(&tab.caption).font(theme::bold(theme::SMALL)).color(TOKENS.text));
                 for a in tab.actions {
                     if ui.button(format!("{}   {}", widgets::glyph(&a.icon), a.caption.replace('&', ""))).clicked() {
-                        out = Some(RowAct::Action(a.clone()));
+                        out = Some(RowAct::Action(Box::new(a.clone())));
                         ui.close();
                     }
                 }

@@ -59,7 +59,7 @@ Both URLs must be `https://`, except a server on this machine (`http://127.0.0.1
 ```sh
 erpcraft-cli run bc.setup '{"tenant_id":"contoso.onmicrosoft.com","client_id":"<app id>","environment":"Production"}'
 erpcraft-cli run bc.test_connection
-erpcraft-cli run bc.setup '{"company_id":"<company id from the list>","company_name":"CRONUS USA, Inc."}'
+erpcraft-cli run bc.setup '{"company_id":"<company id from the list>","company_name":"Acme Trading Ltd."}'
 ```
 
 ## 3. Commands

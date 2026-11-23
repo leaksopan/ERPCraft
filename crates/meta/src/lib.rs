@@ -1,7 +1,7 @@
-//! ERPCraft metadata: the object model Business Central describes in AL, as plain Rust data.
+//! ERPCraft metadata: declarative table, page, and role-center definitions as plain Rust data.
 //!
-//! - [`TableDef`] / [`FieldDef`] / [`FieldType`]: what a table stores (AL `table` objects).
-//! - [`PageDef`]: how a table is shown (AL `page` objects: List, Card, Document, ListPart, …).
+//! - [`TableDef`] / [`FieldDef`] / [`FieldType`]: relational table schema definitions.
+//! - [`PageDef`]: metadata-driven UI layouts (List, Card, Document, ListPart, …).
 //! - [`RoleCenterDef`]: the home page of a profile (navigation menus, actions, cues).
 //! - [`Value`] / [`Record`]: one typed field value and one row.
 //!

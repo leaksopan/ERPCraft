@@ -93,7 +93,7 @@ pub fn register(m: &mut Metadata) {
                 .pages(list_id, Some(card_id)),
         );
         let entries = Act::page("Item &Tracking Entries", A::Navigate, "item-tracking-entries").link("Item No.", "Item No.").link(no_field, no_field).icon("list").tooltip("View serial, lot or package numbers that are assigned to items.");
-        let find = Act::command("Find entries...", A::Process, "navigate").icon("navigate").shortcut("Ctrl+Alt+Q").tooltip("Find entries and documents that exist for the document number and posting date on the selected document. (Formerly this action was named Navigate.)");
+        let find = Act::command("Find entries...", A::Process, "navigate").icon("navigate").shortcut("Ctrl+Alt+Q").tooltip("List posted entries and documents matching this document number and posting date.");
         let label = Act::command("Print Label", A::Report, "tracking.print_label").icon("print").tooltip(if table == LOT_INFO { "Print a label for the lot number." } else { "Print a label for the serial number." });
         let mut l = PageDef::new(list_id, list_obj, list_caption, PageKind::List, Some(table));
         l.actions = vec![entries.clone(), find.clone(), label.clone()];
@@ -105,7 +105,7 @@ pub fn register(m: &mut Metadata) {
             PageDef::new(card_id, card_obj, card_caption, PageKind::Card, Some(table))
                 .group(G::new("General", &["Item No.", "Variant Code", no_field, "Description", "Test Quality", "Certificate Number", "Blocked"]))
                 .group(G::new("Inventory", &["Inventory", "Expired Inventory"]))
-                .action(Act::page("&Item Tracing", A::Navigate, "item-tracking-entries").link("Item No.", "Item No.").link(no_field, no_field).icon("list").tooltip("Trace where a lot or serial number assigned to the item was used, for example, to find which lot a defective component came from or to find all the customers that have received items containing the defective component."))
+                .action(Act::page("&Item Tracing", A::Navigate, "item-tracking-entries").link("Item No.", "Item No.").link(no_field, no_field).icon("list").tooltip("Trace inbound and outbound ledger movements for this lot or serial number."))
                 .action(entries)
                 .action(find)
                 .action(label)
@@ -164,15 +164,15 @@ pub fn register(m: &mut Metadata) {
     m.add_page(values);
     for page in ["item-card", "item-list"] {
         if let Some(p) = m.pages.get_mut(page) {
-            p.actions.push(Act::page("&Value Entries", A::Navigate, "value-entries").link("Item No.", "No.").icon("ledger").tooltip("View the history of posted amounts that affect the value of the item. Value entries are created for every transaction with the item."));
+            p.actions.push(Act::page("&Value Entries", A::Navigate, "value-entries").link("Item No.", "No.").icon("ledger").tooltip("List posted value entries affecting this item's inventory valuation."));
         }
     }
     if let Some(p) = m.pages.get_mut("item-list") {
-        p.actions.push(Act::command("Adjust Cost - Item Entries", A::Process, "inventory.adjust_cost").icon("adjust").confirm("Do you want to adjust the cost of every item?").tooltip("Adjust inventory values in value entries so that you use the correct adjusted cost for updating the general ledger and so that sales and profit statistics are up to date."));
-        p.actions.push(Act::command("Post Inventory Cost to G/L", A::Process, "inventory.post_cost_to_gl").icon("post").ask(&["posting_date"]).tooltip("Post the quantity and value changes to the inventory in the item ledger entries and the value entries to the inventory accounts in the general ledger."));
+        p.actions.push(Act::command("Adjust Cost - Item Entries", A::Process, "inventory.adjust_cost").icon("adjust").confirm("Do you want to adjust the cost of every item?").tooltip("Recalculate outbound item costs to match updated inbound valuation."));
+        p.actions.push(Act::command("Post Inventory Cost to G/L", A::Process, "inventory.post_cost_to_gl").icon("post").ask(&["posting_date"]).tooltip("Post unposted inventory value entries to the general ledger."));
     }
     if let Some(p) = m.pages.get_mut("item-ledger-entries") {
-        p.actions.push(Act::page("&Value Entries", A::Navigate, "value-entries").link("Item Ledger Entry No.", "Entry No.").icon("ledger").shortcut("Ctrl+F7").tooltip("View the history of posted amounts that affect the value of the item. Value entries are created for every transaction with the item."));
+        p.actions.push(Act::page("&Value Entries", A::Navigate, "value-entries").link("Item Ledger Entry No.", "Entry No.").icon("ledger").shortcut("Ctrl+F7").tooltip("List posted value entries affecting this item's inventory valuation."));
     }
     // Planning: the item's reordering fields and the requisition worksheet.
     ensure(
@@ -238,8 +238,8 @@ pub fn register(m: &mut Metadata) {
     wksh.editable = true;
     wksh.keywords = "requisition reorder planning purchase suggestion".to_string();
     wksh.actions = vec![
-        Act::command("Calculate Plan", A::Process, "reqwksh.calculate_plan").icon("new").ask(&["order_date"]).tooltip("Use a batch job to help you calculate a supply plan for items and stockkeeping units that have the Replenishment System field set to Purchase or Transfer."),
-        Act::command("Carry &Out Action Message", A::Process, "reqwksh.carry_out").icon("post").confirm("Do you want to carry out the action messages and create purchase orders?").tooltip("Use a batch job to help you create actual supply orders from the order proposals."),
+        Act::command("Calculate Plan", A::Process, "reqwksh.calculate_plan").icon("new").ask(&["order_date"]).tooltip("Generate replenishment proposals for items and SKUs using purchase or transfer policies."),
+        Act::command("Carry &Out Action Message", A::Process, "reqwksh.carry_out").icon("post").confirm("Do you want to carry out the action messages and create purchase orders?").tooltip("Create purchase or transfer orders from selected requisition worksheet proposals."),
     ];
     m.add_page(wksh);
     // Item charges and their purchase assignment.
@@ -279,7 +279,7 @@ pub fn register(m: &mut Metadata) {
     assign.columns = ["Applies-to Doc. Type", "Applies-to Doc. No.", "Applies-to Doc. Line No.", "Item No.", "Description", "Qty. to Assign", "Qty. Assigned", "Amount to Assign"].iter().map(|c| (*c).to_string()).collect();
     assign.editable = true;
     assign.actions = vec![
-        Act::command("Suggest Item &Charge Assignment", A::Process, "purchase.charge.suggest").icon("apply").ask(&["method"]).tooltip("Use a function that assigns and distributes the item charge when the document has more than one line of type Item."),
+        Act::command("Suggest Item &Charge Assignment", A::Process, "purchase.charge.suggest").icon("apply").ask(&["method"]).tooltip("Distribute this item charge across item lines by quantity, amount, or equal split."),
     ];
     m.add_page(assign);
     if let Some(p) = m.pages.get_mut("item-charge-assignment-purch") {
@@ -287,11 +287,11 @@ pub fn register(m: &mut Metadata) {
             Act::command("Get &Receipt Lines", A::Process, "purchase.charge.get_receipt_lines")
                 .icon("list")
                 .ask(&["document_no"])
-                .tooltip("Select a posted purchase receipt for the item that you want to assign the item charge to, for example, if you received an invoice for the item charge after you posted the original purchase receipt."),
+                .tooltip("Pull posted purchase receipt lines to assign this item charge to."),
         );
     }
     if let Some(p) = m.pages.get_mut("purchase-lines") {
-        p.actions.push(Act::command("Item Charge &Assignment", A::Navigate, "purchase.charge.assignment").icon("list").shortcut("Alt+I").tooltip("Record additional direct costs, for example for freight. This action is available only for Charge (Item) line types."));
+        p.actions.push(Act::command("Item Charge &Assignment", A::Navigate, "purchase.charge.assignment").icon("list").shortcut("Alt+I").tooltip("Assign freight or other landed costs on a Charge (Item) line to item lines."));
     }
     // The sales side (5809, page 5814).
     m.add_table(
@@ -318,15 +318,15 @@ pub fn register(m: &mut Metadata) {
     sassign.columns = ["Applies-to Doc. Type", "Applies-to Doc. No.", "Applies-to Doc. Line No.", "Item No.", "Description", "Qty. to Assign", "Qty. Assigned", "Amount to Assign"].iter().map(|c| (*c).to_string()).collect();
     sassign.editable = true;
     sassign.actions = vec![
-        Act::command("Get &Shipment Lines", A::Process, "sales.charge.get_shipment_lines").icon("list").ask(&["document_no"]).tooltip("Select multiple shipments to the same customer because you want to combine them on one invoice."),
+        Act::command("Get &Shipment Lines", A::Process, "sales.charge.get_shipment_lines").icon("list").ask(&["document_no"]).tooltip("Pull posted sales shipment lines to assign this item charge to."),
         Act::command("Suggest Item &Charge Assignment", A::Process, "sales.charge.suggest")
             .icon("apply")
             .ask(&["method"])
-            .tooltip("Use a function that assigns and distributes the item charge when the document has more than one line of type Item. You can select between four distribution methods. "),
+            .tooltip("Distribute this item charge across item lines by the selected allocation method."),
     ];
     m.add_page(sassign);
     if let Some(p) = m.pages.get_mut("sales-lines") {
-        p.actions.push(Act::command("Item Charge &Assignment", A::Navigate, "sales.charge.assignment").icon("list").shortcut("Alt+I").tooltip("Record additional direct costs, for example for freight. This action is available only for Charge (Item) line types."));
+        p.actions.push(Act::command("Item Charge &Assignment", A::Navigate, "sales.charge.assignment").icon("list").shortcut("Alt+I").tooltip("Assign freight or other landed costs on a Charge (Item) line to item lines."));
     }
     let mut codes = PageDef::new("item-tracking-codes", 6502, "Item Tracking Codes", PageKind::List, Some(TRACKING_CODE));
     codes.columns = ["Code", "Description"].iter().map(|c| (*c).to_string()).collect();
@@ -433,7 +433,7 @@ pub fn register(m: &mut Metadata) {
         p.actions.push(Act::command("Reservation Entries", A::Navigate, "reservation.entries").icon("list").tooltip("View the entries for every reservation that is made, either manually or automatically."));
     }
     if let Some(p) = m.pages.get_mut("sales-order") {
-        p.actions.push(Act::command("Order &Promising", A::Process, "sales.order_promising").icon("calendar").tooltip("Calculate the shipment and delivery dates based on the item's known and expected availability dates, and then promise the dates to the customer."));
+        p.actions.push(Act::command("Order &Promising", A::Process, "sales.order_promising").icon("calendar").tooltip("Calculate feasible shipment and delivery dates from current and expected supply."));
     }
     let mut entries = PageDef::new("item-tracking-entries", 6501, "Item Tracking Entries", PageKind::List, Some(crate::schema::tables::ITEM_LEDGER));
     entries.columns = ["Posting Date", "Entry Type", "Document No.", "Item No.", "Location Code", "Serial No.", "Lot No.", "Expiration Date", "Quantity", "Remaining Quantity", "Entry No."].iter().map(|c| (*c).to_string()).collect();

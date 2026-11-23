@@ -1,4 +1,4 @@
-//! Business Central filter expressions on one field: `10000`, `<>Open`, `10000|20000`, `''`,
+//! Field filter expressions on one field: `10000`, `<>Open`, `10000|20000`, `''`,
 //! `*bike*`, `>100`, `<=2026-01-31`, `10000..20000`.
 
 use erpcraft_meta::{FieldType, Record, TableDef, Value};

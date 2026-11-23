@@ -75,7 +75,7 @@ pub fn on_insert(ctx: &mut Ctx, r: &mut Record) -> Result<()> {
 fn peek_after(ctx: &Ctx, series: &str, current: &str) -> String {
     let next = noseries::peek(ctx, series).unwrap_or_default();
     let after = noseries::increment(current, 1).unwrap_or_default();
-    if after.len() == next.len() && after > next { after } else if next.is_empty() { after } else { next }
+    if next.is_empty() || (after.len() == next.len() && after > next) { after } else { next }
 }
 
 fn account_name(ctx: &Ctx, account_type: &str, no: &str) -> Result<String> {

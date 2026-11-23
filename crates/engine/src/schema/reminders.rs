@@ -209,10 +209,10 @@ pub fn register(m: &mut Metadata) {
             }
         }
     }
-    if let Some(t) = m.tables.get_mut(crate::schema::tables::CUST_LEDGER) {
-        if t.field("Last Issued Reminder Level").is_none() {
-            t.fields.push(F::integer("Last Issued Reminder Level"));
-        }
+    if let Some(t) = m.tables.get_mut(crate::schema::tables::CUST_LEDGER)
+        && t.field("Last Issued Reminder Level").is_none()
+    {
+        t.fields.push(F::integer("Last Issued Reminder Level"));
     }
 
     m.add_page(list("reminder-terms", 431, "Reminder Terms", REMINDER_TERMS, &["Code", "Description", "Max. No. of Reminders", "Post Interest", "Post Additional Fee", "Minimum Amount (LCY)"], None, true));
@@ -240,8 +240,8 @@ pub fn register(m: &mut Metadata) {
         ("Reminders", "Reminder"),
         false,
         vec![
-            Act::command("&Issue", A::Home, "reminder.issue").icon("post").shortcut("F9").confirm("Do you want to issue the reminder?").tooltip("Post the specified reminder entries according to your specifications in the Reminder Terms window."),
-            Act::command("&Suggest Reminder Lines", A::Process, "reminder.suggest_lines").icon("new").tooltip("Create reminder lines in existing reminders for any overdue payments based on information in the Reminder window."),
+            Act::command("&Issue", A::Home, "reminder.issue").icon("post").shortcut("F9").confirm("Do you want to issue the reminder?").tooltip("Issue this reminder and post any additional fees to the customer ledger."),
+            Act::command("&Suggest Reminder Lines", A::Process, "reminder.suggest_lines").icon("new").tooltip("Populate reminder lines with overdue open entries for this customer."),
         ],
     );
     if let Some(p) = m.pages.get_mut("reminder-list") {
@@ -258,7 +258,7 @@ pub fn register(m: &mut Metadata) {
         "Finance Charge Memo No.",
         ("Finance Charge Memos", "Finance Charge Memo"),
         false,
-        vec![Act::command("&Issue", A::Home, "finance_charge.issue").icon("post").shortcut("F9").confirm("Do you want to issue the finance charge memo?").tooltip("Post the specified finance charge entries according to your specifications in the Finance Charge Terms window.")],
+        vec![Act::command("&Issue", A::Home, "finance_charge.issue").icon("post").shortcut("F9").confirm("Do you want to issue the finance charge memo?").tooltip("Issue this finance charge memo and post interest and fees to the ledger.")],
     );
     if let Some(p) = m.pages.get_mut("finance-charge-memo-list") {
         p.actions.push(Act::command("C&reate Finance Charge Memos", A::Process, "finance_charge.create").icon("new").ask(&["document_date"]).tooltip("Create finance charge memos for one or more customers with overdue payments."));
@@ -281,7 +281,7 @@ pub fn register(m: &mut Metadata) {
                 Act::command("Statement", A::Report, "customer.statement")
                     .icon("report")
                     .ask(&["from", "to"])
-                    .tooltip("View a list of a customer's transactions for a selected period, for example, to send to the customer at the close of an accounting period. You can choose to have all overdue balances displayed regardless of the period specified, or you can choose to include an aging band."),
+                    .tooltip("Generate a period statement of opening balance, transactions, and closing balance for this customer."),
             );
         }
     }

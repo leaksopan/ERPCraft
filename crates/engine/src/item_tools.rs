@@ -13,7 +13,7 @@ use crate::refuse;
 use crate::schema::inventory::{ITEM_JNL_BATCH, ITEM_JNL_LINE, ITEM_JNL_TEMPLATE};
 use crate::schema::tables::ITEM;
 
-fn item_no<'a>(p: &'a Json) -> Result<&'a str> {
+fn item_no(p: &Json) -> Result<&str> {
     if opt_str(p, "table") == Some(ITEM)
         && let Some(k) = p.get("key")
     {

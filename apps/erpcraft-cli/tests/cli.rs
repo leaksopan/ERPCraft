@@ -84,7 +84,7 @@ fn get_describe_and_usage_errors() {
     let out = ok(&d, &["get", "Customer", "10000"]);
     assert!(out.lines().any(|l| l.starts_with("No. ") && l.ends_with("10000")), "{out}");
     assert!(ok(&d, &["describe", "Customer"]).contains("Balance (LCY)"));
-    assert!(ok(&d, &["describe", "customer-card"]).contains("FastTab"));
+    assert!(ok(&d, &["describe", "customer-card"]).contains("Section"));
     assert!(ok(&d, &["commands"]).contains("sales.document.post"));
 
     assert_eq!(cli(&d, &["frobnicate"]).status.code(), Some(2));

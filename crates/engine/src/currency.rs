@@ -88,16 +88,26 @@ pub fn party_account(ctx: &Ctx, side: &Side, entry: &Record) -> Result<String> {
     }
 }
 
+pub struct GainLossEntry<'a> {
+    pub txn: &'a crate::ledger::Txn,
+    pub date: NaiveDate,
+    pub doc_no: &'a str,
+    pub party_account: &'a str,
+    pub other: &'a str,
+    pub amount: Decimal,
+    pub description: &'a str,
+}
+
 /// Two G/L lines moving `amount` (LCY) onto the party account and off the gain / loss account.
-pub fn post_gain_loss(ctx: &mut Ctx, txn: &crate::ledger::Txn, date: NaiveDate, doc_no: &str, party_account: &str, other: &str, amount: Decimal, description: &str) -> Result<()> {
-    if amount.is_zero() {
+pub fn post_gain_loss(ctx: &mut Ctx, entry: &GainLossEntry<'_>) -> Result<()> {
+    if entry.amount.is_zero() {
         return Ok(());
     }
     let lines = vec![
-        crate::posting::GlLine { account: party_account.to_string(), amount, vat_amount: Decimal::ZERO, description: description.to_string(), gen_posting_type: "" },
-        crate::posting::GlLine { account: other.to_string(), amount: -amount, vat_amount: Decimal::ZERO, description: description.to_string(), gen_posting_type: "" },
+        crate::posting::GlLine { account: entry.party_account.to_string(), amount: entry.amount, vat_amount: Decimal::ZERO, description: entry.description.to_string(), gen_posting_type: "" },
+        crate::posting::GlLine { account: entry.other.to_string(), amount: -entry.amount, vat_amount: Decimal::ZERO, description: entry.description.to_string(), gen_posting_type: "" },
     ];
-    crate::posting::post_gl(ctx, &crate::posting::GlDoc { posting_date: date, doc_type: "", doc_no, ext_doc_no: "", source_type: "", source_no: "", txn }, lines)?;
+    crate::posting::post_gl(ctx, &crate::posting::GlDoc { posting_date: entry.date, doc_type: "", doc_no: entry.doc_no, ext_doc_no: "", source_type: "", source_no: "", txn: entry.txn }, lines)?;
     Ok(())
 }
 
@@ -139,7 +149,8 @@ fn adjust(ctx: &mut Ctx, p: &Json) -> Result<Json> {
                 crate::ledger::detailed_lcy(ctx, side, txn.no, no, entry_type, ending, e.str("Document Type"), &doc_no, e.str(side.ledger_party), Decimal::ZERO, diff)?;
                 let party_acc = party_account(ctx, side, &e)?;
                 let other = gain_loss_account(ctx, &code, false, gain)?;
-                post_gain_loss(ctx, &txn, ending, &doc_no, &party_acc, &other, diff, &format!("Adjmt. of {code} {} {}", e.str("Document Type"), e.str("Document No.")))?;
+                let desc = format!("Adjmt. of {code} {} {}", e.str("Document Type"), e.str("Document No."));
+                post_gain_loss(ctx, &GainLossEntry { txn: &txn, date: ending, doc_no: &doc_no, party_account: &party_acc, other: &other, amount: diff, description: &desc })?;
                 adjusted += 1;
                 total += diff;
             }

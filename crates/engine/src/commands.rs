@@ -132,7 +132,7 @@ fn opt_date(params: &Json, name: &str) -> Result<Option<NaiveDate>> {
     }
 }
 
-fn table_param<'a>(ctx: &Ctx, params: &'a Json) -> Result<(&'static TableDef, Option<&'static PageDef>)> {
+fn table_param(ctx: &Ctx, params: &Json) -> Result<(&'static TableDef, Option<&'static PageDef>)> {
     if let Some(p) = opt_str(params, "page") {
         let page = ctx.meta.page(p).ok_or_else(|| EngineError::not_found(format!("Page '{p}' does not exist.")))?;
         let t = page.source_table.as_deref().ok_or_else(|| EngineError::invalid(format!("Page '{p}' has no source table.")))?;
@@ -1019,10 +1019,10 @@ static COMMANDS: &[CommandDef] = &[
     cmd!("table.list", "Tables", "Metadata", false, s_none, table_list, "Every table with its record count."),
     cmd!("table.describe", "Describe Table", "Metadata", false, s_table, table_describe, "Fields, types, options and relations of a table."),
     cmd!("page.list", "Pages", "Metadata", false, s_none, page_list, "Every page (List, Card, Document, ListPart)."),
-    cmd!("page.describe", "Describe Page", "Metadata", false, s_page, page_describe, "Layout of a page: FastTabs, columns, parts, FactBoxes, actions."),
+    cmd!("page.describe", "Describe Page", "Metadata", false, s_page, page_describe, "Layout of a page: sections, columns, parts, detail panels, actions."),
     cmd!("rolecenter.get", "Role Center", "Metadata", false, s_rolecenter, rolecenter_get, "Navigation, actions and cue values of a role center."),
-    cmd!("search", "Tell Me", "Metadata", false, s_search, search, "Find pages and commands by name (Alt+Q)."),
-    cmd!("record.list", "List Records", "Data", false, s_list, record_list, "Records of a table or list page, with BC filters and search."),
+    cmd!("search", "Search", "Metadata", false, s_search, search, "Find pages and commands by name (Alt+Q)."),
+    cmd!("record.list", "List Records", "Data", false, s_list, record_list, "Records of a table or list page, with filters and search."),
     cmd!("record.get", "Get Record", "Data", false, s_get, record_get, "One record by primary key, FlowFields calculated."),
     cmd!("record.new", "New Record", "Data", true, s_new, record_new, "Create a record (number series, defaults, field validation)."),
     cmd!("record.validate", "Set Field", "Data", true, s_validate, record_validate, "Set one field with its OnValidate trigger and save."),

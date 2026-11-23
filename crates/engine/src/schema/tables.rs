@@ -1,5 +1,5 @@
-//! The base application's tables. Names, ids and field names follow Business Central's W1 Base
-//! Application so data, pages and a later BC connector map one to one.
+//! Core ERP table definitions (general ledger, customers, vendors, items, banks, sales,
+//! purchasing, and access control).
 
 use erpcraft_meta::{FieldDef as F, Metadata, TableDef};
 

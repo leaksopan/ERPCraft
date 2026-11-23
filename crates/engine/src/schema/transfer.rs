@@ -67,10 +67,10 @@ fn sub(id: &str, object_id: u32, table: &str, columns: &[&str], editable: bool) 
 }
 
 pub fn register(m: &mut Metadata) {
-    if let Some(t) = m.tables.get_mut(LOCATION) {
-        if t.field("Use As In-Transit").is_none() {
-            t.fields.push(F::boolean("Use As In-Transit"));
-        }
+    if let Some(t) = m.tables.get_mut(LOCATION)
+        && t.field("Use As In-Transit").is_none()
+    {
+        t.fields.push(F::boolean("Use As In-Transit"));
     }
     if let Some(t) = m.tables.get_mut(crate::schema::tables::INVENTORY_SETUP) {
         for f in [F::code("Transfer Order Nos.", 20).relation("No. Series"), F::code("Posted Transfer Shpt. Nos.", 20).relation("No. Series"), F::code("Posted Transfer Rcpt. Nos.", 20).relation("No. Series")] {
@@ -122,10 +122,10 @@ pub fn register(m: &mut Metadata) {
                     .icon("post")
                     .shortcut("F9")
                     .ask(&["mode"])
-                    .tooltip("Finalize the document or journal by posting the amounts and quantities to the related accounts in your company books."),
+                    .tooltip("Post the transfer shipment, receipt, or direct transfer to inventory ledgers."),
             )
-            .action(Act::command("Re&lease", A::Home, "transfer.release").icon("release").shortcut("Ctrl+F9").tooltip("Release the document to the next stage of processing."))
-            .action(Act::command("Reo&pen", A::Home, "transfer.reopen").icon("reopen").tooltip("Reopen the transfer order after being released for warehouse handling."))
+            .action(Act::command("Re&lease", A::Home, "transfer.release").icon("release").shortcut("Ctrl+F9").tooltip("Release this transfer order for shipping and receiving."))
+            .action(Act::command("Reo&pen", A::Home, "transfer.reopen").icon("reopen").tooltip("Reopen this transfer order for editing."))
             .action(Act::page("S&hipments", A::Navigate, "posted-transfer-shipments").link("Transfer Order No.", "No.").icon("list").tooltip("View related posted transfer shipments."))
             .action(Act::page("Re&ceipts", A::Navigate, "posted-transfer-receipts").link("Transfer Order No.", "No.").icon("list").tooltip("View related posted transfer receipts.")),
     );

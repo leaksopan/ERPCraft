@@ -250,7 +250,7 @@ fn move_stock(ctx: &mut Ctx, mv: &StockMove<'_>) -> Result<()> {
     for (loc, q, c, parts) in [(mv.from, -base, -cost, &out), (mv.to, base, cost, &inbound)] {
         crate::tracking::post_parts(
             ctx,
-            &ItemEntry { item: &item, posting_date: date, entry_type: "Transfer", doc_type: mv.doc_type, doc_no: mv.doc_no, description: mv.line.str("Description"), location: loc, qty: q, cost: c, sales_amount: Decimal::ZERO, uom: &uom, source_type: "", source_no: "", variant: mv.line.str("Variant Code") },
+            &ItemEntry { item: &item, posting_date: date, entry_type: "Transfer", doc_type: mv.doc_type, doc_no: mv.doc_no, doc_line_no: mv.line.get("Line No.").as_int(), description: mv.line.str("Description"), location: loc, qty: q, cost: c, sales_amount: Decimal::ZERO, uom: &uom, source_type: "", source_no: "", variant: mv.line.str("Variant Code"), recognition: crate::costing::CostRecognition::Actual { posted_to_gl: true } },
             parts,
         )?;
     }

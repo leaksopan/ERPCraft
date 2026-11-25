@@ -573,16 +573,20 @@ pub fn register(m: &mut Metadata) {
                     ],
                 ),
                 F::code("Document No.", 20),
+                F::integer("Document Line No."),
                 F::text("Description", 100),
                 F::code("Location Code", 10),
                 F::decimal("Quantity"),
                 F::decimal("Remaining Quantity"),
+                F::decimal("Invoiced Quantity"),
                 F::decimal("Cost Amount (Actual)"),
+                F::decimal("Cost Amount (Expected)").auto_format(1),
                 F::decimal("Sales Amount (Actual)"),
                 F::code("Unit of Measure Code", 10),
                 F::option("Source Type", &["", "Customer", "Vendor", "Item"]),
                 F::code("Source No.", 20),
                 F::boolean("Open"),
+                F::boolean("Completely Invoiced"),
             ])
             .key(&["Entry No."])
             .describe_by("Description")

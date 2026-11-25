@@ -219,7 +219,7 @@ pub fn calculate_inventory_value(ctx: &mut Ctx, template: &str, batch: &str, dat
                 .db
                 .rows(crate::costing::VALUE_ENTRY)
                 .filter(|v| v.get("Item Ledger Entry No.") == e.get("Entry No.") && v.get("Valuation Date").as_date().is_none_or(|d| d <= date))
-                .map(|v| v.get("Cost Amount (Actual)").as_dec())
+                .map(crate::costing::entry_valuation)
                 .sum();
             let slot = per.entry(key).or_default();
             slot.0 += e.get("Quantity").as_dec();
@@ -342,7 +342,7 @@ pub fn post(ctx: &mut Ctx, template: &str, batch: &str) -> Result<Json> {
                     let cost = round_amount(signed * unit);
                     let source = crate::tracking::source_of(ITEM_JNL_LINE, l);
                     let parts = crate::tracking::parts_for(ctx, &item, source.as_ref(), &loc, signed)?;
-                    crate::tracking::post_parts(ctx, &ItemEntry { item: &item, posting_date: date, entry_type: t, doc_type: "", doc_no: doc, description: &desc, location: &loc, qty: signed, cost, sales_amount: Decimal::ZERO, uom: l.get("Unit of Measure Code"), source_type: "", source_no: "", variant: l.str("Variant Code") }, &parts)?;
+                    crate::tracking::post_parts(ctx, &ItemEntry { item: &item, posting_date: date, entry_type: t, doc_type: "", doc_no: doc, doc_line_no: l.get("Line No.").as_int(), description: &desc, location: &loc, qty: signed, cost, sales_amount: Decimal::ZERO, uom: l.get("Unit of Measure Code"), source_type: "", source_no: "", variant: l.str("Variant Code"), recognition: crate::costing::CostRecognition::Actual { posted_to_gl: true } }, &parts)?;
                     if let Some(s) = &source {
                         crate::tracking::consume(ctx, s)?;
                     }
@@ -364,8 +364,8 @@ pub fn post(ctx: &mut Ctx, template: &str, batch: &str) -> Result<Json> {
                     let source = crate::tracking::source_of(ITEM_JNL_LINE, l);
                     let out = crate::tracking::parts_for(ctx, &item, source.as_ref(), &loc, -qty)?;
                     let inbound: Vec<crate::tracking::Part> = out.iter().map(|p| crate::tracking::Part { qty: -p.qty, ..p.clone() }).collect();
-                    crate::tracking::post_parts(ctx, &ItemEntry { item: &item, posting_date: date, entry_type: "Transfer", doc_type: "", doc_no: doc, description: &desc, location: &loc, qty: -qty, cost: -cost, sales_amount: Decimal::ZERO, uom: l.get("Unit of Measure Code"), source_type: "", source_no: "", variant: l.str("Variant Code") }, &out)?;
-                    crate::tracking::post_parts(ctx, &ItemEntry { item: &item, posting_date: date, entry_type: "Transfer", doc_type: "", doc_no: doc, description: &desc, location: &to, qty, cost, sales_amount: Decimal::ZERO, uom: l.get("Unit of Measure Code"), source_type: "", source_no: "", variant: l.str("Variant Code") }, &inbound)?;
+                    crate::tracking::post_parts(ctx, &ItemEntry { item: &item, posting_date: date, entry_type: "Transfer", doc_type: "", doc_no: doc, doc_line_no: l.get("Line No.").as_int(), description: &desc, location: &loc, qty: -qty, cost: -cost, sales_amount: Decimal::ZERO, uom: l.get("Unit of Measure Code"), source_type: "", source_no: "", variant: l.str("Variant Code"), recognition: crate::costing::CostRecognition::Actual { posted_to_gl: true } }, &out)?;
+                    crate::tracking::post_parts(ctx, &ItemEntry { item: &item, posting_date: date, entry_type: "Transfer", doc_type: "", doc_no: doc, doc_line_no: l.get("Line No.").as_int(), description: &desc, location: &to, qty, cost, sales_amount: Decimal::ZERO, uom: l.get("Unit of Measure Code"), source_type: "", source_no: "", variant: l.str("Variant Code"), recognition: crate::costing::CostRecognition::Actual { posted_to_gl: true } }, &inbound)?;
                     if let Some(s) = &source {
                         crate::tracking::consume(ctx, s)?;
                     }

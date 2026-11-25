@@ -129,6 +129,7 @@ pub fn register(m: &mut Metadata) {
                 F::option("Item Ledger Entry Type", &["Purchase", "Sale", "Positive Adjmt.", "Negative Adjmt.", "Transfer", "Consumption", "Output"]),
                 F::code("Source No.", 20),
                 F::code("Document No.", 20),
+                F::integer("Document Line No."),
                 F::text("Description", 100),
                 F::code("Location Code", 10),
                 F::code("Inventory Posting Group", 20),
@@ -139,6 +140,7 @@ pub fn register(m: &mut Metadata) {
                 F::decimal("Cost per Unit"),
                 F::decimal("Sales Amount (Actual)").auto_format(1),
                 F::decimal("Cost Amount (Actual)").auto_format(1),
+                F::decimal("Cost Amount (Expected)").auto_format(1),
                 F::decimal("Cost Posted to G/L").auto_format(1),
                 F::option("Source Type", &["", "Customer", "Vendor", "Item"]),
                 F::code("Gen. Bus. Posting Group", 20),
@@ -146,6 +148,7 @@ pub fn register(m: &mut Metadata) {
                 F::option("Document Type", &["", "Sales Shipment", "Sales Invoice", "Sales Return Receipt", "Sales Credit Memo", "Purchase Receipt", "Purchase Invoice", "Purchase Return Shipment", "Purchase Credit Memo", "Transfer Shipment", "Transfer Receipt"]),
                 F::option("Entry Type", &["Direct Cost", "Revaluation", "Rounding", "Indirect Cost", "Variance"]),
                 F::boolean("Adjustment"),
+                F::boolean("Expected Cost"),
                 F::code("Item Charge No.", 20),
                 F::date("Valuation Date"),
                 F::code("User ID", 50),
@@ -157,7 +160,7 @@ pub fn register(m: &mut Metadata) {
     ensure(m, crate::schema::tables::INVENTORY_SETUP, vec![F::boolean("Automatic Cost Posting"), F::option("Automatic Cost Adjustment", &["Never", "Day", "Week", "Month", "Quarter", "Year", "Always"])]);
     ensure(m, crate::schema::tables::ITEM, vec![F::decimal("Standard Cost")]);
     let mut values = PageDef::new("value-entries", 5802, "Value Entries", PageKind::List, Some(crate::costing::VALUE_ENTRY));
-    values.columns = ["Posting Date", "Valuation Date", "Item Ledger Entry Type", "Entry Type", "Adjustment", "Document No.", "Item No.", "Location Code", "Valued Quantity", "Item Ledger Entry Quantity", "Cost per Unit", "Sales Amount (Actual)", "Cost Amount (Actual)", "Cost Posted to G/L", "Item Ledger Entry No.", "Entry No."]
+    values.columns = ["Posting Date", "Valuation Date", "Item Ledger Entry Type", "Entry Type", "Adjustment", "Expected Cost", "Document No.", "Item No.", "Location Code", "Valued Quantity", "Item Ledger Entry Quantity", "Invoiced Quantity", "Cost per Unit", "Sales Amount (Actual)", "Cost Amount (Actual)", "Cost Amount (Expected)", "Cost Posted to G/L", "Item Ledger Entry No.", "Entry No."]
         .iter()
         .map(|c| (*c).to_string())
         .collect();

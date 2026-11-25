@@ -835,7 +835,7 @@ fn ledgers(m: &mut Metadata) {
         38,
         "Item Ledger Entries",
         ITEM_LEDGER,
-        &["Posting Date", "Entry Type", "Document Type", "Document No.", "Item No.", "Description", "Quantity", "Remaining Quantity", "Sales Amount (Actual)", "Cost Amount (Actual)", "Entry No."],
+        &["Posting Date", "Entry Type", "Document Type", "Document No.", "Item No.", "Description", "Quantity", "Remaining Quantity", "Invoiced Quantity", "Completely Invoiced", "Sales Amount (Actual)", "Cost Amount (Actual)", "Cost Amount (Expected)", "Entry No."],
     ));
     m.add_page(ledger(
         "bank-account-ledger-entries",

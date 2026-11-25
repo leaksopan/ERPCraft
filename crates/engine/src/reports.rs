@@ -156,19 +156,28 @@ pub fn aged(ctx: &Ctx, side: &Side, date: NaiveDate) -> Result<Json> {
 /// ledger entries), with the inventory G/L balance for reconciliation.
 pub fn inventory_valuation(ctx: &Ctx, date: NaiveDate) -> Result<Json> {
     let mut rows = Vec::new();
-    let (mut total_qty, mut total_value) = (Decimal::ZERO, Decimal::ZERO);
+    let (mut total_qty, mut total_actual, mut total_expected) = (Decimal::ZERO, Decimal::ZERO, Decimal::ZERO);
     for item in ctx.db.rows(crate::schema::tables::ITEM).filter(|i| i.str("Type") == "Inventory") {
         let no = item.str("No.");
         let entries = ctx.db.rows(crate::schema::tables::ITEM_LEDGER).filter(|e| e.str("Item No.") == no && e.get("Posting Date").as_date().is_some_and(|d| d <= date));
-        let (qty, value) = entries.fold((Decimal::ZERO, Decimal::ZERO), |(q, v), e| (q + e.get("Quantity").as_dec(), v + e.get("Cost Amount (Actual)").as_dec()));
+        let (qty, actual, expected, value) = entries.fold((Decimal::ZERO, Decimal::ZERO, Decimal::ZERO, Decimal::ZERO), |(q, a, exp, v), e| {
+            (
+                q + e.get("Quantity").as_dec(),
+                a + e.get("Cost Amount (Actual)").as_dec(),
+                exp + e.get("Cost Amount (Expected)").as_dec(),
+                v + crate::costing::entry_valuation(e),
+            )
+        });
         if qty.is_zero() && value.is_zero() {
             continue;
         }
         total_qty += qty;
-        total_value += value;
+        total_actual += actual;
+        total_expected += expected;
         let unit = if qty.is_zero() { Decimal::ZERO } else { (value / qty).round_dp(2) };
         rows.push(json!([no, item.str("Description"), item.str("Base Unit of Measure"), money(qty), money(unit), money(value)]));
     }
+    let total_value = total_actual + total_expected;
     rows.push(json!(["", "Total", "", money(total_qty), "", money(total_value)]));
     let gl: Decimal = ctx
         .db
@@ -182,6 +191,8 @@ pub fn inventory_valuation(ctx: &Ctx, date: NaiveDate) -> Result<Json> {
     Ok(json!({
         "report": {"title": format!("Inventory Valuation as of {date}"), "columns": ["No.", "Description", "Unit", "Quantity", "Unit Cost", "Value"], "rows": rows},
         "value": money(total_value),
+        "actual_value": money(total_actual),
+        "expected_value": money(total_expected),
         "gl_value": money(gl),
     }))
 }

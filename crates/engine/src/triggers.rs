@@ -449,6 +449,15 @@ fn validate_line(ctx: &mut Ctx, side: &Side, r: &mut Record, field: &str, old: &
     let header = line_header(ctx, side, r)?;
     if r.get(field) != old {
         test_status_open(ctx, side, &header)?;
+        if matches!(field, "Type" | "No." | "Unit of Measure Code")
+            && (!r.get(side.qty_handled).as_dec().is_zero() || !r.get("Quantity Invoiced").as_dec().is_zero())
+        {
+            refuse!(
+                "You cannot change {field} on line {} because quantity has already been {} or invoiced.",
+                r.get("Line No.").as_int(),
+                if side.sales { "shipped" } else { "received" }
+            );
+        }
     }
     let doc_type = r.str("Document Type").to_string();
     match field {

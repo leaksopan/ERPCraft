@@ -170,6 +170,7 @@ pub struct ItemEntry<'a> {
     pub entry_type: &'a str,
     pub doc_type: &'a str,
     pub doc_no: &'a str,
+    pub doc_line_no: i64,
     pub description: &'a str,
     pub location: &'a str,
     /// Signed: positive into stock, negative out.
@@ -180,6 +181,7 @@ pub struct ItemEntry<'a> {
     pub source_type: &'a str,
     pub source_no: &'a str,
     pub variant: &'a str,
+    pub recognition: crate::costing::CostRecognition,
 }
 
 pub fn post_item(ctx: &mut Ctx, e: &ItemEntry) -> Result<i64> {
@@ -192,19 +194,23 @@ pub fn post_item(ctx: &mut Ctx, e: &ItemEntry) -> Result<i64> {
     r.set("Entry Type", Value::text(e.entry_type));
     r.set("Document Type", Value::text(e.doc_type));
     r.set("Document No.", Value::text(e.doc_no));
+    r.set("Document Line No.", Value::Int(e.doc_line_no));
     r.set("Description", Value::text(e.description));
     r.set("Location Code", Value::text(e.location));
     r.set("Quantity", dec(e.qty));
     r.set("Remaining Quantity", dec(e.qty.max(Decimal::ZERO)));
+    r.set("Invoiced Quantity", dec(Decimal::ZERO));
     r.set("Open", Value::Bool(e.qty > Decimal::ZERO));
-    r.set("Cost Amount (Actual)", dec(e.cost));
+    r.set("Cost Amount (Actual)", dec(Decimal::ZERO));
+    r.set("Cost Amount (Expected)", dec(Decimal::ZERO));
+    r.set("Completely Invoiced", Value::Bool(e.qty <= Decimal::ZERO));
     r.set("Sales Amount (Actual)", dec(e.sales_amount));
     r.set("Unit of Measure Code", e.uom.clone());
     r.set("Source Type", Value::text(e.source_type));
     r.set("Source No.", Value::text(e.source_no));
     r.set("Variant Code", Value::text(e.variant));
     ctx.db.insert(t, r.clone())?;
-    crate::costing::on_item_entry(ctx, &r)?;
+    crate::costing::on_item_entry(ctx, &mut r, e.cost, e.recognition)?;
     Ok(no)
 }
 
@@ -225,6 +231,7 @@ fn post_item_entry(
     uom: &Value,
     party_no: &str,
     line: &Record,
+    recognition: crate::costing::CostRecognition,
 ) -> Result<i64> {
     if qty < Decimal::ZERO {
         crate::item_journal::check_negative(ctx, item.str("No."), location, -qty)?;
@@ -240,6 +247,7 @@ fn post_item_entry(
             entry_type: if side.sales { "Sale" } else { "Purchase" },
             doc_type,
             doc_no,
+            doc_line_no: line.get("Line No.").as_int(),
             description,
             location,
             qty,
@@ -249,6 +257,7 @@ fn post_item_entry(
             source_type: if side.sales { "Customer" } else { "Vendor" },
             source_no: party_no,
             variant: line.str("Variant Code"),
+            recognition,
         },
         &parts,
     )?;
@@ -356,6 +365,9 @@ pub fn post_document(ctx: &mut Ctx, side: &Side, doc_type: &str, no: &str, mode:
     if !any_ship && !any_invoice {
         refuse!("There is nothing to post.");
     }
+    let direct_invoice = |l: &Record| {
+        is_order && !side.sales && mode.invoice && shipped(l).is_zero() && invoiced(l).is_zero() && to_ship(l) == to_invoice(l)
+    };
     let description = header.str("Posting Description").to_string();
     // A document in a currency: amounts convert line by line at its factor; the party entry
     // keeps the currency amount and the sum of the lines in LCY.
@@ -395,6 +407,12 @@ pub fn post_document(ctx: &mut Ctx, side: &Side, doc_type: &str, no: &str, mode:
         ctx.db.insert(sht, sh)?;
         for l in lines.iter().filter(|l| !to_ship(l).is_zero()) {
             let q = to_ship(l);
+            let direct = direct_invoice(l);
+            let recognition = if !side.sales && is_order && !direct {
+                crate::costing::CostRecognition::Expected
+            } else {
+                crate::costing::CostRecognition::Actual { posted_to_gl: true }
+            };
             let mut ile = 0;
             if let Some(it) = is_item_inventory(ctx, l)? {
                 let qb = q * per(l);
@@ -403,7 +421,7 @@ pub fn post_document(ctx: &mut Ctx, side: &Side, doc_type: &str, no: &str, mode:
                 } else {
                     (qb, lcy(portion(l, "Amount", q)))
                 };
-                ile = post_item_entry(ctx, side, &it, posting_date, ile_doc, &shipment_no, l.str("Description"), l.str("Location Code"), qty, cost, Decimal::ZERO, l.get("Unit of Measure Code"), &party_no, l)?;
+                ile = post_item_entry(ctx, side, &it, posting_date, ile_doc, &shipment_no, l.str("Description"), l.str("Location Code"), qty, cost, Decimal::ZERO, l.get("Unit of Measure Code"), &party_no, l, recognition)?;
                 if !side.sales {
                     update_item_cost(ctx, it.str("No."), qb, cost)?;
                 }
@@ -415,8 +433,9 @@ pub fn post_document(ctx: &mut Ctx, side: &Side, doc_type: &str, no: &str, mode:
             copy_common(l, slt, &mut sl);
             sl.set("Document No.", Value::text(&shipment_no));
             sl.set("Quantity", dec(q));
-            sl.set("Quantity Invoiced", dec(Decimal::ZERO));
-            sl.set(if side.sales { "Qty. Shipped Not Invoiced" } else { "Qty. Rcd. Not Invoiced" }, dec(q));
+            let init_inv = if direct { q } else { Decimal::ZERO };
+            sl.set("Quantity Invoiced", dec(init_inv));
+            sl.set(if side.sales { "Qty. Shipped Not Invoiced" } else { "Qty. Rcd. Not Invoiced" }, dec(q - init_inv));
             sl.set("Order No.", Value::text(no));
             sl.set("Order Line No.", l.get("Line No.").clone());
             sl.set("Item Ledger Entry No.", Value::Int(ile));
@@ -553,7 +572,7 @@ pub fn post_document(ctx: &mut Ctx, side: &Side, doc_type: &str, no: &str, mode:
                         (false, true) => "Purchase Credit Memo",
                     };
                     let sales_amount = if side.sales { if credit { -amount } else { amount } } else { Decimal::ZERO };
-                    let ile = post_item_entry(ctx, side, it, posting_date, ile_doc, &posted_no, &line_desc, l.str("Location Code"), signed, cost, sales_amount, l.get("Unit of Measure Code"), &party_no, l)?;
+                    let ile = post_item_entry(ctx, side, it, posting_date, ile_doc, &posted_no, &line_desc, l.str("Location Code"), signed, cost, sales_amount, l.get("Unit of Measure Code"), &party_no, l, crate::costing::CostRecognition::Actual { posted_to_gl: true })?;
                     posted_now.push((l.get("Line No.").as_int(), ile));
                     if !side.sales && !credit && !qty.is_zero() {
                         update_item_cost(ctx, it.str("No."), qty * per(l), amount)?;
@@ -569,6 +588,21 @@ pub fn post_document(ctx: &mut Ctx, side: &Side, doc_type: &str, no: &str, mode:
                         gl.push(GlLine { account: inv, amount: -cost, vat_amount: Decimal::ZERO, description: line_desc.clone(), gen_posting_type: "" });
                     }
                 }
+            }
+            if is_order && !side.sales && !direct_invoice(l) {
+                settle_order_receipts(
+                    ctx,
+                    &OrderSettlement {
+                        order_no: no,
+                        line_no,
+                        qty,
+                        amount_lcy: amount,
+                        order_per: per(l),
+                        inventory_item: inventory_item.as_ref(),
+                        posted_no: &posted_no,
+                        posting_date,
+                    },
+                )?;
             }
             let mut pl = plt.init_record();
             copy_common(l, plt, &mut pl);
@@ -594,7 +628,8 @@ pub fn post_document(ctx: &mut Ctx, side: &Side, doc_type: &str, no: &str, mode:
         // Item charges land on the entries they were assigned to.
         let at = ctx.table(if side.sales { crate::item_charge::ASSIGNMENT_SALES } else { crate::item_charge::ASSIGNMENT })?;
         for (a, cost, charge) in &charge_costs {
-            let Some(ile) = crate::item_charge::target_entry(ctx, side.sales, a, &posted_now) else {
+            let iles = crate::item_charge::target_entries(ctx, side.sales, a, &posted_now);
+            if iles.is_empty() {
                 refuse!(
                     "Item charge {charge} is assigned to line {} of {} {}, which has not been {} yet.",
                     a.get("Applies-to Doc. Line No.").as_int(),
@@ -602,11 +637,26 @@ pub fn post_document(ctx: &mut Ctx, side: &Side, doc_type: &str, no: &str, mode:
                     a.str("Applies-to Doc. No."),
                     if side.sales { "shipped" } else { "received" }
                 );
-            };
-            if side.sales {
-                crate::item_charge::add_sales_amount(ctx, ile, charge, *cost, &posted_no, posting_date)?;
-            } else {
-                crate::item_charge::add_cost(ctx, ile, charge, *cost, &posted_no, posting_date)?;
+            }
+            let doc_line_no = a.get("Document Line No.").as_int();
+            let qtys: Vec<(i64, Decimal)> = iles
+                .iter()
+                .map(|&ile_no| {
+                    let q = ctx.db.get(ITEM_LEDGER, &Key(vec![Value::Int(ile_no)])).map(|r| r.get("Quantity").as_dec().abs()).unwrap_or(Decimal::ONE);
+                    (ile_no, q)
+                })
+                .collect();
+            let total_q: Decimal = qtys.iter().map(|(_, q)| *q).sum();
+            let mut left_cost = *cost;
+            let n = qtys.len();
+            for (i, (ile_no, q)) in qtys.into_iter().enumerate() {
+                let share = if i + 1 == n || total_q.is_zero() { left_cost } else { round_amount(*cost * q / total_q) };
+                left_cost -= share;
+                if side.sales {
+                    crate::item_charge::add_sales_amount(ctx, ile_no, charge, share, &posted_no, doc_line_no, posting_date)?;
+                } else {
+                    crate::item_charge::add_cost(ctx, ile_no, charge, share, &posted_no, doc_line_no, posting_date)?;
+                }
             }
             let mut done = a.clone();
             done.set("Qty. Assigned", dec(done.get("Qty. Assigned").as_dec() + done.get("Qty. to Assign").as_dec()));
@@ -755,20 +805,94 @@ pub fn document_page(side: &Side, doc_type: &str) -> &'static str {
     pages.iter().find(|p| p.0 == doc_type).map_or(if side.sales { "sales-order" } else { "purchase-order" }, |p| p.4)
 }
 
-/// Average cost after a purchase of `qty` for `amount`; also records the last direct cost.
+struct OrderSettlement<'a> {
+    order_no: &'a str,
+    line_no: i64,
+    qty: Decimal,
+    amount_lcy: Decimal,
+    order_per: Decimal,
+    inventory_item: Option<&'a Record>,
+    posted_no: &'a str,
+    posting_date: NaiveDate,
+}
+
+fn allocate_receipt_lines(ctx: &mut Ctx, order_no: &str, order_line_no: i64, qty: Decimal) -> Result<Vec<(Record, Decimal)>> {
+    let rcpt_lt = ctx.table(PURCH_RCPT_LINE)?;
+    let mut open: Vec<Record> = ctx
+        .db
+        .rows(PURCH_RCPT_LINE)
+        .filter(|r| {
+            r.str("Order No.") == order_no
+                && r.get("Order Line No.").as_int() == order_line_no
+                && r.get("Qty. Rcd. Not Invoiced").as_dec() > Decimal::ZERO
+        })
+        .cloned()
+        .collect();
+    open.sort_by(|a, b| {
+        (a.get("Item Ledger Entry No.").as_int(), a.str("Document No."), a.get("Line No.").as_int())
+            .cmp(&(b.get("Item Ledger Entry No.").as_int(), b.str("Document No."), b.get("Line No.").as_int()))
+    });
+    let mut left = qty;
+    let mut slices = Vec::new();
+    for mut r in open {
+        if left.is_zero() {
+            break;
+        }
+        let rem = r.get("Qty. Rcd. Not Invoiced").as_dec();
+        let take = left.min(rem);
+        r.set("Quantity Invoiced", dec(r.get("Quantity Invoiced").as_dec() + take));
+        r.set("Qty. Rcd. Not Invoiced", dec(rem - take));
+        ctx.db.modify(rcpt_lt, r.clone())?;
+        slices.push((r, take));
+        left -= take;
+    }
+    if !left.is_zero() {
+        refuse!("Order {order_no} line {order_line_no} has {left} invoiced units without an open purchase receipt line.");
+    }
+    Ok(slices)
+}
+
+fn settle_order_receipts(ctx: &mut Ctx, s: &OrderSettlement<'_>) -> Result<()> {
+    let slices = allocate_receipt_lines(ctx, s.order_no, s.line_no, s.qty)?;
+    let Some(it) = s.inventory_item else {
+        return Ok(());
+    };
+    let mut left_cost = s.amount_lcy;
+    let n = slices.len();
+    for (i, (rcpt_line, take)) in slices.into_iter().enumerate() {
+        let slice_cost = if i + 1 == n { left_cost } else { round_amount(s.amount_lcy * take / s.qty) };
+        left_cost -= slice_cost;
+        let rcpt_per = match rcpt_line.get("Qty. per Unit of Measure").as_dec() {
+            d if d.is_zero() => s.order_per,
+            d => d,
+        };
+        crate::costing::settle_purchase_receipt(
+            ctx,
+            &crate::costing::ReceiptCostSettlement {
+                receipt_no: rcpt_line.str("Document No."),
+                receipt_line_no: rcpt_line.get("Line No.").as_int(),
+                first_ile_no: rcpt_line.get("Item Ledger Entry No.").as_int(),
+                qty_base: take * rcpt_per,
+                actual_cost_lcy: slice_cost,
+                inv_doc_type: "Purchase Invoice",
+                inv_doc_no: s.posted_no,
+                inv_line_no: s.line_no,
+                posting_date: s.posting_date,
+            },
+        )?;
+    }
+    update_item_cost(ctx, it.str("No."), s.qty * s.order_per, s.amount_lcy)
+}
+
+/// Updates the item's last direct cost and recalculates its unit cost from ledger entries.
 pub fn update_item_cost(ctx: &mut Ctx, item_no: &str, qty: Decimal, amount: Decimal) -> Result<()> {
-    let it = ctx.table(ITEM)?;
-    let mut item = ctx.get_code(ITEM, item_no)?;
-    // Inventory before this receipt (its entry is already written).
-    let inv_after: Decimal = ctx.db.rows(ITEM_LEDGER).filter(|e| e.str("Item No.") == item_no).map(|e| e.get("Quantity").as_dec()).sum();
-    let inv_before = (inv_after - qty).max(Decimal::ZERO);
-    let old_cost = item.get("Unit Cost").as_dec();
-    let unit = round_unit(amount / qty);
-    let new_cost =
-        if inv_before + qty > Decimal::ZERO { round_unit((inv_before * old_cost + amount) / (inv_before + qty)) } else { unit };
-    item.set("Last Direct Cost", dec(unit));
-    item.set("Unit Cost", dec(new_cost));
-    ctx.db.modify(it, item)
+    if !qty.is_zero() {
+        let it = ctx.table(ITEM)?;
+        let mut item = ctx.get_code(ITEM, item_no)?;
+        item.set("Last Direct Cost", dec(round_unit(amount / qty)));
+        ctx.db.modify(it, item)?;
+    }
+    crate::costing::recalc_item_unit_cost(ctx, item_no)
 }
 
 /// BC's CopyCommentLines: the document's comments go with it to the posted document.

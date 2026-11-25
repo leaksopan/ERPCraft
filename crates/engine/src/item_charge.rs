@@ -14,7 +14,7 @@ use crate::ctx::{Ctx, dec, round_amount};
 use crate::error::{EngineError, Result};
 use crate::refuse;
 use crate::schema::finance::{PURCH_RCPT_LINE, SALES_SHIPMENT_LINE};
-use crate::schema::tables::{ITEM, ITEM_LEDGER, PURCH_LINE, SALES_LINE};
+use crate::schema::tables::{ITEM_LEDGER, PURCH_LINE, SALES_LINE};
 
 pub const ITEM_CHARGE: &str = "Item Charge";
 pub const ASSIGNMENT: &str = "Item Charge Assignment (Purch)";
@@ -37,96 +37,90 @@ pub fn assignments(ctx: &Ctx, sales: bool, doc_type: &str, doc_no: &str, line_no
     v
 }
 
-/// The item ledger entry an assignment's cost lands on: the receipt line's, or (an item line of
-/// the same document) the entry its posting made / its order's latest receipt made.
-pub fn target_entry(ctx: &Ctx, sales: bool, a: &Record, posted_now: &[(i64, i64)]) -> Option<i64> {
+pub fn target_entries(ctx: &Ctx, sales: bool, a: &Record, posted_now: &[(i64, i64)]) -> Vec<i64> {
     let line = a.get("Applies-to Doc. Line No.").as_int();
     let (_, _, posted, posted_type) = tables(sales);
+    let ile_doc_type = if sales { "Sales Shipment" } else { "Purchase Receipt" };
+    let doc_iles = |doc_type: &str, doc_no: &str, doc_line_no: i64, fallback_ile: i64| -> Vec<i64> {
+        crate::costing::doc_line_iles(ctx, doc_type, doc_no, doc_line_no, fallback_ile)
+            .into_iter()
+            .map(|e| e.get("Entry No.").as_int())
+            .collect()
+    };
+    let from_posted_now = || {
+        posted_now
+            .iter()
+            .find(|(l, _)| *l == line)
+            .and_then(|(_, first)| {
+                ctx.db
+                    .rows(ITEM_LEDGER)
+                    .find(|e| e.get("Entry No.").as_int() == *first)
+                    .map(|e| doc_iles(e.str("Document Type"), e.str("Document No."), e.get("Document Line No.").as_int(), *first))
+            })
+            .unwrap_or_default()
+    };
     match a.str("Applies-to Doc. Type") {
         t if t == posted_type => ctx
             .db
             .get(posted, &Key(vec![a.get("Applies-to Doc. No.").clone(), Value::Int(line)]))
             .map(|r| r.get("Item Ledger Entry No.").as_int())
-            .filter(|n| *n != 0),
-        _ => posted_now.iter().find(|(l, _)| *l == line).map(|(_, e)| *e).or_else(|| {
-            ctx.db
+            .filter(|n| *n != 0)
+            .map(|first| doc_iles(ile_doc_type, a.str("Applies-to Doc. No."), line, first))
+            .unwrap_or_default(),
+        "Order" => {
+            let mut iles: Vec<i64> = ctx
+                .db
                 .rows(posted)
                 .filter(|r| r.str("Order No.") == a.str("Applies-to Doc. No.") && r.get("Order Line No.").as_int() == line)
-                .map(|r| r.get("Item Ledger Entry No.").as_int())
-                .max()
-        }),
+                .filter_map(|r| {
+                    let first = r.get("Item Ledger Entry No.").as_int();
+                    (first != 0).then(|| doc_iles(ile_doc_type, r.str("Document No."), r.get("Line No.").as_int(), first))
+                })
+                .flatten()
+                .collect();
+            if iles.is_empty() {
+                iles = from_posted_now();
+            }
+            iles.sort_unstable();
+            iles.dedup();
+            iles
+        }
+        _ => from_posted_now(),
     }
 }
 
-/// Puts `amount` (LCY) of `charge` on an item ledger entry: a value entry, the entry's cost and
-/// the item's unit cost (BC's charge value entry; the receiving entry's quantity carries it).
-pub fn add_cost(ctx: &mut Ctx, ile_no: i64, charge: &str, amount: Decimal, doc_no: &str, posting_date: chrono::NaiveDate) -> Result<()> {
-    let it = ctx.table(ITEM_LEDGER)?;
-    let mut ile = ctx.get(ITEM_LEDGER, &Key(vec![Value::Int(ile_no)]))?;
-    ile.set("Cost Amount (Actual)", dec(ile.get("Cost Amount (Actual)").as_dec() + amount));
-    ctx.db.modify(it, ile.clone())?;
-    let vt = ctx.table(crate::costing::VALUE_ENTRY)?;
-    let src = ctx.db.rows(crate::costing::VALUE_ENTRY).find(|v| v.get("Item Ledger Entry No.").as_int() == ile_no).cloned();
-    let mut v = vt.init_record();
-    v.set("Entry No.", Value::Int(ctx.db.next_entry_no(crate::costing::VALUE_ENTRY)));
-    if let Some(src) = &src {
-        for f in ["Item No.", "Location Code", "Source Type", "Source No.", "Item Ledger Entry Type", "Gen. Bus. Posting Group", "Gen. Prod. Posting Group", "Inventory Posting Group"] {
-            v.set(f, src.get(f).clone());
-        }
-    }
-    v.set("Posting Date", Value::Date(posting_date));
-    v.set("Valuation Date", ile.get("Posting Date").clone());
-    v.set("Document No.", Value::text(doc_no));
-    v.set("Document Type", Value::text("Purchase Invoice"));
-    v.set("Item Ledger Entry No.", Value::Int(ile_no));
-    v.set("Cost Amount (Actual)", dec(amount));
-    v.set("Cost Posted to G/L", dec(amount));
-    v.set("Entry Type", Value::text("Direct Cost"));
-    v.set("Item Charge No.", Value::text(charge));
-    v.set("Description", Value::text(format!("Item charge {charge}")));
-    v.set("User ID", Value::text(ctx.user.to_uppercase()));
-    ctx.db.insert(vt, v)?;
-    // The item's average cost takes the extra cost over what is on hand.
-    let item_no = ile.str("Item No.").to_string();
-    let on_hand: Decimal = ctx.db.rows(ITEM_LEDGER).filter(|e| e.str("Item No.") == item_no).map(|e| e.get("Quantity").as_dec()).sum();
-    if on_hand > Decimal::ZERO {
-        let itt = ctx.table(ITEM)?;
-        let mut item = ctx.get_code(ITEM, &item_no)?;
-        let unit = item.get("Unit Cost").as_dec();
-        item.set("Unit Cost", dec(((unit * on_hand + amount) / on_hand).round_dp(5)));
-        ctx.db.modify(itt, item)?;
-    }
-    Ok(())
+/// Puts `amount` (LCY) of `charge` on an item ledger entry through `costing::add_direct_cost`.
+pub fn add_cost(ctx: &mut Ctx, ile_no: i64, charge: &str, amount: Decimal, doc_no: &str, doc_line_no: i64, posting_date: chrono::NaiveDate) -> Result<()> {
+    crate::costing::add_direct_cost(
+        ctx,
+        &crate::costing::DirectCostEntry {
+            ile_no,
+            charge_no: charge,
+            cost_lcy: amount,
+            sales_amount_lcy: Decimal::ZERO,
+            doc_type: "Purchase Invoice",
+            doc_no,
+            doc_line_no,
+            posting_date,
+        },
+    )
 }
 
-/// Puts `amount` (LCY) of a sales `charge` on a shipped item ledger entry: a value entry with the
-/// sales amount, and the entry's Sales Amount (Actual).
-pub fn add_sales_amount(ctx: &mut Ctx, ile_no: i64, charge: &str, amount: Decimal, doc_no: &str, posting_date: chrono::NaiveDate) -> Result<()> {
-    let it = ctx.table(ITEM_LEDGER)?;
-    let mut ile = ctx.get(ITEM_LEDGER, &Key(vec![Value::Int(ile_no)]))?;
-    ile.set("Sales Amount (Actual)", dec(ile.get("Sales Amount (Actual)").as_dec() + amount));
-    ctx.db.modify(it, ile.clone())?;
-    let vt = ctx.table(crate::costing::VALUE_ENTRY)?;
-    let src = ctx.db.rows(crate::costing::VALUE_ENTRY).find(|v| v.get("Item Ledger Entry No.").as_int() == ile_no).cloned();
-    let mut v = vt.init_record();
-    v.set("Entry No.", Value::Int(ctx.db.next_entry_no(crate::costing::VALUE_ENTRY)));
-    if let Some(src) = &src {
-        for f in ["Item No.", "Location Code", "Source Type", "Source No.", "Item Ledger Entry Type", "Gen. Bus. Posting Group", "Gen. Prod. Posting Group", "Inventory Posting Group"] {
-            v.set(f, src.get(f).clone());
-        }
-    }
-    v.set("Posting Date", Value::Date(posting_date));
-    v.set("Valuation Date", ile.get("Posting Date").clone());
-    v.set("Document No.", Value::text(doc_no));
-    v.set("Document Type", Value::text("Sales Invoice"));
-    v.set("Item Ledger Entry No.", Value::Int(ile_no));
-    v.set("Sales Amount (Actual)", dec(amount));
-    v.set("Entry Type", Value::text("Direct Cost"));
-    v.set("Item Charge No.", Value::text(charge));
-    v.set("Description", Value::text(format!("Item charge {charge}")));
-    v.set("User ID", Value::text(ctx.user.to_uppercase()));
-    ctx.db.insert(vt, v)?;
-    Ok(())
+/// Puts `amount` (LCY) of a sales `charge` on a shipped item ledger entry through `costing::add_direct_cost`.
+pub fn add_sales_amount(ctx: &mut Ctx, ile_no: i64, charge: &str, amount: Decimal, doc_no: &str, doc_line_no: i64, posting_date: chrono::NaiveDate) -> Result<()> {
+    crate::costing::add_direct_cost(
+        ctx,
+        &crate::costing::DirectCostEntry {
+            ile_no,
+            charge_no: charge,
+            cost_lcy: Decimal::ZERO,
+            sales_amount_lcy: amount,
+            doc_type: "Sales Invoice",
+            doc_no,
+            doc_line_no,
+            posting_date,
+        },
+    )
 }
 
 /// The assignment shares of a charge line's `amount` (LCY), the last taking the rounding.

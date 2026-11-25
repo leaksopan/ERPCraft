@@ -184,6 +184,7 @@ fn tables(m: &mut Metadata) {
                     F::code("No.", 20),
                     F::text("Description", 100),
                     F::code("Unit of Measure Code", 10),
+                    F::decimal("Qty. per Unit of Measure"),
                     F::decimal("Quantity"),
                     F::decimal("Quantity Invoiced"),
                     F::decimal(handled_not_invoiced),

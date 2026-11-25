@@ -62,7 +62,7 @@ fn statistics(ctx: &mut Ctx, p: &Json) -> Result<Json> {
             // Shipped, not yet invoiced: no sales amount yet, so its cost stays out of the margin
             // (BC counts the expected amounts of both; item entries here keep actual amounts).
             if !amount.is_zero() {
-                cost -= e.get("Cost Amount (Actual)").as_dec();
+                cost -= crate::costing::entry_valuation(e);
             }
             let q = e.get("Quantity").as_dec();
             if q.is_sign_negative() { sold -= q } else { returned += q }
@@ -93,7 +93,7 @@ fn statistics(ctx: &mut Ctx, p: &Json) -> Result<Json> {
         rows[2].push(json!(pct(margin)));
         rows[3].push(json!(pct(rate)));
     }
-    let value: Decimal = entries(ctx, &no).map(|e| e.get("Cost Amount (Actual)").as_dec()).sum();
+    let value: Decimal = entries(ctx, &no).map(crate::costing::entry_valuation).sum();
     let names = ["This Fiscal Period", "This Fiscal Year", "Last Fiscal Year", "Lifetime"];
     let mut cols = vec![json!("")];
     cols.extend(names.iter().zip(ps.iter()).map(|(n, (label, ..))| json!(if *n == "This Fiscal Period" { format!("{n} ({label})") } else { (*n).to_string() })));
@@ -128,7 +128,7 @@ fn entry_statistics(ctx: &mut Ctx, p: &Json) -> Result<Json> {
         .map(|(caption, ty, sign, negate)| match last(ty, *sign) {
             Some(e) => {
                 let q = e.get("Quantity").as_dec();
-                let amount = if *ty == "Sale" { e.get("Sales Amount (Actual)").as_dec() } else { e.get("Cost Amount (Actual)").as_dec().abs() };
+                let amount = if *ty == "Sale" { e.get("Sales Amount (Actual)").as_dec() } else { crate::costing::entry_valuation(e).abs() };
                 json!([caption, e.get("Posting Date").to_string(), e.str("Document No."), (if *negate { -q } else { q }).normalize().to_string(), money(amount)])
             }
             None => json!([caption, "", "", "", ""]),
@@ -155,7 +155,7 @@ fn turnover(ctx: &mut Ctx, p: &Json) -> Result<Json> {
             match e.str("Entry Type") {
                 "Purchase" => {
                     pq += e.get("Quantity").as_dec();
-                    pa += e.get("Cost Amount (Actual)").as_dec();
+                    pa += crate::costing::entry_valuation(e);
                 }
                 "Sale" => {
                     sq -= e.get("Quantity").as_dec();
